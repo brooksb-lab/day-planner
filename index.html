@@ -142,7 +142,11 @@ h2{font-size:20px;line-height:1.2;margin:0;text-wrap:balance;letter-spacing:-.01
 .tl-wrap{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--win)}
 .tl{position:relative;margin-left:52px;border-left:1px solid var(--line)}
 .hr{position:absolute;left:-52px;right:0;border-top:1px solid var(--line-2);font-size:10.5px;color:var(--fg-3)}
-.hr span{position:absolute;left:8px;top:-7px;background:var(--win);padding-right:4px;font-family:var(--mono)}
+.hr span{position:absolute;left:6px;top:-7px;background:var(--win);padding-right:4px;font-family:var(--mono);line-height:14px;white-space:nowrap}
+.hr span i{font-style:normal;font-size:.82em;margin-left:1px;letter-spacing:.02em}
+.hr span i.am{color:var(--warn)}
+.hr span i.pm{color:var(--accent)}
+.tl-wrap{padding-block:12px}
 .ev{position:absolute;border-radius:6px;padding:3px 7px;font-size:12px;overflow:hidden;border-left:3px solid;min-width:0}
 .ev{display:flex;flex-direction:column;line-height:1.25}
 .ev b{font-weight:600;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--lines,1);overflow:hidden;overflow-wrap:anywhere;min-width:0}
@@ -295,8 +299,6 @@ body.pane-mode .side{overflow:auto;min-height:0}
 .lookseg{display:flex;gap:2px;padding:2px;background:var(--line-2);border-radius:8px;width:max-content}
 .lookseg button{border:0;background:transparent;color:var(--fg-2);font-size:12.5px;padding:5px 12px;border-radius:6px}
 .lookseg button[aria-pressed="true"]{background:var(--win);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.gap{position:absolute;left:0;right:0;pointer-events:none;z-index:0}
-.gap span{position:sticky;display:block;left:10px;top:6px;padding:6px 10px;font-size:11px;font-weight:500;white-space:nowrap}
 
 /* ===================== Day look ===================== */
 body.theme-day{
@@ -307,7 +309,7 @@ body.theme-day{
   --accent:#639be3; --accent-soft:rgba(99,155,227,.14);
   --ok:#4fba73; --warn:#e7bb40; --bad:#de6b54; --studio:#4fba73; --studio-fill:#4fba73;
   --shadow:0 12px 30px -18px rgba(0,0,0,.9);
-  --c-personal:#639be3; --c-work:#5f6368; --c-fun:#e7bb40; --c-meal:#de6b54; --c-between:#9aa0a6; --c-hol:#7a9a86; --c-other:#8ab4c8;
+  --c-personal:#639be3; --c-work:#737980; --c-fun:#e7bb40; --c-meal:#de6b54; --c-between:#4cb89a; --c-hol:#a986d9; --c-other:#8ab4c8;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
   --hair:inset 0 0 0 .5px rgba(232,234,237,.10);
   --glass-bg:rgba(30,31,35,.70);
@@ -343,8 +345,9 @@ body.theme-day .sync{font-size:12px;color:var(--fg-2)}
 body.theme-day .hidetog{color:var(--fg-2);font-size:12.5px}
 body.theme-day .hidetog input{accent-color:var(--fg-2)}
 body.theme-day .window{background:transparent;border:0;box-shadow:none;border-radius:0;margin-top:14px;overflow:visible}
-body.theme-day .main{padding:4px 0 22px}
-body.theme-day .side{background:transparent;border-left:.5px solid var(--line);padding:4px 0 20px 20px}
+body.theme-day .main{padding:4px 28px 22px 0}
+@media (max-width:860px){body.theme-day .main{padding:4px 0 22px}}
+body.theme-day .side{background:transparent;border-left:.5px solid var(--line);padding:4px 0 20px 28px}
 @media (max-width:860px){body.theme-day .side{border-left:0;border-top:.5px solid var(--line);padding:18px 0}}
 body.theme-day .head h2,body.theme-day .head .sub,body.theme-day .pane-head h2,body.theme-day .pane-head .sub{display:none}
 body.theme-day .head{margin-bottom:12px}
@@ -381,8 +384,6 @@ body.theme-day .ev{border-left-width:0;border-radius:10px;corner-shape:squircle;
 body.theme-day .ev span{opacity:.72}
 body.theme-day .ev.lifting{box-shadow:inset 0 0 0 1px var(--evc),0 14px 30px -12px rgba(0,0,0,.85)}
 body.theme-day .nowline{border-top-color:var(--bad)} body.theme-day .nowline::before{background:var(--bad)}
-body.theme-day .gap{border-radius:10px;corner-shape:squircle;box-shadow:inset 0 0 0 1px rgba(79,186,115,.45);background:rgba(79,186,115,.08)}
-body.theme-day .gap span{color:var(--studio)}
 body.theme-day .tl-preview{border:1px dashed var(--accent);background:rgba(99,155,227,.10);border-radius:10px}
 body.theme-day .wday{border:0;box-shadow:var(--hair);background:var(--win-2);border-radius:14px;corner-shape:squircle}
 body.theme-day .wday.today{box-shadow:inset 0 0 0 1px rgba(232,234,237,.32)}
@@ -434,8 +435,14 @@ body.theme-day :focus-visible{outline:2.5px solid var(--accent);outline-offset:2
 .row .ttl,.todo .tt{min-width:0;overflow-wrap:break-word;word-break:normal}
 /* Day mark */
 .dh-brand{display:flex;align-items:center;gap:14px;min-width:0}
-.dmark{width:46px;height:46px;flex:none;display:block;background:var(--warn);-webkit-mask:url("icons/sun-mask.png") center/contain no-repeat;mask:url("icons/sun-mask.png") center/contain no-repeat}
-@media (max-width:560px){.dmark{width:38px;height:38px}.dh-brand{gap:11px}}
+.dmark{width:46px;height:46px;flex:none;display:block;align-self:center;background:var(--warn);-webkit-mask:url("icons/sun-mask.png") center/contain no-repeat;mask:url("icons/sun-mask.png") center/contain no-repeat}
+.dh-grid{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:20px}
+.dh-main{flex:1;min-width:0}
+.dh-main .dh-row,.dh-main .dh-ctrl{max-width:none}
+@media (max-width:560px){.dh-grid{gap:14px}}
+.dmark.night{background:#c9d3ee;-webkit-mask-image:url("icons/moon-mask.png");mask-image:url("icons/moon-mask.png")}
+.dh-l .eyebrow{display:flex;gap:4px 12px;flex-wrap:wrap;align-items:baseline}
+.wx{font-size:11.5px;color:var(--fg-3);letter-spacing:.01em;white-space:nowrap}
 /* icon controls */
 .mbtn.icon,body.theme-day .mbtn.icon{display:inline-grid;place-items:center;width:30px;height:30px;min-height:30px;padding:0;border:0;background:transparent;box-shadow:none;color:var(--fg-2);border-radius:8px}
 .mbtn.icon:hover,body.theme-day .mbtn.icon:hover{color:var(--fg);background:var(--line-2)}
@@ -468,10 +475,13 @@ body.theme-day :focus-visible{outline:2.5px solid var(--accent);outline-offset:2
 </div>
 
 <header class="dhdr" id="dhdr">
-  <div class="dh-row">
-    <div class="dh-brand"><span class="dmark" role="img" aria-label="Day"></span><div class="dh-l"><div class="eyebrow" id="dEyebrow"></div><h1 id="dTitle">Planner</h1></div></div>
+  <div class="dh-grid">
+    <span class="dmark" id="dmark" role="img" aria-label="Day"></span>
+    <div class="dh-main" id="dmain">
+      <div class="dh-row"><div class="dh-l"><div class="eyebrow"><span id="dEyebrow"></span><span class="wx" id="dWx"></span></div><h1 id="dTitle">Planner</h1></div></div>
+      <div class="dh-ctrl"><div class="dh-tabs" id="dTabsSlot"></div><div class="dh-right" id="dRightSlot"></div></div>
+    </div>
   </div>
-  <div class="dh-ctrl"><div class="dh-tabs" id="dTabsSlot"></div><div class="dh-right" id="dRightSlot"></div></div>
 </header>
 
 <div class="window">
@@ -1051,8 +1061,7 @@ function timeline(evs, day){
   for (const cl of clusters){ const lanes = []; for (const it of cl){ let l = lanes.findIndex(end => end <= it.s); if (l < 0){ l = lanes.length; lanes.push(0); } lanes[l] = it.en; it.lane = l; } cl.forEach(it => it.lanes = lanes.length); }
   let grid = "";
   const dayLook = document.body.classList.contains("theme-day");
-  if (dayLook) grid += openGaps(day).map(g => { const top = (g.s - H0*60)/60*PX, ht = (g.e - g.s)/60*PX; return `<div class="gap" style="top:${top}px;height:${ht}px">${ht >= 26 ? `<span>Studio · ${durTxt(g.e - g.s)}</span>` : ""}</div>`; }).join("");
-  for (let hr = H0; hr <= H1; hr++){ const lbl = dayLook ? pad(hr % 24) : (hr === 24 ? "12a" : (hr%12||12) + (hr<12?"a":"p")); grid += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${lbl}</span></div>`; }
+  for (let hr = H0; hr <= H1; hr++){ const h24 = hr % 24, am = h24 < 12; const lbl = `${h24 % 12 || 12}<i class="${am ? "am" : "pm"}">${am ? "am" : "pm"}</i>`; grid += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${lbl}</span></div>`; }
   const evh = items.map(it => {
     const t = todoForEvent(it.e); const done = t && t.status === "done" || /^✓/.test(it.e.title);
     const w = 100/it.lanes;
@@ -1181,21 +1190,7 @@ function renderSide(){
   $("callegend").innerHTML = S.calendars.length ? S.calendars.map(c => `<div style="display:flex;align-items:center;gap:8px"><i style="width:9px;height:9px;border-radius:3px;background:${c.color};display:block;flex:none"></i><span>${esc(c.name)}</span><span class="sub" style="margin:0;margin-left:auto">${c.writable?"":"read-only"}${S.events.get(c.id)?.error?" · not syncing":""}</span></div>`).join("") : `<div class="sub">Calendars appear once Google Calendar is connected.</div>`;
 }
 
-/* ---------- open time (studio available) ---------- */
-const SESSION = 90;
 const durTxt = (m) => { const h = Math.floor(m/60), x = m % 60; return (h ? h + "h" : "") + (x ? (h ? " " : "") + x + "m" : (h ? "" : "0m")); };
-function openGaps(day){
-  const d0 = startOfDay(day);
-  let from = TL.H0*60; const to = Math.min(TL.H1*60, 22*60);
-  const now = new Date();
-  if (sameDay(now, d0)) from = Math.max(from, Math.ceil((now.getHours()*60 + now.getMinutes()) / 15) * 15);
-  const busy = eventsOn(d0, allEvents()).filter(e => !e.allDay).map(e => [Math.max(0, minsOf(e.start, dayKey(d0))), Math.min(24*60, minsOf(e.end, dayKey(d0)))]).sort((a,b) => a[0]-b[0]);
-  const gaps = []; let t = from;
-  for (const [a, b] of busy){ if (b <= t) continue; if (a > t && a <= to) { if (Math.min(a, to) - t >= SESSION) gaps.push({s:t, e:Math.min(a, to)}); } t = Math.max(t, b); if (t >= to) break; }
-  if (to - t >= SESSION) gaps.push({s:t, e:to});
-  return gaps;
-}
-const openMins = (day) => openGaps(day).reduce((a, g) => a + g.e - g.s, 0);
 
 /* ---------- look (Day / BrooksOS) ---------- */
 const chromeHome = {};
@@ -1216,16 +1211,57 @@ document.addEventListener("click", (e) => {
   const name = b.dataset.themeSet; applyTheme(name); schedule();
   if (S.db) saveCfg({theme:name}).catch(() => {});
 });
+function sizeMark(){
+  const m = $("dmain"), k = $("dmark"); if (!m || !k || !document.body.classList.contains("theme-day")) return;
+  const h = m.offsetHeight; if (!h) return;
+  const sz = Math.round(innerWidth <= 560 ? Math.min(h, 104) : h);
+  if (k.offsetHeight !== sz){ k.style.width = sz + "px"; k.style.height = sz + "px"; }
+}
+if (window.ResizeObserver) new ResizeObserver(sizeMark).observe($("dmain"));
+addEventListener("resize", sizeMark);
 function renderDayHeader(){
   if (!document.body.classList.contains("theme-day")) return;
   const today = startOfDay(new Date());
   const tab = TABS.find(t => t.id === S.tab);
   $("dTitle").textContent = tab.label;
-  let eyebrow = fmtDay(today), resLabel = "Studio available", mins;
-  if (S.tab === "tomorrow"){ const t = addDays(today,1); eyebrow = fmtDay(t); mins = openMins(t); resLabel = "Studio tomorrow"; }
-  else if (S.tab === "week"){ const st = addDays(today, S.weekOff*7); eyebrow = `${fmtDay(st)} to ${fmtDay(addDays(st,6))}`; mins = 0; for (let i = 0; i < 7; i++) mins += openMins(addDays(st, i)); resLabel = "Studio this week"; }
-  else mins = openMins(today);
-  $("dEyebrow").textContent = eyebrow;
+  let eyebrow = fmtDay(today);
+  if (S.tab === "tomorrow") eyebrow = fmtDay(addDays(today,1));
+  else if (S.tab === "week"){ const st = addDays(today, S.weekOff*7); eyebrow = `${fmtDay(st)} to ${fmtDay(addDays(st,6))}`; }
+  $("dEyebrow").textContent = eyebrow; sizeMark();
+  $("dmark").classList.toggle("night", isNight());
+  $("dmark").setAttribute("aria-label", isNight() ? "Day, night" : "Day");
+  $("dWx").textContent = wxLine();
+}
+
+/* ---------- weather (Open-Meteo, no key) ---------- */
+const WX = {data:null, at:0, loading:false};
+const WX_WORD = (c) => c === 0 ? "clear" : c <= 2 ? "partly cloudy" : c === 3 ? "overcast" : c <= 48 ? "fog" : c <= 57 ? "drizzle" : c <= 67 ? "rain" : c <= 77 ? "snow" : c <= 82 ? "showers" : c <= 86 ? "snow showers" : "storms";
+async function loadWeather(force){
+  if (WX.loading || (!force && WX.data && Date.now() - WX.at < 30*60000)) return;
+  WX.loading = true;
+  const lat = 40.69, lon = -73.97;   // Brooklyn
+  try {
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&timezone=auto&forecast_days=3`;
+    const r = await fetch(u); if (r.ok){ WX.data = await r.json(); WX.at = Date.now(); schedule(); }
+  } catch {}
+  WX.loading = false;
+}
+setInterval(() => { if (!document.hidden) loadWeather(); }, 10*60000);
+function isNight(){
+  const c = WX.data && WX.data.current;
+  if (c && typeof c.is_day === "number" && Date.now() - WX.at < 2*3600000) return c.is_day === 0;
+  const h = new Date().getHours(); return h < 6 || h >= 19;
+}
+function wxLine(){
+  const d = WX.data; if (!d || !d.daily) return "";
+  const tom = S.tab === "tomorrow", i = tom ? 1 : 0, dl = d.daily;
+  const hi = Math.round(dl.temperature_2m_max[i]), lo = Math.round(dl.temperature_2m_min[i]), pp = dl.precipitation_probability_max ? dl.precipitation_probability_max[i] : 0;
+  const parts = [];
+  if (!tom && d.current) parts.push(`${Math.round(d.current.temperature_2m)}° ${WX_WORD(d.current.weather_code)}`);
+  else parts.push(WX_WORD(dl.weather_code[i]));
+  parts.push(`H${hi}° L${lo}°`);
+  if (pp >= 20) parts.push(`${pp}% rain`);
+  return parts.join(" · ");
 }
 
 /* ---------- fixed pane sizing ---------- */
@@ -1960,6 +1996,7 @@ function onSignedIn(){
   storeSync().catch(() => {});
 }
 applyTheme(cfg().theme);
+loadWeather();
 S.db = DB; startDb();
 S.sample = claudeSample;
 render();
