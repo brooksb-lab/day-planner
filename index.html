@@ -2043,7 +2043,7 @@ function saveKey(){
   const el = $("akey"); const v = ((el && el.value) || "").trim();
   if (!v) return;
   try { localStorage.setItem("anthropicKey", v); } catch {}
-  toast(/^sk-ant-api/.test(v) ? "Claude key saved on this device." : "Saved. That doesn't look like a standard API key (sk-ant-api…), so the Claude bar may not accept it.");
+  toast("Claude key saved on this device.");
   renderConn();
 }
 document.addEventListener("change", (e) => { if (e.target && e.target.id === "akey") saveKey(); });
