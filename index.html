@@ -144,7 +144,16 @@ h2{font-size:20px;line-height:1.2;margin:0;text-wrap:balance;letter-spacing:-.01
 .rain{position:absolute;left:0;right:0;z-index:0;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%227%22%20height%3D%227%22%3E%3Cg%20fill%3D%22%238fb4ff%22%3E%3Ccircle%20cx%3D%22.9%22%20cy%3D%226.1%22%20r%3D%22.62%22/%3E%3Ccircle%20cx%3D%222.65%22%20cy%3D%224.35%22%20r%3D%22.62%22/%3E%3Ccircle%20cx%3D%224.35%22%20cy%3D%222.65%22%20r%3D%22.62%22/%3E%3Ccircle%20cx%3D%226.1%22%20cy%3D%22.9%22%20r%3D%22.62%22/%3E%3C/g%3E%3C/svg%3E");background-size:7px 7px;opacity:var(--rain-o,.6);border-radius:6px;
   -webkit-mask:linear-gradient(90deg,#000 0 100%);mask:linear-gradient(90deg,#000 0 100%)}
 .hr span i{font-style:normal;color:var(--fg-3);opacity:.7;margin-left:-1px}
-.rain span{position:absolute;right:6px;top:3px;font:10px var(--mono);color:#8fb4ff;background:var(--win);padding:0 3px;border-radius:3px}
+.tint{position:absolute;left:0;right:0;top:0;z-index:0;pointer-events:none;border-radius:6px}
+.hr span b.tz2{display:block;font-weight:400;font-size:9px;line-height:10px;color:var(--accent);opacity:.7;margin-top:1px}
+.tzsel{width:100%;font:inherit;font-size:13px;color:var(--fg);background:var(--win-2);border:1px solid var(--line);border-radius:9px;padding:7px 10px}
+@media (max-width:560px){.tzsel{font-size:16px}}
+.tmp{position:absolute;right:6px;margin-top:3px;z-index:1;pointer-events:none;font:10px var(--mono);color:var(--fg-3);opacity:.55;letter-spacing:.02em}
+.sunln{position:absolute;left:0;right:0;z-index:0;pointer-events:none;border-top:1px dashed rgba(231,187,64,.45)}
+.sunln.sunset{border-top-color:rgba(222,107,84,.45)}
+.sunln span{position:absolute;left:6px;top:-7px;font:10px var(--mono);color:rgba(231,187,64,.85);background:var(--win);padding:0 4px;border-radius:3px;line-height:14px}
+.sunln.sunset span{color:rgba(222,107,84,.9)}
+.rain span{position:absolute;right:38px;top:3px;font:10px var(--mono);color:#8fb4ff;background:var(--win);padding:0 3px;border-radius:3px}
 .hr{position:absolute;left:-52px;right:0;border-top:1px solid var(--line-2);font-size:10.5px;color:var(--fg-3)}
 .hr span{position:absolute;left:6px;top:-7px;background:var(--win);padding-right:4px;font-family:var(--mono);line-height:14px;white-space:nowrap}
 .tl-wrap{padding-block:12px}
@@ -559,6 +568,10 @@ body.spot-open .spot-in{width:min(680px,100%);margin:0;box-shadow:0 24px 60px -1
         <div class="label">Look</div>
         <div class="lookseg" role="group" aria-label="Look"><button type="button" data-theme-set="day">Day</button><button type="button" data-theme-set="brooksos">BrooksOS</button></div>
       </div>
+      <div class="section">
+        <div class="label">Second time zone</div>
+        <select id="tz2sel" class="tzsel" aria-label="Second time zone"></select>
+      </div>
       <div class="section" id="samplebox" hidden>
         <div class="label">Sample data</div>
         <div class="sub" id="samplecount"></div>
@@ -635,7 +648,7 @@ function calKind(c){
 }
 const KIND_NAME = {personal:"Personal", work:"Work", hol:"Holidays"};
 /* ---------- settings (stored with the page, editable by the Claude bar) ---------- */
-const CFG_DEFAULTS = {tlStart:0, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day"};
+const CFG_DEFAULTS = {tlStart:0, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day", tz2:""};
 let cfgRaw = {};
 const cfg = () => ({...CFG_DEFAULTS, ...cfgRaw, tabHours:{...CFG_DEFAULTS.tabHours, ...(cfgRaw.tabHours || {})}, calColors:{...(cfgRaw.calColors || {})}});
 function applyCfg(){
@@ -645,6 +658,7 @@ function applyCfg(){
   const set = (id, from, to) => { const t = TABS.find(x => x.id === id); t.from = from; t.to = to; };
   set("morning", th.morning, th.day); set("day", th.day, th.evening); set("evening", th.evening, th.tomorrow); set("tomorrow", th.tomorrow, th.morning + 24);
   S.paneMode = c.layout; S.split = c.split; applyTheme(c.theme);
+  const tzs = document.getElementById("tz2sel"); if (tzs && document.activeElement !== tzs) tzs.value = c.tz2 || "";
   for (const cal of S.calendars) cal.color = c.calColors[cal.name] || `var(--c-${cal.kind})`;
 }
 const cfgRef = () => S.db.collection("settings").doc("main");
@@ -1142,8 +1156,8 @@ function timeline(evs, day){
   for (const cl of clusters){ const lanes = []; for (const it of cl){ let l = lanes.findIndex(end => end <= it.s); if (l < 0){ l = lanes.length; lanes.push(0); } lanes[l] = it.en; it.lane = l; } cl.forEach(it => it.lanes = lanes.length); }
   let grid = "";
   const dayLook = document.body.classList.contains("theme-day");
-  grid += rainBlocks(day, H0, H1, PX);
-  for (let hr = H0; hr <= H1; hr++){ const h24 = hr % 24, am = h24 < 12; const lbl = `${h24 % 12 || 12}<i>${am ? "a" : "p"}</i>`; grid += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${lbl}</span></div>`; }
+  grid += wxLayer(day, H0, H1, PX) + rainBlocks(day, H0, H1, PX);
+  for (let hr = H0; hr <= H1; hr++){ const h24 = hr % 24, am = h24 < 12; const lbl = `${h24 % 12 || 12}<i>${am ? "a" : "p"}</i>${tz2Label(day, hr)}`; grid += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${lbl}</span></div>`; }
   const evh = items.map(it => {
     const t = todoForEvent(it.e); const done = t && t.status === "done" || /^✓/.test(it.e.title);
     const w = 100/it.lanes;
@@ -1330,7 +1344,7 @@ async function loadWeather(force){
   WX.loading = true;
   const lat = 40.69, lon = -73.97;   // Brooklyn
   try {
-    const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&hourly=precipitation_probability,precipitation&temperature_unit=fahrenheit&timezone=auto&forecast_days=8`;
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&hourly=precipitation_probability,precipitation,temperature_2m&temperature_unit=fahrenheit&timezone=auto&forecast_days=8`;
     const r = await fetch(u); if (r.ok){ WX.data = await r.json(); WX.at = Date.now(); schedule(); }
   } catch {}
   WX.loading = false;
@@ -1341,6 +1355,60 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) load
 function toggleMoon(){ const n = !isNight(); try { localStorage.setItem("moonForce", n ? "1" : "0"); } catch {} schedule(); }
 document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("#dmark")) toggleMoon(); });
 document.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && document.activeElement && document.activeElement.id === "dmark"){ e.preventDefault(); toggleMoon(); } });
+/* second time zone: alt hour under each timeline label */
+const TZ_QUICK = ["America/Los_Angeles","America/Denver","America/Chicago","America/New_York","America/Mexico_City","America/Sao_Paulo","Europe/London","Europe/Paris","Europe/Berlin","Europe/Istanbul","Asia/Dubai","Asia/Kolkata","Asia/Shanghai","Asia/Seoul","Asia/Tokyo","Australia/Sydney","Pacific/Honolulu","UTC"];
+const tzCity = (z) => z === "UTC" ? "UTC" : z.split("/").pop().replace(/_/g, " ");
+const tzFmt = {};
+function tz2Label(day, hr){
+  const z = cfg().tz2; if (!z) return "";
+  try {
+    const f = tzFmt[z] || (tzFmt[z] = new Intl.DateTimeFormat("en-US", {timeZone:z, hour:"numeric", minute:"2-digit", hour12:true}));
+    const d = new Date(day); d.setHours(hr % 24, 0, 0, 0); if (hr >= 24) d.setDate(d.getDate() + 1);
+    const parts = f.formatToParts(d), h = parts.find(x => x.type === "hour").value, m = parts.find(x => x.type === "minute").value, ap = parts.find(x => x.type === "dayPeriod").value[0].toLowerCase();
+    return `<b class="tz2" title="${esc(tzCity(z))}">${h}${m !== "00" ? ":" + m : ""}${ap}</b>`;
+  } catch { return ""; }
+}
+function fillTzSelect(){
+  const sel = $("tz2sel"); if (!sel) return;
+  const here = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  let all = []; try { all = Intl.supportedValuesOf("timeZone"); } catch {}
+  const opt = (z) => `<option value="${z}">${esc(tzCity(z))}${z === here ? " (here)" : ""} · ${esc(z.split("/")[0])}</option>`;
+  sel.innerHTML = `<option value="">Off</option><optgroup label="Common">${TZ_QUICK.map(opt).join("")}</optgroup>` + (all.length ? `<optgroup label="All">${all.filter(z => !TZ_QUICK.includes(z)).map(opt).join("")}</optgroup>` : "");
+  sel.value = cfg().tz2 || "";
+  sel.addEventListener("change", () => { saveCfg({tz2: sel.value}).catch(() => { cfgRaw = {...cfgRaw, tz2: sel.value}; applyCfg(); schedule(); }); });
+}
+fillTzSelect();
+/* temperature tint per hour, faint hourly temps, sunrise and sunset */
+function tempTint(t){
+  // cold blue below ~55F, warm amber above ~68F, neutral between; strength grows with distance
+  if (t <= 55){ const k = Math.min(1, (55 - t) / 30); return `rgba(110,160,255,${(0.025 + 0.06*k).toFixed(3)})`; }
+  if (t >= 68){ const k = Math.min(1, (t - 68) / 25); return `rgba(255,170,90,${(0.025 + 0.06*k).toFixed(3)})`; }
+  return "rgba(0,0,0,0)";
+}
+function wxLayer(day, H0, H1, PX){
+  const d = WX.data; if (!d || !d.hourly || !d.hourly.temperature_2m) return "";
+  const hz = d.hourly, key = dayKey(startOfDay(day)), stops = [], labels = [];
+  for (let hr = H0; hr < H1; hr++){
+    const i = hz.time.indexOf(`${key}T${pad(hr)}:00`); if (i < 0) continue;
+    const t = hz.temperature_2m[i]; if (t == null) continue;
+    const pc = ((hr - H0 + 0.5) / (H1 - H0) * 100).toFixed(2);
+    stops.push(`${tempTint(t)} ${pc}%`);
+    labels.push(`<span class="tmp" style="top:${(hr - H0) * PX}px">${Math.round(t)}°</span>`);
+  }
+  let h = stops.length > 1 ? `<div class="tint" style="height:${(H1 - H0) * PX}px;background:linear-gradient(180deg,${stops.join(",")})"></div>` : "";
+  h += labels.join("");
+  const di = d.daily && d.daily.time ? d.daily.time.indexOf(key) : -1;
+  if (di >= 0){
+    for (const [k, name] of [["sunrise","sunrise"],["sunset","sunset"]]){
+      const v = d.daily[k] && d.daily[k][di]; if (!v) continue;
+      const hh = +v.slice(11,13), mi = +v.slice(14,16), m = hh*60 + mi;
+      if (m < H0*60 || m > H1*60) continue;
+      const lbl = `${hh % 12 || 12}:${pad(mi)}${hh < 12 ? "a" : "p"}`;
+      h += `<div class="sunln ${name}" style="top:${(m - H0*60) / 60 * PX}px"><span>${name === "sunrise" ? "↑" : "↓"} ${name} ${lbl}</span></div>`;
+    }
+  }
+  return h;
+}
 /* hours with rain in the forecast, merged into blocks for the timeline */
 function rainBlocks(day, H0, H1, PX){
   const hz = WX.data && WX.data.hourly; if (!hz || !hz.time) return "";
@@ -2142,7 +2210,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.17-20";
+const APP_VERSION = "2026.10.17-22";
 try { $("appver").textContent = "Version " + APP_VERSION; } catch {}
 if ("serviceWorker" in navigator){
   const hadController = !!navigator.serviceWorker.controller;
