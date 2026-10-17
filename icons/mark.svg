@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" fill="#0f1012"/>
+  <!-- solid D: stem + half-disc, cut by a horizon slot; red tick marks now -->
+  <path d="M24 22H40A28 28 0 0 1 40 78H24Z" fill="#e3e5e8"/>
+  <rect x="20" y="56" width="52" height="6" fill="#0f1012"/>
+  <rect x="72" y="56" width="8" height="6" fill="#de6b54"/>
+</svg>
