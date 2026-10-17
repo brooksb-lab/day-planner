@@ -422,6 +422,15 @@ body.theme-day :focus-visible{outline:2.5px solid var(--studio);outline-offset:2
 .setup p,.setup ol{margin:0;color:var(--fg-2);font-size:13.5px;line-height:1.5}
 .setup ol{padding-left:20px;display:flex;flex-direction:column;gap:4px}
 .setup code{font-family:var(--mono);color:var(--fg);font-size:12.5px;overflow-wrap:anywhere}
+/* rows adapt to the width of their own list, not the screen */
+.rows{container-type:inline-size}
+@container (max-width:560px){
+  .row{grid-template-columns:70px 4px minmax(0,1fr);row-gap:6px}
+  .row .acts{grid-column:3;justify-content:flex-start}
+  .todo{grid-template-columns:auto minmax(0,1fr)}
+  .todo .acts{grid-column:2;justify-content:flex-start}
+}
+.row .ttl,.todo .tt{min-width:0;overflow-wrap:break-word;word-break:normal}
 @media (prefers-reduced-motion:no-preference){.tab,.btn{transition:background .12s}}
 </style>
 
