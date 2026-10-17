@@ -141,6 +141,10 @@ h2{font-size:20px;line-height:1.2;margin:0;text-wrap:balance;letter-spacing:-.01
 .allday .ev-pill{font-size:12px;padding:2px 8px;border-radius:5px;background:var(--win-2);border-left:3px solid var(--fg-3)}
 .tl-wrap{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--win)}
 .tl{position:relative;margin-left:52px;border-left:1px solid var(--line)}
+.rain{position:absolute;left:0;right:0;z-index:0;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%227%22%20height%3D%227%22%3E%3Cg%20fill%3D%22%238fb4ff%22%3E%3Ccircle%20cx%3D%22.9%22%20cy%3D%226.1%22%20r%3D%22.62%22/%3E%3Ccircle%20cx%3D%222.65%22%20cy%3D%224.35%22%20r%3D%22.62%22/%3E%3Ccircle%20cx%3D%224.35%22%20cy%3D%222.65%22%20r%3D%22.62%22/%3E%3Ccircle%20cx%3D%226.1%22%20cy%3D%22.9%22%20r%3D%22.62%22/%3E%3C/g%3E%3C/svg%3E");background-size:7px 7px;opacity:var(--rain-o,.6);border-radius:6px;
+  -webkit-mask:linear-gradient(90deg,#000 0 100%);mask:linear-gradient(90deg,#000 0 100%)}
+.hr span i{font-style:normal;color:var(--fg-3);opacity:.7;margin-left:-1px}
+.rain span{position:absolute;right:6px;top:3px;font:10px var(--mono);color:#8fb4ff;background:var(--win);padding:0 3px;border-radius:3px}
 .hr{position:absolute;left:-52px;right:0;border-top:1px solid var(--line-2);font-size:10.5px;color:var(--fg-3)}
 .hr span{position:absolute;left:6px;top:-7px;background:var(--win);padding-right:4px;font-family:var(--mono);line-height:14px;white-space:nowrap}
 .tl-wrap{padding-block:12px}
@@ -432,12 +436,12 @@ body.theme-day :focus-visible{outline:2.5px solid var(--accent);outline-offset:2
 .row .ttl,.todo .tt{min-width:0;overflow-wrap:break-word;word-break:normal}
 /* Day mark */
 .dh-brand{display:flex;align-items:center;gap:14px;min-width:0}
-.dmark{width:46px;height:46px;flex:none;display:block;align-self:center;background:var(--warn);-webkit-mask:url("icons/sun-mask.png") center/contain no-repeat;mask:url("icons/sun-mask.png") center/contain no-repeat}
+.dmark{width:46px;height:46px;flex:none;display:block;align-self:center;background:var(--warn);-webkit-mask:url("icons/sun.svg") center/contain no-repeat;mask:url("icons/sun.svg") center/contain no-repeat}
 .dh-grid{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:20px}
 .dh-main{flex:1;min-width:0}
 .dh-main .dh-row,.dh-main .dh-ctrl{max-width:none}
 @media (max-width:560px){.dh-grid{gap:14px}}
-.dmark.night{background:#c9d3ee;-webkit-mask-image:url("icons/moon-mask.png");mask-image:url("icons/moon-mask.png")}
+.dmark.night{background:#c9d3ee;-webkit-mask-image:url("icons/moon.svg");mask-image:url("icons/moon.svg")}
 .dh-l .eyebrow{display:flex;gap:4px 12px;flex-wrap:wrap;align-items:baseline}
 .wx{font-size:11.5px;color:var(--fg-3);letter-spacing:.01em;white-space:nowrap}
 .dmark{cursor:pointer}
@@ -1138,7 +1142,8 @@ function timeline(evs, day){
   for (const cl of clusters){ const lanes = []; for (const it of cl){ let l = lanes.findIndex(end => end <= it.s); if (l < 0){ l = lanes.length; lanes.push(0); } lanes[l] = it.en; it.lane = l; } cl.forEach(it => it.lanes = lanes.length); }
   let grid = "";
   const dayLook = document.body.classList.contains("theme-day");
-  for (let hr = H0; hr <= H1; hr++){ const h24 = hr % 24, am = h24 < 12; const lbl = `${h24 % 12 || 12}${am ? "A" : "P"}`; grid += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${lbl}</span></div>`; }
+  grid += rainBlocks(day, H0, H1, PX);
+  for (let hr = H0; hr <= H1; hr++){ const h24 = hr % 24, am = h24 < 12; const lbl = `${h24 % 12 || 12}<i>${am ? "a" : "p"}</i>`; grid += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${lbl}</span></div>`; }
   const evh = items.map(it => {
     const t = todoForEvent(it.e); const done = t && t.status === "done" || /^✓/.test(it.e.title);
     const w = 100/it.lanes;
@@ -1321,20 +1326,37 @@ function renderDayHeader(){
 const WX = {data:null, at:0, loading:false};
 const WX_WORD = (c) => c === 0 ? "clear" : c <= 2 ? "partly cloudy" : c === 3 ? "overcast" : c <= 48 ? "fog" : c <= 57 ? "drizzle" : c <= 67 ? "rain" : c <= 77 ? "snow" : c <= 82 ? "showers" : c <= 86 ? "snow showers" : "storms";
 async function loadWeather(force){
-  if (WX.loading || (!force && WX.data && Date.now() - WX.at < 30*60000)) return;
+  if (WX.loading || (!force && WX.data && Date.now() - WX.at < 20*60000)) return;
   WX.loading = true;
   const lat = 40.69, lon = -73.97;   // Brooklyn
   try {
-    const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&timezone=auto&forecast_days=3`;
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&hourly=precipitation_probability,precipitation&temperature_unit=fahrenheit&timezone=auto&forecast_days=8`;
     const r = await fetch(u); if (r.ok){ WX.data = await r.json(); WX.at = Date.now(); schedule(); }
   } catch {}
   WX.loading = false;
 }
-setInterval(() => { if (!document.hidden) loadWeather(); }, 10*60000);
+setInterval(() => { if (!document.hidden) loadWeather(); }, 5*60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) loadWeather(); });
 /* TEMP: tap the mark to force sun/moon. Remove later. */
 function toggleMoon(){ const n = !isNight(); try { localStorage.setItem("moonForce", n ? "1" : "0"); } catch {} schedule(); }
 document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("#dmark")) toggleMoon(); });
 document.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && document.activeElement && document.activeElement.id === "dmark"){ e.preventDefault(); toggleMoon(); } });
+/* hours with rain in the forecast, merged into blocks for the timeline */
+function rainBlocks(day, H0, H1, PX){
+  const hz = WX.data && WX.data.hourly; if (!hz || !hz.time) return "";
+  const key = dayKey(startOfDay(day)), out = [];
+  let cur = null;
+  for (let hr = H0; hr < H1; hr++){
+    const i = hz.time.indexOf(`${key}T${pad(hr)}:00`); if (i < 0){ cur = null; continue; }
+    const p = hz.precipitation_probability ? hz.precipitation_probability[i] || 0 : 0, mm = hz.precipitation ? hz.precipitation[i] || 0 : 0;
+    if (p >= 30 || mm >= 0.2){ if (cur && cur.e === hr){ cur.e = hr + 1; cur.p = Math.max(cur.p, p); } else { cur = {s:hr, e:hr + 1, p}; out.push(cur); } }
+    else cur = null;
+  }
+  return out.map(b => {
+    const top = (b.s - H0) * PX, ht = (b.e - b.s) * PX, op = (0.35 + 0.65 * Math.min(1, Math.max(0, (b.p - 30) / 60))).toFixed(2);
+    return `<div class="rain" style="top:${top}px;height:${ht}px;--rain-o:${op}" title="${b.p}% chance of rain">${ht >= 22 ? `<span>${b.p}%</span>` : ""}</div>`;
+  }).join("");
+}
 function isNight(){
   try { const f = localStorage.getItem("moonForce"); if (f === "1") return true; if (f === "0") return false; } catch {}
   const c = WX.data && WX.data.current;
@@ -2120,7 +2142,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.17-18";
+const APP_VERSION = "2026.10.17-20";
 try { $("appver").textContent = "Version " + APP_VERSION; } catch {}
 if ("serviceWorker" in navigator){
   const hadController = !!navigator.serviceWorker.controller;
