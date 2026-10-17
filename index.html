@@ -1,0 +1,1920 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0F1210">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Day">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+<title>Day Planner</title>
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{-webkit-text-size-adjust:100%}
+body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<style>
+/* Layout: macOS desktop. Menu bar on top, one Planner window with a segmented toolbar, Spotlight-style Claude bar docked at the bottom. */
+:root{
+  --desk:#dfe3ea; --desk-2:#c9d0db;
+  --win:#fbfbfc; --win-2:#f1f2f5; --bar:rgba(246,247,249,.82);
+  --line:#dcdee4; --line-2:#e9eaee;
+  --fg:#1d1f24; --fg-2:#5c616c; --fg-3:#8c919b;
+  --accent:#2f6fed; --accent-soft:#e3ecfd;
+  --ok:#2e9b5f; --warn:#b7791f; --bad:#c9384a;
+  --shadow:0 18px 50px rgba(30,36,50,.18),0 2px 6px rgba(30,36,50,.08);
+  --c-personal:#3b7be8; --c-work:#7f8590; --c-fun:#6f63d2; --c-meal:#cf4f72; --c-between:#23977d; --c-hol:#b8901c; --c-other:#9b6a3c;
+  --ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --desk:#15171c; --desk-2:#1f232b;
+  --win:#1f2127; --win-2:#272a31; --bar:rgba(28,30,36,.82);
+  --line:#353943; --line-2:#2c2f37;
+  --fg:#eceef2; --fg-2:#a6abb6; --fg-3:#757b87;
+  --accent:#5b93ff; --accent-soft:#22324f;
+  --ok:#4cc382; --warn:#e0a640; --bad:#f06b7b;
+  --shadow:0 18px 50px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.3);
+  --c-personal:#5b93ff; --c-work:#8f95a1; --c-fun:#958af0; --c-meal:#ef7598; --c-between:#43c3a4; --c-hol:#dbb443; --c-other:#c38f5d;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --desk:#15171c; --desk-2:#1f232b;
+  --win:#1f2127; --win-2:#272a31; --bar:rgba(28,30,36,.82);
+  --line:#353943; --line-2:#2c2f37;
+  --fg:#eceef2; --fg-2:#a6abb6; --fg-3:#757b87;
+  --accent:#5b93ff; --accent-soft:#22324f;
+  --ok:#4cc382; --warn:#e0a640; --bad:#f06b7b;
+  --shadow:0 18px 50px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.3);
+  --c-personal:#5b93ff; --c-work:#8f95a1; --c-fun:#958af0; --c-meal:#ef7598; --c-between:#43c3a4; --c-hol:#dbb443; --c-other:#c38f5d;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:radial-gradient(1200px 700px at 20% -10%,var(--desk-2),transparent 70%),var(--desk);color:var(--fg);font:14px/1.45 var(--ui);min-height:100%;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 140px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bar)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* menu bar */
+.menubar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px))) 0 calc(-1*max(16px,env(safe-area-inset-left,0px)));padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));height:30px;display:flex;align-items:center;gap:18px;background:var(--bar);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);border-bottom:1px solid var(--line-2);font-size:13px}
+.menubar .brand{font-weight:700;letter-spacing:.01em}
+.menubar .app{font-weight:600}
+.menubar .item{color:var(--fg-2)}
+.menubar .right{margin-left:auto;display:flex;gap:14px;align-items:center;color:var(--fg-2)}
+.sync{display:flex;align-items:center;gap:6px;font-size:12px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--fg-3);flex:none}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+.mbtn{border:1px solid var(--line);background:var(--win);border-radius:5px;padding:1px 8px;font-size:12px;color:var(--fg)}
+.mbtn:disabled{opacity:.55;cursor:default}
+.hidetog{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--fg-2);white-space:nowrap;cursor:pointer}
+.hidetog input{margin:0;accent-color:var(--accent)}
+.toast{display:flex;align-items:center;gap:10px}
+@media (max-width:560px){.menubar .item{display:none}.menubar .app{display:none}}
+
+/* window */
+.window{max-width:1120px;margin:22px auto 0;background:var(--win);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.titlebar{display:flex;align-items:center;gap:14px;padding:10px 14px;background:var(--win-2);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.lights{display:flex;gap:7px}
+.lights i{width:12px;height:12px;border-radius:50%;display:block}
+.lights i:nth-child(1){background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.wtitle{font-weight:600;font-size:13px;color:var(--fg-2)}
+.tabs{display:flex;gap:2px;padding:2px;background:var(--line-2);border-radius:8px;margin-left:auto;overflow-x:auto;max-width:100%}
+.tab{border:0;background:transparent;padding:4px 11px;border-radius:6px;font-size:12.5px;color:var(--fg-2);white-space:nowrap;position:relative}
+.tab[aria-selected="true"]{background:var(--win);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.tab .now{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin-left:5px;vertical-align:middle}
+@media (max-width:640px){.tabs{margin-left:0;width:100%}}
+
+.content{display:grid;grid-template-columns:minmax(0,1fr) 300px;min-height:520px}
+.main{padding:20px 22px 28px;min-width:0}
+.side{border-left:1px solid var(--line);background:var(--win-2);padding:18px 16px;min-width:0}
+@media (max-width:860px){.content{grid-template-columns:1fr}.side{border-left:0;border-top:1px solid var(--line)}}
+
+h2{font-size:20px;line-height:1.2;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.sub{color:var(--fg-2);font-size:13px;margin-top:2px}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--fg-3);font-weight:600}
+.head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.section{display:flex;flex-direction:column;gap:8px;margin-top:22px}
+.section:first-child{margin-top:0}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}.grid2.plan>:last-child{order:-1}}
+
+/* agenda rows */
+.rows{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--win)}
+.row{display:grid;grid-template-columns:86px 4px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 12px;border-top:1px solid var(--line-2)}
+.row:first-child{border-top:0}
+.row .t{font-size:12px;color:var(--fg-2)}
+.row .sw{width:4px;height:100%;min-height:20px;border-radius:2px}
+.row .ttl{min-width:0;overflow-wrap:anywhere}
+.row .ttl small{display:block;color:var(--fg-3);font-size:11.5px}
+.row.done .ttl{color:var(--fg-3);text-decoration:line-through}
+.empty{padding:14px;border:1px dashed var(--line);border-radius:9px;color:var(--fg-2);font-size:13px}
+.acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.btn{border:1px solid var(--line);background:var(--win);border-radius:6px;padding:3px 9px;font-size:12px;color:var(--fg)}
+.btn:hover{background:var(--win-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--fg-2)}
+.btn:disabled{opacity:.5;cursor:default}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--fg-2);white-space:nowrap}
+.chip i{width:7px;height:7px;border-radius:50%;display:block}
+.pri{font-family:var(--mono);font-size:11px;color:var(--fg-3)}
+.pri.p1{color:var(--bad)}
+
+/* now card */
+.now-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.now-card>div{padding:14px 16px;min-width:0}
+.now-card>div+div{border-left:1px solid var(--line);background:var(--win-2)}
+.now-card .big{font-size:17px;font-weight:600;margin-top:4px;overflow-wrap:anywhere}
+@media (max-width:520px){.now-card{grid-template-columns:1fr}.now-card>div+div{border-left:0;border-top:1px solid var(--line)}}
+
+/* timeline */
+.allday{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.allday .ev-pill{font-size:12px;padding:2px 8px;border-radius:5px;background:var(--win-2);border-left:3px solid var(--fg-3)}
+.tl-wrap{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--win)}
+.tl{position:relative;margin-left:52px;border-left:1px solid var(--line)}
+.hr{position:absolute;left:-52px;right:0;border-top:1px solid var(--line-2);font-size:10.5px;color:var(--fg-3)}
+.hr span{position:absolute;left:8px;top:-7px;background:var(--win);padding-right:4px;font-family:var(--mono)}
+.ev{position:absolute;border-radius:6px;padding:3px 7px;font-size:12px;overflow:hidden;border-left:3px solid;min-width:0}
+.ev{display:flex;flex-direction:column;line-height:1.25}
+.ev b{font-weight:600;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--lines,1);overflow:hidden;overflow-wrap:anywhere;min-width:0}
+.ev span{font-family:var(--mono);font-size:10.5px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
+.ev.short{flex-direction:row;align-items:baseline;gap:6px;padding-top:1px;padding-bottom:1px}
+.ev.short b{display:block;white-space:nowrap;text-overflow:ellipsis;flex:1 1 auto}
+.ev.short span{flex:0 1 auto;min-width:0}
+.ev.ev-todo b::before{content:"☐ "}
+.ev.ev-todo.done b::before{content:"☑ "}
+.ev.movable{cursor:grab;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.ev .rs{position:absolute;left:0;right:0;bottom:0;height:9px;cursor:ns-resize;touch-action:none}
+.ev .rs::after{content:"";position:absolute;left:50%;bottom:3px;width:18px;height:2px;margin-left:-9px;border-radius:1px;background:currentColor;opacity:0;transition:opacity .12s}
+.ev.movable:hover .rs::after,.ev.lifting .rs::after{opacity:.45}
+.ev.lifting{z-index:4;box-shadow:var(--shadow);cursor:grabbing}
+.ev.leaving{opacity:.35}
+.tl-preview{position:absolute;left:4px;right:4px;border-radius:6px;border:2px dashed var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);z-index:3;pointer-events:none;font-size:11.5px;padding:2px 7px;color:var(--fg);overflow:hidden}
+.tl-preview span{font-family:var(--mono);font-size:10.5px;opacity:.8;display:block}
+.nowline{position:absolute;left:-6px;right:0;height:0;border-top:2px solid var(--bad);z-index:2}
+.nowline::before{content:"";position:absolute;left:-1px;top:-6px;width:10px;height:10px;border-radius:50%;background:var(--bad)}
+
+/* week */
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.wday{border:1px solid var(--line);border-radius:9px;padding:8px;min-height:140px;min-width:0;background:var(--win)}
+.wday.today{border-color:var(--accent)}
+.wday h4{margin:0 0 6px;font-size:12px;font-weight:600;display:flex;justify-content:space-between;gap:4px}
+.wday h4 span{color:var(--fg-3);font-weight:400}
+.wev{font-size:11.5px;padding:3px 0 3px 7px;border-left:3px solid;margin-top:4px;overflow-wrap:anywhere}
+.wev small{display:block;font-family:var(--mono);color:var(--fg-3);font-size:10px}
+@media (max-width:860px){.week{grid-template-columns:1fr}.wday{min-height:0}}
+
+/* todos */
+.todo{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:8px;align-items:start;padding:8px 10px;border-top:1px solid var(--line-2)}
+.todo:first-child{border-top:0}
+.check{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--fg-3);background:transparent;padding:0;margin-top:2px;display:grid;place-items:center;font-size:11px;line-height:1}
+.check.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.todo .tt{min-width:0;overflow-wrap:anywhere}
+.lead{display:flex;align-items:flex-start;gap:4px}
+.grip{width:16px;margin-top:1px;color:var(--fg-3);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;text-align:center;font-size:13px;line-height:18px;border-radius:4px}
+.grip:hover{color:var(--fg);background:var(--win-2)}
+.nogrip{width:16px;display:block}
+.todo.dragging{opacity:.3}
+.todo[data-drag]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:grab}
+.todo[data-drag] button{cursor:pointer}
+.todo.drop-before{box-shadow:inset 0 2px 0 var(--accent)}
+.todo.drop-after{box-shadow:inset 0 -2px 0 var(--accent)}
+[data-zone].drop-into{outline:2px dashed var(--accent);outline-offset:-2px}
+.drag-ghost{position:fixed;z-index:20;pointer-events:none;background:var(--win);border:1px solid var(--accent);border-radius:8px;box-shadow:var(--shadow);opacity:.95;margin:0}
+body.is-dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
+.zonehint{font-size:11px;color:var(--fg-3);font-weight:400;text-transform:none;letter-spacing:0}
+.todo .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px;align-items:center}
+.todo.is-done .tt>div:first-child{text-decoration:line-through;color:var(--fg-3)}
+.quick{display:flex;gap:6px}
+.quick input{flex:1;min-width:0;border:1px solid var(--line);background:var(--win);border-radius:7px;padding:6px 9px}
+.sched{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px;background:var(--win-2);border-radius:7px;margin-top:4px}
+.sched input,.sched select{border:1px solid var(--line);background:var(--win);border-radius:6px;padding:3px 6px;font-size:12px;max-width:100%}
+
+/* banners */
+.banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 12px;border-radius:9px;border:1px solid var(--line);background:var(--win-2);font-size:13px;margin-bottom:14px}
+.banner.bad{border-color:var(--bad)}
+
+/* claude bar */
+.spot{position:fixed;left:0;right:0;bottom:0;z-index:6;padding:0 max(16px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));pointer-events:none}
+.spot-in{max-width:680px;margin:0 auto;pointer-events:auto;background:var(--bar);backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.spot form{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.spot .glyph{font-family:var(--mono);color:var(--accent);font-weight:500}
+.spot input{flex:1;min-width:0;border:0;background:transparent;font-size:15px;outline:none}
+.spot .out{padding:0 14px 10px 36px;font-size:13px;color:var(--fg-2);white-space:pre-wrap;max-height:140px;overflow:auto}
+.spot .out:empty{display:none}
+.spot .out.err{color:var(--bad)}
+
+.toast{position:fixed;top:calc(40px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:7;background:var(--win);border:1px solid var(--line);border-radius:9px;padding:8px 12px;box-shadow:var(--shadow);font-size:13px;max-width:min(360px,calc(100vw - 32px))}
+/* iPhone */
+@media (max-width:500px){
+  body{padding-bottom:150px}
+  .menubar{gap:10px;font-size:12px}
+  .menubar .right{gap:8px}
+  .menubar #clock{display:none}
+  .sync{font-size:11px}
+  .window{margin-top:10px;border-radius:10px}
+  .titlebar{padding:8px 10px;gap:8px}
+  .lights,.wtitle{display:none}
+  .tabs{order:1;width:100%;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{padding:7px 12px;font-size:13px}
+  .hidetog{order:2;font-size:12px}
+  .main{padding:16px 14px 22px}
+  .side{padding:16px 14px}
+  h2{font-size:22px}
+  .row{grid-template-columns:62px 3px minmax(0,1fr);row-gap:6px;padding:10px 12px}
+  .row .t{font-size:11px}
+  .row .acts{grid-column:3;justify-content:flex-start}
+  .todo{grid-template-columns:50px minmax(0,1fr);padding:10px 12px;row-gap:8px}
+  .grip{width:22px;font-size:16px;line-height:22px}
+  .nogrip{width:22px}
+  .todo .acts{grid-column:2;justify-content:flex-start}
+  .check{width:22px;height:22px;margin-top:0;font-size:13px}
+  .btn{padding:6px 12px;font-size:13px}
+  .sched{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .sched input,.sched select{width:100%;padding:8px;font-size:16px}
+  .sched .btn{width:100%}
+  .quick input{font-size:16px;padding:9px 10px}
+  .spot form{padding:9px 12px}
+  .spot input{font-size:16px}
+  .spot .out{padding:0 12px 10px 12px}
+  .tl{margin-left:40px}
+  .ev .rs{height:14px}
+  .ev .rs::after{opacity:.35}
+  .hr{left:-40px}
+  .hr span{left:4px}
+  .now-card .big{font-size:16px}
+  .toast{left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));max-width:none;justify-content:space-between}
+}
+/* fixed planner pane (Day, Tomorrow) */
+body.pane-mode{overflow:hidden;padding-bottom:0}
+body.pane-mode .window{display:flex;flex-direction:column}
+body.pane-mode .content{flex:1;min-height:0}
+body.pane-mode .main{display:flex;flex-direction:column;min-height:0;overflow:hidden;padding-bottom:12px}
+body.pane-mode .side{overflow:auto;min-height:0}
+@media (max-width:860px){body.pane-mode .content{grid-template-columns:1fr}body.pane-mode .side{display:none}}
+.pane{display:flex;flex-direction:column;flex:1;min-height:0}
+.pane-head{flex:none;display:flex;align-items:flex-end;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;margin-bottom:10px}
+.pane-head h2{font-size:20px}
+.nowstrip{display:flex;gap:6px 12px;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--fg-2)}
+.nowstrip b{color:var(--fg);font-weight:600}
+.nowstrip .label{margin-right:4px}
+.modes{display:flex;gap:2px;padding:2px;background:var(--line-2);border-radius:8px;flex:none}
+.modes button{border:0;background:transparent;width:36px;height:28px;border-radius:6px;color:var(--fg-2);display:grid;place-items:center;padding:0}
+.modes button svg{width:18px;height:18px;display:block}
+.modes button[aria-pressed="true"]{background:var(--win);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.pane-body{flex:1;min-height:0;display:flex;flex-direction:column}
+.pane-tl{min-height:60px;overflow:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:10px;background:var(--win);-webkit-overflow-scrolling:touch}
+.pane-tl .tl-wrap{border:0;border-radius:0}
+.pane-tl .allday{position:sticky;top:0;z-index:5;margin:0;padding:6px 8px;background:var(--win);border-bottom:1px solid var(--line-2)}
+.pane-list{flex:1;min-height:60px;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:2px 1px 6px}
+.pane-list>.section:first-child{margin-top:0}
+.pane.m-split .pane-tl{flex:0 0 var(--split,55%)}
+.pane.m-timeline .pane-tl{flex:1 1 auto}
+.pane.m-timeline .divider,.pane.m-timeline .pane-list{display:none}
+.pane.m-list .pane-tl,.pane.m-list .divider{display:none}
+.divider{flex:none;height:18px;display:grid;place-items:center;cursor:row-resize;touch-action:none;-webkit-user-select:none;user-select:none}
+.divider i{width:44px;height:4px;border-radius:2px;background:var(--fg-3);opacity:.55;transition:opacity .12s,background .12s}
+.divider:hover i,.divider.active i{opacity:1;background:var(--accent)}
+.drawer-add{display:none}
+@media (max-width:860px){.drawer-add{display:flex;margin-top:16px}}
+.wknav{display:flex;gap:4px;align-items:center}
+.wknav .btn{min-width:32px}
+@media (max-width:500px){.divider{height:24px}.modes button{width:40px;height:32px}}
+/* Look switch (both themes) */
+.dhdr{display:none}
+.lookseg{display:flex;gap:2px;padding:2px;background:var(--line-2);border-radius:8px;width:max-content}
+.lookseg button{border:0;background:transparent;color:var(--fg-2);font-size:12.5px;padding:5px 12px;border-radius:6px}
+.lookseg button[aria-pressed="true"]{background:var(--win);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.gap{position:absolute;left:0;right:0;pointer-events:none;z-index:0}
+.gap span{position:sticky;display:block;left:10px;top:6px;padding:6px 10px;font-size:11px;font-weight:500;white-space:nowrap}
+
+/* ===================== Day look ===================== */
+body.theme-day{
+  --desk:#0F1210; --desk-2:#0F1210; --win:#0F1210; --win-2:#171B16; --bar:rgba(15,18,16,.72);
+  --line:#2C332A; --line-2:rgba(221,226,214,.08);
+  --fg:#DDE2D6; --fg-2:#7E877A; --fg-3:#5F675B;
+  --accent:#A9B2A1; --accent-soft:rgba(221,226,214,.08);
+  --ok:#3FA98F; --warn:#CF9A6C; --bad:#C4553D; --studio:#3FA98F;
+  --shadow:0 12px 30px -18px rgba(0,0,0,.8);
+  --c-personal:#8D9A84; --c-work:#5F675B; --c-fun:#8E86B5; --c-meal:#C27C5C; --c-between:#6F858C; --c-hol:#A89A5B; --c-other:#9A8A70;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --hair:inset 0 0 0 .5px rgba(221,226,214,.10);
+  --glass-bg:rgba(28,34,27,.62);
+  --glass-sh:inset 0 0 0 .5px rgba(221,226,214,.13),inset 0 .5px 0 rgba(255,255,255,.11),0 10px 28px -16px rgba(0,0,0,.75);
+  color-scheme:dark; background:var(--desk); color:var(--fg); font-size:13px; -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums;
+}
+body.theme-day::before{background:rgba(15,18,16,.72)}
+body.theme-day .menubar,body.theme-day .titlebar{display:none}
+body.theme-day .dhdr{display:block;position:sticky;top:env(safe-area-inset-top,0px);z-index:8;
+  margin:0 calc(-1*max(16px,env(safe-area-inset-right,0px))) 0 calc(-1*max(16px,env(safe-area-inset-left,0px)));
+  padding:14px max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px));
+  background:rgba(15,18,16,.72);-webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%);
+  box-shadow:0 .5px 0 rgba(221,226,214,.09)}
+.dh-row,.dh-ctrl{max-width:1120px;margin:0 auto}
+.dh-row{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
+.dhdr .eyebrow{font-size:12px;color:var(--fg-2)}
+.dhdr h1{font:700 32px/1.1 -apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui,sans-serif;letter-spacing:-.022em;margin:0;color:var(--fg)}
+.residual{text-align:right}
+.residual-label{font-size:11px;color:var(--fg-2)}
+.residual-value{font-size:27px;font-weight:600;letter-spacing:-.02em;color:var(--studio);line-height:1.1;font-variant-numeric:tabular-nums}
+.residual-value.none{color:var(--fg-2)}
+.dh-ctrl{display:flex;align-items:center;justify-content:space-between;gap:10px 12px;flex-wrap:wrap;margin-top:12px}
+.dh-tabs{min-width:0;max-width:100%}
+.dh-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+body.theme-day .tabs{margin:0;padding:2px;gap:2px;border-radius:11px;corner-shape:squircle;background:rgba(221,226,214,.07);box-shadow:inset 0 0 0 .5px rgba(221,226,214,.08)}
+body.theme-day .tab{font-size:13px;font-weight:500;padding:6px 14px;min-height:32px;border-radius:9px;corner-shape:squircle;color:var(--fg-2)}
+body.theme-day .tab[aria-selected="true"]{color:var(--fg);background:rgba(221,226,214,.10);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  box-shadow:inset 0 0 0 .5px rgba(221,226,214,.16),inset 0 .5px 0 rgba(255,255,255,.14),0 2px 6px -3px rgba(0,0,0,.7)}
+body.theme-day .tab .now{background:var(--fg-2)}
+body.theme-day .mbtn{border:0;border-radius:999px;corner-shape:squircle;padding:6px 13px;min-height:30px;font-size:12.5px;font-weight:500;color:var(--fg);
+  background:rgba(221,226,214,.08);box-shadow:inset 0 0 0 .5px rgba(221,226,214,.16),inset 0 .5px 0 rgba(255,255,255,.12)}
+body.theme-day .sync{font-size:12px;color:var(--fg-2)}
+body.theme-day .hidetog{color:var(--fg-2);font-size:12.5px}
+body.theme-day .hidetog input{accent-color:var(--fg-2)}
+body.theme-day .window{background:transparent;border:0;box-shadow:none;border-radius:0;margin-top:14px;overflow:visible}
+body.theme-day .main{padding:4px 0 22px}
+body.theme-day .side{background:transparent;border-left:.5px solid var(--line);padding:4px 0 20px 20px}
+@media (max-width:860px){body.theme-day .side{border-left:0;border-top:.5px solid var(--line);padding:18px 0}}
+body.theme-day .head h2,body.theme-day .head .sub,body.theme-day .pane-head h2,body.theme-day .pane-head .sub{display:none}
+body.theme-day .head{margin-bottom:12px}
+body.theme-day .label{text-transform:none;letter-spacing:0;font-size:12px;font-weight:500;color:var(--fg-2)}
+body.theme-day .zonehint{font-size:11.5px}
+body.theme-day .rows{background:var(--win-2);border:0;box-shadow:var(--hair);border-radius:14px;corner-shape:squircle}
+body.theme-day .row,body.theme-day .todo{border-top:.5px solid rgba(221,226,214,.07)}
+body.theme-day .row:first-child,body.theme-day .todo:first-child{border-top:0}
+body.theme-day .row .sw{border-radius:2px}
+body.theme-day .empty{border:0;box-shadow:inset 0 0 0 .5px var(--line);border-radius:14px;corner-shape:squircle;color:var(--fg-2)}
+body.theme-day .btn{border:0;border-radius:999px;corner-shape:squircle;padding:6px 13px;font-size:12.5px;font-weight:500;color:var(--fg);
+  background:rgba(221,226,214,.08);box-shadow:inset 0 0 0 .5px rgba(221,226,214,.14)}
+body.theme-day .btn:hover{background:rgba(221,226,214,.14)}
+body.theme-day .btn:active{transform:scale(.97)}
+body.theme-day .btn.ghost{background:transparent;box-shadow:none;color:var(--fg-2)}
+body.theme-day .btn.ghost:hover{color:var(--fg);background:rgba(221,226,214,.07)}
+body.theme-day .btn.primary{background:rgba(63,169,143,.18);color:var(--studio);box-shadow:inset 0 0 0 .5px rgba(63,169,143,.45)}
+body.theme-day .chip{border:0;border-radius:999px;corner-shape:squircle;background:rgba(221,226,214,.07);box-shadow:inset 0 0 0 .5px rgba(221,226,214,.10);color:var(--fg-2);padding:2px 9px}
+body.theme-day .pri{color:var(--fg-3)} body.theme-day .pri.p1{color:var(--bad)}
+body.theme-day .check{border-radius:6px;corner-shape:squircle;border:1px solid var(--fg-3)}
+body.theme-day .check.on{background:var(--fg);border-color:var(--fg);color:var(--desk)}
+body.theme-day .todo.is-done .tt>div:first-child{color:var(--fg-3)}
+body.theme-day .grip{color:var(--fg-3)}
+body.theme-day .tl-wrap{border:0;box-shadow:var(--hair);border-radius:14px;corner-shape:squircle;background:var(--win)}
+body.theme-day .pane-tl{border:0;box-shadow:var(--hair);border-radius:14px;corner-shape:squircle;background:var(--win)}
+body.theme-day .pane-tl .tl-wrap{box-shadow:none;border-radius:0}
+body.theme-day .pane-tl .allday{background:var(--win);border-bottom:.5px solid var(--line)}
+body.theme-day .allday .ev-pill{background:var(--win-2);border-left:0;box-shadow:inset 0 0 0 1px var(--evc,var(--line));border-radius:7px;corner-shape:squircle}
+body.theme-day .tl{border-left:.5px solid var(--line)}
+body.theme-day .hr{border-top:.5px solid rgba(221,226,214,.06);color:var(--fg-2)}
+body.theme-day .hr span{background:var(--win);font-size:11px}
+body.theme-day .ev{border-left-width:0;border-radius:10px;corner-shape:squircle;box-shadow:inset 0 0 0 1px var(--evc);color:var(--fg);
+  background:color-mix(in srgb,var(--evc) 20%,var(--win-2)) !important;z-index:1}
+body.theme-day .ev span{opacity:.72}
+body.theme-day .ev.lifting{box-shadow:inset 0 0 0 1px var(--evc),0 14px 30px -12px rgba(0,0,0,.85)}
+body.theme-day .nowline{border-top-color:var(--bad)} body.theme-day .nowline::before{background:var(--bad)}
+body.theme-day .gap{border-radius:10px;corner-shape:squircle;box-shadow:inset 0 0 0 1px rgba(63,169,143,.45);background:rgba(63,169,143,.08)}
+body.theme-day .gap span{color:var(--studio)}
+body.theme-day .tl-preview{border:1px dashed var(--fg-2);background:rgba(221,226,214,.06);border-radius:10px}
+body.theme-day .wday{border:0;box-shadow:var(--hair);background:var(--win-2);border-radius:14px;corner-shape:squircle}
+body.theme-day .wday.today{box-shadow:inset 0 0 0 1px rgba(221,226,214,.32)}
+body.theme-day .wev{border-left-width:2px}
+body.theme-day .modes,body.theme-day .lookseg{border-radius:11px;corner-shape:squircle;background:rgba(221,226,214,.07);box-shadow:inset 0 0 0 .5px rgba(221,226,214,.08)}
+body.theme-day .modes button,body.theme-day .lookseg button{border-radius:9px;corner-shape:squircle}
+body.theme-day .modes button[aria-pressed="true"],body.theme-day .lookseg button[aria-pressed="true"]{background:rgba(221,226,214,.10);
+  box-shadow:inset 0 0 0 .5px rgba(221,226,214,.16),inset 0 .5px 0 rgba(255,255,255,.14),0 2px 6px -3px rgba(0,0,0,.7)}
+body.theme-day .divider i{background:var(--fg-3)}
+body.theme-day .divider:hover i,body.theme-day .divider.active i{background:var(--fg)}
+body.theme-day .nowstrip{color:var(--fg-2)}
+body.theme-day .banner{border:0;border-radius:14px;corner-shape:squircle;background:var(--glass-bg);-webkit-backdrop-filter:blur(28px) saturate(180%);backdrop-filter:blur(28px) saturate(180%);box-shadow:var(--glass-sh)}
+body.theme-day .banner.bad{box-shadow:inset 0 0 0 .5px rgba(196,85,61,.55),inset 0 .5px 0 rgba(255,255,255,.10),0 10px 28px -16px rgba(0,0,0,.75)}
+body.theme-day .spot-in{border:0;border-radius:22px;corner-shape:squircle;background:var(--glass-bg);-webkit-backdrop-filter:blur(28px) saturate(180%);backdrop-filter:blur(28px) saturate(180%);box-shadow:var(--glass-sh)}
+body.theme-day .spot .glyph{color:var(--fg-2)}
+body.theme-day .toast{border:0;border-radius:14px;corner-shape:squircle;background:var(--glass-bg);-webkit-backdrop-filter:blur(28px) saturate(180%);backdrop-filter:blur(28px) saturate(180%);box-shadow:var(--glass-sh)}
+body.theme-day .quick input,body.theme-day .sched input,body.theme-day .sched select{border:0;background:var(--win-2);box-shadow:var(--hair);border-radius:10px;corner-shape:squircle;color:var(--fg)}
+body.theme-day .sched{background:rgba(221,226,214,.04);border-radius:12px}
+body.theme-day .drag-ghost{background:var(--win-2);border:0;box-shadow:inset 0 0 0 .5px rgba(221,226,214,.3),0 18px 36px -14px rgba(0,0,0,.9);border-radius:14px}
+body.theme-day .todo.drop-before{box-shadow:inset 0 2px 0 var(--fg)} body.theme-day .todo.drop-after{box-shadow:inset 0 -2px 0 var(--fg)}
+body.theme-day [data-zone].drop-into{outline-color:var(--fg-2)}
+body.theme-day :focus-visible{outline:2.5px solid var(--studio);outline-offset:2px}
+@media (max-width:560px){
+  .dhdr h1{font-size:26px} .residual-value{font-size:21px}
+  .dh-tabs{width:100%;order:1} .dh-tabs .tabs{width:100%;overflow-x:auto;scrollbar-width:none} .dh-tabs .tabs::-webkit-scrollbar{display:none}
+  .dh-right{order:2;width:100%;justify-content:flex-start;gap:8px 10px}
+  .dh-right .mbtn{padding:5px 11px;min-height:28px}
+  .dh-right #undobtn{margin-left:auto}
+  .dh-right .sync span:last-child{display:none}
+  body.theme-day .window{margin-top:10px}
+}
+@media (prefers-reduced-transparency:reduce){
+  body.theme-day .dhdr,body.theme-day .spot-in,body.theme-day .toast,body.theme-day .banner{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--win-2)}
+}
+.setup{position:fixed;inset:0;z-index:30;background:var(--desk);display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.setup-in{max-width:520px;width:100%;display:flex;flex-direction:column;gap:12px}
+.setup h1{margin:0;font:700 30px/1.1 -apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui,sans-serif;letter-spacing:-.02em}
+.setup p,.setup ol{margin:0;color:var(--fg-2);font-size:13.5px;line-height:1.5}
+.setup ol{padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.setup code{font-family:var(--mono);color:var(--fg);font-size:12.5px;overflow-wrap:anywhere}
+@media (prefers-reduced-motion:no-preference){.tab,.btn{transition:background .12s}}
+</style>
+
+<div class="menubar">
+  <span class="brand">BrooksOS</span>
+  <span class="app">Planner</span>
+  <span class="item">File</span><span class="item">View</span><span class="item">Window</span>
+  <div class="right">
+    <span class="sync" id="sync"><span class="dot" id="syncdot"></span><span id="synctxt">Connecting</span></span>
+    <button class="mbtn" id="undobtn" type="button" data-act="undo" disabled title="Undo (⌘Z)">Undo</button>
+    <button class="mbtn" id="syncnow" type="button">Sync now</button>
+    <span class="mono" id="clock"></span>
+  </div>
+</div>
+
+<header class="dhdr" id="dhdr">
+  <div class="dh-row">
+    <div class="dh-l"><div class="eyebrow" id="dEyebrow"></div><h1 id="dTitle">Planner</h1></div>
+    <div class="residual"><div class="residual-label" id="dResLabel">Studio available</div><div class="residual-value" id="dResidual">&mdash;</div></div>
+  </div>
+  <div class="dh-ctrl"><div class="dh-tabs" id="dTabsSlot"></div><div class="dh-right" id="dRightSlot"></div></div>
+</header>
+
+<div class="window">
+  <div class="titlebar">
+    <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+    <span class="wtitle" id="wtitle">Planner</span>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <label class="hidetog"><input type="checkbox" id="hidedone"> Hide completed</label>
+  </div>
+  <div class="content">
+    <div class="main" id="main"></div>
+    <aside class="side">
+      <div class="section">
+        <div class="label">Add to-do</div>
+        <form class="quick" id="quickform">
+          <input id="quickin" placeholder="Pick up trims from the garment district" autocomplete="off">
+          <button class="btn" type="submit">Add</button>
+        </form>
+      </div>
+      <div class="section">
+        <div class="head" style="margin:0"><div class="label">Backlog</div><span class="label" id="blcount"></span></div>
+        <div id="sidebacklog"></div>
+      </div>
+      <div class="section">
+        <div class="label">Calendars</div>
+        <div id="callegend" style="display:flex;flex-direction:column;gap:6px;font-size:12.5px"></div>
+      </div>
+      <div class="section">
+        <div class="label">Connections</div>
+        <div id="conn" style="display:flex;flex-direction:column;gap:10px;font-size:12.5px"></div>
+      </div>
+      <div class="section">
+        <div class="label">Look</div>
+        <div class="lookseg" role="group" aria-label="Look"><button type="button" data-theme-set="day">Day</button><button type="button" data-theme-set="brooksos">BrooksOS</button></div>
+      </div>
+      <div class="section" id="samplebox" hidden>
+        <div class="label">Sample data</div>
+        <div class="sub" id="samplecount"></div>
+        <button class="btn" data-act="clearsamples" id="clearbtn">Remove samples</button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="spot">
+  <div class="spot-in">
+    <form id="spotform">
+      <span class="glyph">⌘</span>
+      <input id="spotin" placeholder="Ask Claude: schedule the trims run tomorrow at 11, push gym to 7" autocomplete="off">
+      <button class="btn ghost" type="button" id="spotstop" hidden>Stop</button>
+    </form>
+    <div class="out" id="spotout"></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<div class="setup" id="setup" hidden>
+  <div class="setup-in">
+    <h1>Set up</h1>
+    <p>Paste your Google OAuth Client ID. It connects this app straight to your Google Calendar and keeps your to-dos in a private file in your Google Drive. It's stored on this device only.</p>
+    <ol>
+      <li>console.cloud.google.com → new project</li>
+      <li>Enable <b>Google Calendar API</b> and <b>Google Drive API</b></li>
+      <li>OAuth consent screen → External → add yourself as a test user</li>
+      <li>Credentials → OAuth client ID → Web application → Authorized JavaScript origin: <code id="origin"></code></li>
+    </ol>
+    <form class="quick" onsubmit="return false"><input id="cidin" placeholder="…apps.googleusercontent.com" autocomplete="off" spellcheck="false"><button class="btn primary" type="button" data-act="setupsave">Save</button></form>
+  </div>
+</div>
+
+<script>
+(() => {
+const GC = "Google Calendar";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = (n) => String(n).padStart(2, "0");
+const dayKey = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const localISO = (d) => `${dayKey(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const fmtTime = (d) => d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}).replace(" ", "").toLowerCase();
+const fmtDay = (d) => d.toLocaleDateString([], {weekday:"long", month:"short", day:"numeric"});
+const sameDay = (a, b) => dayKey(a) === dayKey(b);
+
+/* ---------- state ---------- */
+const S = {
+  mcp:null, db:null, sample:null,
+  calStatus:"idle", calError:null, calendars:[], calMap:new Map(),
+  events:new Map(), // calId -> {list, fresh, storedAt, error}
+  todos:[], todosReady:false, dbError:null,
+  tab:null, tabManual:0, syncing:false, optim:new Map(), weekOff:0,
+  paneMode:"split", split:0.55, confirmClear:0, hideDone:(() => { try { return localStorage.getItem('hideDone') === '1'; } catch { return false; } })(), schedOpen:null, sched:{}, busy:new Set(),
+  lastSync:null,
+};
+const watches = new Map(); // key -> unsubscribe
+let rangeKey = "";
+
+/* ---------- calendars ---------- */
+function calKind(c){
+  const id = c.id || "";
+  if (id.includes("#holiday")) return "hol";
+  if (c.primary) return "personal";
+  if (c.accessRole === "freeBusyReader") return "work";
+  const n = (c.summary||"").toLowerCase();
+  if (n === "fun") return "fun";
+  if (n === "meal") return "meal";
+  if (n === "between") return "between";
+  return "other";
+}
+const KIND_NAME = {personal:"Personal", work:"Work", hol:"Holidays"};
+/* ---------- settings (stored with the page, editable by the Claude bar) ---------- */
+const CFG_DEFAULTS = {tlStart:6, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day"};
+let cfgRaw = {};
+const cfg = () => ({...CFG_DEFAULTS, ...cfgRaw, tabHours:{...CFG_DEFAULTS.tabHours, ...(cfgRaw.tabHours || {})}, calColors:{...(cfgRaw.calColors || {})}});
+function applyCfg(){
+  const c = cfg();
+  TL.H0 = c.tlStart; TL.H1 = c.tlEnd; TL.PX = c.hourHeight;
+  const th = c.tabHours;
+  const set = (id, from, to) => { const t = TABS.find(x => x.id === id); t.from = from; t.to = to; };
+  set("morning", th.morning, th.day); set("day", th.day, th.evening); set("evening", th.evening, th.tomorrow); set("tomorrow", th.tomorrow, th.morning + 24);
+  S.paneMode = c.layout; S.split = c.split; applyTheme(c.theme);
+  for (const cal of S.calendars) cal.color = c.calColors[cal.name] || `var(--c-${cal.kind})`;
+}
+const cfgRef = () => S.db.collection("settings").doc("main");
+async function saveCfg(patch){
+  if (!S.db) throw new Error("Settings storage isn't ready.");
+  const next = {...cfgRaw, ...patch};
+  if (patch.tabHours) next.tabHours = {...(cfgRaw.tabHours || {}), ...patch.tabHours};
+  if (patch.calColors) next.calColors = {...(cfgRaw.calColors || {}), ...patch.calColors};
+  cfgRaw = next; applyCfg(); schedule();
+  await cfgRef().set(next);
+}
+
+function decorate(c){
+  const kind = calKind(c);
+  const nm = kind === "personal" ? "Personal" : kind === "hol" ? "Holidays" : (kind === "work" && /@/.test(c.summary || "")) ? "Work" : (c.summary || c.id);
+  return {id:c.id, name:nm, kind, description:c.description||"",
+    color:`var(--c-${kind})`, writable: c.accessRole ? (c.accessRole === "owner" || c.accessRole === "writer") : (kind !== "hol" && kind !== "work")};
+}
+const writableCals = () => S.calendars.filter(c => c.writable);
+const calByName = (name) => {
+  const n = String(name||"").trim().toLowerCase();
+  return S.calendars.find(c => c.name.toLowerCase() === n || c.id.toLowerCase() === n);
+};
+const defaultCal = () => { const n = calByName(cfg().defaultCal); return (n && n.writable) ? n : (S.calendars.find(c => c.kind === "personal") || writableCals()[0]); };
+function guessCal(text){
+  const t = text.toLowerCase();
+  const has = (...w) => w.some(x => t.includes(x));
+  let kind = "personal";
+  if (has("lunch","dinner","breakfast","brunch","eat","cook","meal","grocer","restaurant","resy","coffee")) kind = "meal";
+  else if (has("party","drinks","show","concert","movie","club","bar ","friends","date","museum","gallery")) kind = "fun";
+  const c = S.calendars.find(x => x.kind === kind && x.writable) || defaultCal();
+  return c ? c.name : "Personal";
+}
+
+/* ---------- events ---------- */
+function parseEvent(e, cal){
+  const allDay = !!(e.start && e.start.date && !e.start.dateTime);
+  const start = allDay ? new Date(e.start.date + "T00:00:00") : new Date(e.start?.dateTime);
+  const end = allDay ? new Date((e.end?.date || e.start.date) + "T00:00:00") : new Date(e.end?.dateTime || e.start?.dateTime);
+  return {id:e.id, calId:cal.id, cal, title:e.summary || (cal.kind==="work" ? "Busy" : "(no title)"),
+    start, end, allDay, attendees:(e.attendees||[]).length, link:e.htmlLink, status:e.status};
+}
+function allEvents(){
+  const out = [];
+  for (const [calId, rec] of S.events){
+    const cal = S.calMap.get(calId); if (!cal || !rec.list) continue;
+    for (const e of rec.list) if (e.status !== "cancelled"){
+      const p = parseEvent(e, cal); const o = S.optim.get(p.id);
+      if (o){ if (Date.now() - o.at > 30000 || (+p.start === +o.start && +p.end === +o.end)) S.optim.delete(p.id); else { p.start = o.start; p.end = o.end; } }
+      out.push(p);
+    }
+  }
+  return out.sort((a,b) => a.start - b.start);
+}
+function eventsOn(day, evs){
+  const s = startOfDay(day), e = addDays(s, 1);
+  return evs.filter(x => x.start < e && x.end > s && !(x.allDay && x.end <= s));
+}
+const todoForEvent = (ev) => S.todos.find(t => t.eventId && t.eventId === ev.id);
+
+function windowRange(){
+  const s = addDays(startOfDay(new Date()), -1);
+  return {startTime: localISO(s), endTime: localISO(addDays(s, 23))};
+}
+function syncWatches(){
+  if (!S.mcp) return;
+  const r = windowRange();
+  const rk = r.startTime;
+  const want = new Set(S.calendars.map(c => c.id + "|" + rk));
+  for (const [k, un] of watches) if (!want.has(k)) { un(); watches.delete(k); }
+  rangeKey = rk;
+  for (const cal of S.calendars){
+    const k = cal.id + "|" + rk;
+    if (watches.has(k)) continue;
+    const input = {calendarId:cal.id, startTime:r.startTime, endTime:r.endTime, pageSize:250, orderBy:"startTime"};
+    const un = S.mcp.watchTool(GC, "list_events", input, (ev) => {
+      const rec = S.events.get(cal.id) || {};
+      if (ev.type === "data"){
+        const p = ev.result.payload || {};
+        rec.list = Array.isArray(p.events) ? p.events : [];
+        rec.fresh = !ev.result.cache || !ev.result.cache.revalidating;
+        rec.at = ev.result.cache ? ev.result.cache.storedAt : Date.now();
+        rec.error = null;
+        S.lastSync = ev.result.cache ? ev.result.cache.storedAt : Date.now();
+        S.calStatus = "ok";
+      } else {
+        const code = ev.error.code;
+        rec.error = code;
+        if (["needs_reauth","server_not_connected","blocked_by_policy","approval_required","not_in_manifest"].includes(code)) { rec.list = null; }
+      }
+      S.events.set(cal.id, rec);
+      reconcile();
+      schedule();
+    }, {refetchInterval:60000});
+    watches.set(k, un);
+  }
+}
+
+async function startCalendar(){
+  S.calStatus = "loading"; schedule();
+  try {
+    const res = await S.mcp.callTool(GC, "list_calendars", {pageSize:100});
+    applyCalendars(res.payload);
+    S.calStatus = "ok"; S.calError = null;
+    S.mcp.watchTool(GC, "list_calendars", {pageSize:100}, (ev) => {
+      if (ev.type === "data") { applyCalendars(ev.result.payload); schedule(); }
+    }, {refetchInterval:600000});
+  } catch (e) {
+    S.calStatus = "error"; S.calError = e && e.code || "upstream_error";
+    if (e && e.retryable) setTimeout(() => S.calStatus === "error" && startCalendar(), (e.retryAfterMs || 3000) + Math.random()*2000);
+  }
+  schedule();
+}
+function applyCalendars(p){
+  const list = (p && Array.isArray(p.calendars)) ? p.calendars : [];
+  S.calendars = list.map(decorate).sort((a,b) => order(a) - order(b));
+  const cc = cfg().calColors; for (const c of S.calendars) if (cc[c.name]) c.color = cc[c.name];
+  S.calMap = new Map(S.calendars.map(c => [c.id, c]));
+  syncWatches();
+}
+const order = (c) => ({personal:0, fun:1, meal:2, between:3, other:4, work:5, hol:6}[c.kind] ?? 9);
+
+async function afterWrite(){
+  try { await S.mcp.invalidate(GC, "list_events"); } catch {}
+}
+
+/* ---------- todos (db) ---------- */
+function startDb(){
+  cfgRef().onSnapshot((snap) => { cfgRaw = snap.exists ? {...snap.data()} : {}; applyCfg(); const was = autoTab; autoTab = timeTab(); if (autoTab !== was && S.tab === was && Date.now() - S.tabManual > 20*60000) S.tab = autoTab; schedule(); }, () => {});
+  S.db.collection("todos").onSnapshot((snap) => {
+    S.todos = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    S.todosReady = true; reconcile(); schedule();
+  }, (e) => { S.dbError = e && e.code || "error"; schedule(); });
+}
+const todoRef = (id) => S.db.collection("todos").doc(id);
+async function addTodo({title, notes="", pri=2, cal, est=30}){
+  if (!S.db) throw new Error("To-do storage is unavailable in this view.");
+  const ref = await S.db.collection("todos").add({title:String(title).slice(0,200), notes:String(notes||"").slice(0,1000),
+    pri:Number(pri)||2, cal:cal || guessCal(title), est:Number(est)||30, status:"open", createdAt:Date.now(), order:Date.now()});
+  pushUndo(`Added "${String(title).slice(0,40)}"`, () => ref.delete());
+  return ref.id;
+}
+
+/* keep backlog and calendar in agreement */
+const reconciling = new Set();
+function reconcile(){
+  if (!S.todosReady || !S.db) return;
+  const evs = allEvents();
+  const r = windowRange(); const ws = new Date(r.startTime), we = new Date(r.endTime);
+  for (const t of S.todos){
+    if (t.status !== "scheduled" || !t.eventId || reconciling.has(t.id)) continue;
+    const rec = S.events.get(t.calId);
+    if (!rec || !rec.list || !rec.fresh || rec.error) continue;
+    const ev = evs.find(e => e.id === t.eventId);
+    if (ev){
+      const iso = ev.start.toISOString();
+      if (t.start !== iso || t.title !== ev.title.replace(/^✓\s*/, "")){
+        reconciling.add(t.id);
+        todoRef(t.id).update({start:iso, title:ev.title.replace(/^✓\s*/, "")}).finally(() => reconciling.delete(t.id));
+      }
+    } else if (t.start){
+      const st = new Date(t.start);
+      /* only treat the event as deleted if this list was fetched well after the to-do was scheduled */
+      if (!rec.at || rec.at < (t.scheduledAt || 0) + 15000) continue;
+      if (st >= ws && st < we){
+        reconciling.add(t.id);
+        todoRef(t.id).update({status:"open", eventId:null, calId:null, start:null}).finally(() => reconciling.delete(t.id));
+      }
+    }
+  }
+}
+
+/* ---------- undo ---------- */
+const undoStack = []; let replaying = false;
+function pushUndo(label, fn){
+  if (replaying) return;
+  undoStack.push({label, fn}); if (undoStack.length > 40) undoStack.shift();
+  toast(label, true); updateUndo();
+}
+function updateUndo(){ const b = $("undobtn"); b.disabled = !undoStack.length || S.busy.has("undo"); b.title = undoStack.length ? `Undo: ${undoStack[undoStack.length-1].label} (⌘Z)` : "Nothing to undo"; }
+async function undo(){
+  const u = undoStack.pop(); if (!u || S.busy.has("undo")) { updateUndo(); return; }
+  S.busy.add("undo"); updateUndo(); replaying = true;
+  try { await u.fn(); toast("Undone: " + u.label); }
+  catch (e) { toast("Couldn't undo: " + (e instanceof Error ? e.message : friendly(e))); }
+  finally { replaying = false; S.busy.delete("undo"); updateUndo(); schedule(); }
+}
+document.addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "z"){
+    const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
+    e.preventDefault(); undo();
+  }
+});
+const findTodoLive = (id) => S.todos.find(x => x.id === id);
+async function deleteTodo(t){
+  const {id, ...data} = t;
+  if (t.status === "scheduled" && t.eventId) await unscheduleTodoRaw(t);
+  await todoRef(id).delete();
+  pushUndo(`Deleted "${t.title}"`, async () => {
+    await todoRef(id).set({...data, status:"open", eventId:null, calId:null, start:null});
+  });
+}
+
+/* ---------- calendar writes ---------- */
+async function scheduleTodo(t, {start, minutes, calName}){
+  const cal = calByName(calName) || calByName(t.cal) || defaultCal();
+  if (!cal || !cal.writable) throw new Error(`Can't write to ${calName || "that calendar"}.`);
+  const st = new Date(start); if (isNaN(st)) throw new Error("Couldn't read that start time.");
+  const en = new Date(st.getTime() + (Number(minutes)||t.est||30)*60000);
+  const res = await S.mcp.callTool(GC, "create_event", {calendarId:cal.id, summary:t.title, startTime:localISO(st), endTime:localISO(en),
+    description:`${t.notes ? t.notes + "\n\n" : ""}planner:todo/${t.id}`, notificationLevel:"NONE"});
+  const p = res.payload || {};
+  let eventId = p.id || p.event?.id || p.eventId;
+  if (!eventId){
+    try {
+      const f = await S.mcp.callTool(GC, "list_events", {calendarId:cal.id, fullText:`planner:todo/${t.id}`, startTime:localISO(addDays(st,-1)), endTime:localISO(addDays(st,1)), pageSize:5}, {cache:false});
+      eventId = (f.payload?.events || [])[0]?.id;
+    } catch {}
+  }
+  await todoRef(t.id).update({status:"scheduled", eventId:eventId || null, calId:cal.id, cal:cal.name, start:st.toISOString(), est:Number(minutes)||t.est||30, scheduledAt:Date.now()});
+  await afterWrite();
+  pushUndo(`Scheduled "${t.title}"`, async () => { const f = findTodoLive(t.id); if (f) await unscheduleTodoRaw(f); });
+  return {calendar:cal.name, start:localISO(st)};
+}
+async function unscheduleTodo(t){
+  const prev = {start:t.start, est:t.est, cal:(S.calMap.get(t.calId)||{}).name || t.cal};
+  await unscheduleTodoRaw(t);
+  if (prev.start) pushUndo(`Unscheduled "${t.title}"`, async () => {
+    const f = findTodoLive(t.id) || t;
+    await scheduleTodo(f, {start:localISO(new Date(prev.start)), minutes:prev.est, calName:prev.cal});
+  });
+}
+async function unscheduleTodoRaw(t){
+  if (t.eventId && t.calId){
+    try { await S.mcp.callTool(GC, "delete_event", {calendarId:t.calId, eventId:t.eventId, notificationLevel:"NONE"}); }
+    catch (e) { if (e.code !== "tool_error") throw e; }
+  }
+  await todoRef(t.id).update({status:"open", eventId:null, calId:null, start:null});
+  await afterWrite();
+}
+async function completeTodo(t, done=true){
+  await todoRef(t.id).update({status: done ? "done" : (t.eventId ? "scheduled" : "open"), doneAt: done ? Date.now() : null});
+  pushUndo(done ? `Checked off "${t.title}"` : `Unchecked "${t.title}"`, async () => { const f = findTodoLive(t.id); if (f) await completeTodo(f, !done); });
+  if (t.eventId && t.calId){
+    const ev = allEvents().find(e => e.id === t.eventId);
+    const base = (ev ? ev.title : t.title).replace(/^✓\s*/, "");
+    try { await S.mcp.callTool(GC, "update_event", {calendarId:t.calId, eventId:t.eventId, summary: done ? "✓ " + base : base, notificationLevel:"NONE"}); await afterWrite(); }
+    catch (e) { toast("Checked off here. Google Calendar didn't update: " + friendly(e)); }
+  }
+}
+async function moveEvent(ev, startDate){
+  if (!ev.cal.writable) throw new Error(`${ev.cal.name} is read-only here.`);
+  if (ev.attendees > 1) throw new Error("This event has guests. Move it in Google Calendar so they're notified properly.");
+  const dur = ev.end - ev.start;
+  await S.mcp.callTool(GC, "update_event", {calendarId:ev.calId, eventId:ev.id, startTime:localISO(startDate), endTime:localISO(new Date(startDate.getTime()+dur)), notificationLevel:"NONE"});
+  const t = todoForEvent(ev); if (t) await todoRef(t.id).update({start:startDate.toISOString()});
+  await afterWrite();
+  const oldStart = new Date(ev.start), moved = {...ev, start:startDate, end:new Date(startDate.getTime()+dur)};
+  pushUndo(`Moved "${ev.title}"`, async () => { S.optim.set(ev.id, {start:oldStart, end:new Date(oldStart.getTime()+dur), at:Date.now()}); await moveEvent(moved, oldStart); });
+}
+
+function friendly(e){
+  const c = e && e.code;
+  if (c === "needs_reauth") return "Google sign-in expired. Tap Continue at the top.";
+  if (c === "server_not_connected") return "Sign in with Google first.";
+  if (c === "approval_required" || c === "not_in_manifest") return "Calendar access wasn't allowed for this page.";
+  if (c === "tool_error") return "Google Calendar refused the change.";
+  if (c === "server_unavailable") return "Google Calendar didn't answer. Check before retrying.";
+  return (e && e.message) || "Something failed.";
+}
+async function act(key, fn){
+  if (S.busy.has(key)) return; S.busy.add(key); schedule();
+  try { await fn(); } catch (e) { toast(e instanceof Error ? e.message : friendly(e)); }
+  finally { S.busy.delete(key); schedule(); }
+}
+let toastT;
+function toast(msg, withUndo){
+  const el = $("toast"); el.innerHTML = `<span>${esc(msg)}</span>${withUndo ? '<button class="btn" data-act="undo">Undo</button>' : ""}`;
+  el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, withUndo ? 7000 : 5000);
+}
+
+async function syncNow(){
+  if (!S.mcp){ signIn(); return; }
+  if (S.syncing) return;
+  S.syncing = true; tick();
+  try {
+    if (S.calStatus === "error") await startCalendar();
+    else { await S.mcp.invalidate(GC); }
+    await storeSync().catch(() => {});
+  } catch {}
+  setTimeout(() => { S.syncing = false; schedule(); }, 1200);
+}
+$("syncnow").addEventListener("click", syncNow);
+async function clearSamples(){
+  let n = 0; const base = startOfDay(new Date());
+  for (const c of writableCals()){
+    const r = await S.mcp.callTool(GC, "list_events", {calendarId:c.id, fullText:"planner:sample", startTime:localISO(addDays(base,-14)), endTime:localISO(addDays(base,45)), pageSize:250}, {cache:false});
+    for (const e of (r.payload?.events || [])){
+      await S.mcp.callTool(GC, "delete_event", {calendarId:c.id, eventId:e.id, notificationLevel:"NONE"}); n++;
+    }
+  }
+  for (const t of S.todos.filter(t => t.sample)){ await todoRef(t.id).delete(); n++; }
+  await afterWrite();
+  toast(`Removed ${n} sample item${n===1?"":"s"}.`);
+}
+
+/* ---------- tabs ---------- */
+const TABS = [
+  {id:"morning", label:"Morning", from:5, to:11},
+  {id:"day", label:"Day", from:11, to:17},
+  {id:"evening", label:"Evening", from:17, to:22},
+  {id:"tomorrow", label:"Tomorrow", from:22, to:29},
+  {id:"week", label:"Week"},
+  {id:"backlog", label:"Backlog"},
+];
+function timeTab(d = new Date()){
+  let h = d.getHours() + d.getMinutes()/60; if (h < TABS[0].from) h += 24;
+  return (TABS.find(t => t.from !== undefined && h >= t.from && h < t.to) || TABS[1]).id;
+}
+let autoTab = timeTab();
+S.tab = (() => { try { const h = location.hash.slice(1); if (TABS.some(t => t.id === h)) return h; } catch {} return autoTab; })();
+function renderTabs(){
+  $("tabs").innerHTML = TABS.map(t => `<button class="tab" role="tab" data-tab="${t.id}" aria-selected="${S.tab===t.id}">${t.label}${t.id===autoTab?'<span class="now" title="Now"></span>':""}</button>`).join("");
+}
+$("tabs").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-tab]"); if (!b) return;
+  S.tab = b.dataset.tab; S.tabManual = Date.now(); S.schedOpen = null; schedule();
+});
+setInterval(() => {
+  const t = timeTab();
+  if (t !== autoTab){ autoTab = t; if (Date.now() - S.tabManual > 20*60000) S.tab = t; }
+  if (windowRange().startTime !== rangeKey) syncWatches();
+  tick(); schedule();
+}, 30000);
+function tick(){
+  const d = new Date();
+  $("clock").textContent = d.toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"}) + "  " + fmtTime(d);
+  const dot = $("syncdot"), tx = $("synctxt");
+  const errs = [...S.events.values()].filter(r => r.error).length;
+  $("syncnow").disabled = !S.mcp || S.syncing;
+  $("syncnow").textContent = S.syncing ? "Syncing…" : "Sync now";
+  if (S.syncing){ dot.className = "dot"; tx.textContent = "Syncing"; }
+  else if (!S.mcp){ dot.className = "dot"; tx.textContent = "Calendar off"; }
+  else if (S.calStatus === "error"){ dot.className = "dot bad"; tx.textContent = "Calendar error"; }
+  else if (errs){ dot.className = "dot warn"; tx.textContent = `${errs} calendar${errs>1?"s":""} not syncing`; }
+  else if (S.lastSync){ dot.className = "dot ok"; tx.textContent = "Synced " + fmtTime(new Date(S.lastSync)); }
+  else { dot.className = "dot"; tx.textContent = "Connecting"; }
+}
+
+/* ---------- render ---------- */
+let pending = false;
+function schedule(){ if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; render(); }); }
+function render(){
+  if ((drag && drag.ghost) || (evDrag && evDrag.active) || divDrag) { pending = false; setTimeout(schedule, 300); return; }
+  tick(); renderTabs(); updateUndo(); renderDayHeader();
+  const a = document.activeElement;
+  if (a && $("main").contains(a) && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) { renderSide(); return; }
+  const evs = allEvents();
+  const today = startOfDay(new Date());
+  const paneTab = S.tab === "day" || S.tab === "tomorrow";
+  const paneKey = paneTab ? S.tab + "|" + dayKey(S.tab === "day" ? today : addDays(today,1)) : "";
+  const oTl = $("main").querySelector(".pane-tl"), oList = $("main").querySelector(".pane-list");
+  const keep = paneTab && $("main").dataset.paneKey === paneKey && oTl ? {tl:oTl.scrollTop, list:oList ? oList.scrollTop : 0} : null;
+  document.body.classList.toggle("pane-mode", paneTab);
+  let html = banners();
+  if (S.tab === "morning") html += viewMorning(evs, today);
+  else if (S.tab === "day") html += viewDay(evs, today);
+  else if (S.tab === "evening") html += viewEvening(evs, today);
+  else if (S.tab === "tomorrow") html += viewTomorrow(evs, addDays(today,1));
+  else if (S.tab === "week") html += viewWeek(evs, today);
+  else html += viewBacklog();
+  $("main").innerHTML = html;
+  $("main").dataset.paneKey = paneKey;
+  if (paneTab){
+    const tl = $("main").querySelector(".pane-tl"), ls = $("main").querySelector(".pane-list");
+    fitPane();
+    if (keep){ tl.scrollTop = keep.tl; if (ls) ls.scrollTop = keep.list; }
+    else if (tl){ const h = S.tab === "day" ? Math.max(TL.H0, new Date().getHours() - 1) : 8; tl.scrollTop = Math.max(0, (h - TL.H0) * TL.PX - 6); }
+  } else fitPane();
+  $("wtitle").textContent = "Planner · " + TABS.find(t => t.id === S.tab).label;
+  const nl = $("main").querySelector(".nowline"); if (nl && !render.scrolled){ render.scrolled = true; }
+  renderSide();
+}
+function banners(){
+  let h = "";
+  if (AUTH.state === "expired") h += `<div class="banner bad"><span>Google sign-in expired.</span><button class="btn primary" data-act="gsignin">Continue</button></div>`;
+  else if (!S.mcp) h += `<div class="banner"><span>Sign in with Google to load your calendars and sync to-dos across devices.</span><button class="btn primary" data-act="gsignin">Sign in with Google</button></div>`;
+  else if (S.calStatus === "error"){
+    const c = S.calError;
+    if (c === "approval_required" || c === "not_in_manifest" || c === "upstream_error")
+      h += `<div class="banner bad"><span>The planner needs permission to read and edit your Google Calendar.</span><button class="btn primary" data-act="allowcal">Allow calendar access</button></div>`;
+    else h += `<div class="banner bad"><span>${esc(friendly({code:c}))}</span><button class="btn" data-act="allowcal">Try again</button></div>`;
+  }
+  if (STORE.error) h += `<div class="banner bad"><span>To-dos couldn't sync to Google Drive. They're saved on this device and will sync when it can.</span><button class="btn" data-act="storesync">Retry</button></div>`;
+  return h;
+}
+function head(title, sub){ return `<div class="head"><div><h2>${esc(title)}</h2><div class="sub">${esc(sub)}</div></div></div>`; }
+function chip(calName){
+  const c = calByName(calName); const col = c ? c.color : "var(--fg-3)";
+  return `<span class="chip"><i style="background:${col}"></i>${esc(c ? c.name : calName || "Personal")}</span>`;
+}
+function agenda(list, {empty="Nothing on the calendar.", actions=true}={}){
+  const timed = list.filter(e => !e.allDay);
+  const allday = list.filter(e => e.allDay);
+  if (!list.length) return `<div class="empty">${esc(empty)}</div>`;
+  const rowsList = [...allday, ...timed].filter(e => { const t = todoForEvent(e); return !(S.hideDone && ((t && t.status === "done") || /^✓/.test(e.title))); });
+  if (!rowsList.length) return `<div class="empty">All done here.</div>`;
+  return `<div class="rows">` + rowsList.map(e => {
+    const t = todoForEvent(e); const done = t && t.status === "done" || /^✓/.test(e.title);
+    const tt = e.allDay ? "All day" : `${fmtTime(e.start)}–${fmtTime(e.end)}`;
+    let acts = "";
+    if (actions && t) acts = `<button class="btn" data-act="toggle" data-id="${t.id}">${done ? "Undo" : "Done"}</button>${done ? "" : `<button class="btn ghost" data-act="tomorrow" data-ev="${esc(e.id)}">Tomorrow</button><button class="btn ghost" data-act="unsched" data-id="${t.id}" ${S.busy.has(t.id)?"disabled":""}>Unschedule</button>`}`;
+    else if (actions && e.cal.writable && e.attendees <= 1 && !e.allDay) acts = `<button class="btn ghost" data-act="tomorrow" data-ev="${esc(e.id)}">Tomorrow</button>`;
+    return `<div class="row${done?" done":""}"><span class="t mono">${tt}</span><span class="sw" style="background:${e.cal.color}"></span>
+      <span class="ttl">${esc(e.title.replace(/^✓\s*/,""))}<small>${esc(e.cal.name)}${t?" · to-do":""}${e.attendees>1?` · ${e.attendees} guests`:""}</small></span>
+      <span class="acts">${acts}</span></div>`;
+  }).join("") + `</div>`;
+}
+const TL = {H0:6, H1:24, PX:46};
+function timeline(evs, day){
+  const list = eventsOn(day, evs);
+  const allday = list.filter(e => e.allDay);
+  const timed = list.filter(e => !e.allDay);
+  const H0 = TL.H0, H1 = TL.H1, PX = TL.PX;
+  let h = "";
+  if (allday.length) h += `<div class="allday">${allday.map(e => `<span class="ev-pill" style="--evc:${e.cal.color};border-left-color:${e.cal.color}">${esc(e.title)}</span>`).join("")}</div>`;
+  // lane layout
+  const items = timed.map(e => {
+    const s = Math.max(H0*60, (e.start < startOfDay(day) ? 0 : e.start.getHours()*60 + e.start.getMinutes()));
+    const en = e.end >= addDays(startOfDay(day),1) ? 24*60 : e.end.getHours()*60 + e.end.getMinutes();
+    return {e, s, en:Math.max(en, s+20)};
+  }).map(x => ({...x, en:Math.min(x.en, H1*60)})).filter(x => x.en > H0*60 && x.s < H1*60).sort((a,b) => a.s - b.s);
+  let cluster = [], clusterEnd = -1; const clusters = [];
+  for (const it of items){ if (it.s >= clusterEnd && cluster.length){ clusters.push(cluster); cluster = []; } cluster.push(it); clusterEnd = Math.max(clusterEnd, it.en); }
+  if (cluster.length) clusters.push(cluster);
+  for (const cl of clusters){ const lanes = []; for (const it of cl){ let l = lanes.findIndex(end => end <= it.s); if (l < 0){ l = lanes.length; lanes.push(0); } lanes[l] = it.en; it.lane = l; } cl.forEach(it => it.lanes = lanes.length); }
+  let grid = "";
+  const dayLook = document.body.classList.contains("theme-day");
+  if (dayLook) grid += openGaps(day).map(g => { const top = (g.s - H0*60)/60*PX, ht = (g.e - g.s)/60*PX; return `<div class="gap" style="top:${top}px;height:${ht}px">${ht >= 26 ? `<span>Studio · ${durTxt(g.e - g.s)}</span>` : ""}</div>`; }).join("");
+  for (let hr = H0; hr <= H1; hr++){ const lbl = dayLook ? pad(hr % 24) : (hr === 24 ? "12a" : (hr%12||12) + (hr<12?"a":"p")); grid += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${lbl}</span></div>`; }
+  const evh = items.map(it => {
+    const t = todoForEvent(it.e); const done = t && t.status === "done" || /^✓/.test(it.e.title);
+    const w = 100/it.lanes;
+    const mv = it.e.cal.writable && it.e.attendees <= 1;
+    const hpx = Math.max(18,(it.en-it.s)/60*PX-2);
+    const short = hpx < 36, lines = Math.max(1, Math.floor((hpx - 22) / 15));
+    return `<div class="ev${t?" ev-todo":""}${done?" done":""}${mv?" movable":""}${short?" short":""}" data-ev="${esc(it.e.id)}" data-cal="${esc(it.e.calId)}" title="${esc(it.e.title)}" style="--evc:${it.e.cal.color};--lines:${lines};top:${(it.s-H0*60)/60*PX+1}px;height:${hpx}px;left:calc(${it.lane*w}% + 4px);width:calc(${w}% - 8px);border-left-color:${it.e.cal.color};background:color-mix(in srgb, ${it.e.cal.color} 16%, var(--win))">
+      <b>${esc(it.e.title.replace(/^✓\s*/,""))}</b><span>${fmtTime(it.e.start)}–${fmtTime(it.e.end)}</span>${mv?'<i class="rs" data-rs></i>':""}</div>`;
+  }).join("");
+  let now = "";
+  const n = new Date();
+  if (sameDay(n, day)){ const m = n.getHours()*60+n.getMinutes(); if (m >= H0*60) now = `<div class="nowline" style="top:${(m-H0*60)/60*PX}px"></div>`; }
+  h += `<div class="tl-wrap"><div class="tl" data-day="${dayKey(day)}" style="height:${(H1-H0)*PX}px">${grid}${evh}${now}</div></div>`;
+  return h;
+}
+function todoRow(t){
+  const done = t.status === "done";
+  const when = t.status === "scheduled" && t.start ? new Date(t.start) : null;
+  const open = S.schedOpen === t.id;
+  const busy = S.busy.has(t.id);
+  let actions = "";
+  if (t.status === "scheduled") actions = `<button class="btn ghost" data-act="unsched" data-id="${t.id}" ${busy?"disabled":""}>Unschedule</button>`;
+  let form = "";
+  if (open){
+    const sv = S.sched; const cals = writableCals();
+    form = `<div class="sched"><input type="date" id="sd-${t.id}" value="${esc(sv.date)}"><input type="time" id="st-${t.id}" value="${esc(sv.time)}" step="900">
+      <select id="sm-${t.id}">${[15,30,45,60,90,120,180].map(m => `<option value="${m}" ${Number(sv.min)===m?"selected":""}>${m<60?m+" min":(m/60)+" hr"}</option>`).join("")}</select>
+      <select id="sc-${t.id}">${cals.map(c => `<option ${c.name===sv.cal?"selected":""}>${esc(c.name)}</option>`).join("")}</select>
+      <button class="btn primary" data-act="schedgo" data-id="${t.id}" ${busy?"disabled":""}>${busy?"Adding…":"Add to calendar"}</button><button class="btn ghost" data-act="schedx">Cancel</button></div>`;
+  }
+  const draggable = t.status !== "scheduled" && !t.eventId;
+  return `<div class="todo${done?" is-done":""}" data-id="${t.id}"${draggable?" data-drag":""}><div class="lead">${draggable ? `<span class="grip" data-grip="${t.id}" aria-label="Drag to move" title="Drag to move">⠿</span>` : `<span class="nogrip"></span>`}<button class="check${done?" on":""}" data-act="toggle" data-id="${t.id}" aria-label="${done?"Mark not done":"Mark done"}">${done?"✓":""}</button></div>
+    <div class="tt"><div>${esc(t.title)}</div><div class="meta"><span class="pri p${t.pri}">P${t.pri||2}</span>${chip(t.cal)}${when?`<span class="chip mono">${esc(fmtDay(when).split(",")[0].slice(0,3))} ${fmtTime(when)}</span>`:""}${t.notes?`<span class="sub" style="margin:0">${esc(t.notes.slice(0,80))}</span>`:""}</div></div>
+    ${actions ? `<div class="acts">${actions}</div>` : ""}${form}</div>`;
+}
+function todoList(list, empty, zone){
+  if (!S.todosReady && S.db) return `<div class="empty">Loading to-dos…</div>`;
+  const z = zone ? ` data-zone="${zone}"` : "";
+  if (!list.length) return `<div class="empty"${z}>${esc(empty)}</div>`;
+  return `<div class="rows"${z}>${list.map(todoRow).join("")}</div>`;
+}
+const openTodos = () => S.todos.filter(t => t.status === "open").sort((a,b) => (a.pri||2)-(b.pri||2) || a.createdAt-b.createdAt);
+const showT = (t) => !(S.hideDone && t.status === "done");
+const byPri = (a,b) => (a.pri||2)-(b.pri||2) || (a.createdAt||0)-(b.createdAt||0);
+/* backlog list: unscheduled items; checked ones stay in place unless hidden */
+const eff = (t) => (typeof t.order === "number" ? t.order : (t.createdAt || 0));
+const byOrder = (a,b) => eff(a) - eff(b);
+const unsched = (t) => (t.status === "open" || (t.status === "done" && !t.eventId));
+const allTop = () => S.todos.filter(t => t.top && unsched(t)).sort(byOrder);
+const topTodos = () => allTop().slice(0,3).filter(showT);
+const listTodos = () => { const ids = new Set(allTop().slice(0,3).map(t => t.id)); return S.todos.filter(t => unsched(t) && !ids.has(t.id) && showT(t)).sort(byOrder); };
+const topSection = (empty) => `<div class="section"><div class="label">Top three <span class="zonehint">· drag to-dos in or out</span></div>${todoList(topTodos(), empty || "Drag up to three to-dos here.", "top")}</div>`;
+const todayTodos = (day) => S.todos.filter(t => t.start && sameDay(new Date(t.start), day));
+
+function viewMorning(evs, today){
+  return head("Morning", fmtDay(today) + " · set the day") + topSection() +
+    `<div class="section"><div class="label">Today's calendar</div>${agenda(eventsOn(today, evs))}</div>
+     <div class="section"><div class="label">Backlog</div>${todoList(listTodos(), "Backlog is clear.", "backlog")}</div>`;
+}
+const MODE_ICONS = {
+  timeline:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="14" height="14" rx="2.5"/><path d="M6.5 7h7M6.5 10h5M6.5 13h7"/></svg>',
+  split:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="14" height="14" rx="2.5"/><path d="M3 10.5h14"/></svg>',
+  list:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="5" cy="6" r="1"/><circle cx="5" cy="10" r="1"/><circle cx="5" cy="14" r="1"/><path d="M8.5 6h8M8.5 10h8M8.5 14h8"/></svg>'};
+const MODE_NAMES = {timeline:"Timeline only", split:"Split", list:"List only"};
+function paneView(title, sub, day, evs, extra){
+  const m = S.paneMode;
+  return `<div class="pane m-${m}" style="--split:${(S.split*100).toFixed(1)}%">
+    <div class="pane-head"><div><h2>${esc(title)}</h2><div class="sub">${esc(sub)}</div>${extra || ""}</div>
+      <div class="modes" role="group" aria-label="Layout">${["timeline","split","list"].map(k => `<button type="button" data-mode="${k}" aria-pressed="${m===k}" title="${MODE_NAMES[k]}" aria-label="${MODE_NAMES[k]}">${MODE_ICONS[k]}</button>`).join("")}</div></div>
+    <div class="pane-body">
+      <div class="pane-tl">${timeline(evs, day)}</div>
+      <div class="divider" data-divider role="separator" aria-orientation="horizontal" aria-label="Resize timeline and list" title="Drag to resize"><i></i></div>
+      <div class="pane-list">${topSection()}<div class="section"><div class="label">Backlog</div>${todoList(listTodos(), "Backlog is clear.", "backlog")}</div>
+        <form class="quick drawer-add" data-quick><input id="drawerin" placeholder="Add a to-do" autocomplete="off"><button class="btn" type="submit">Add</button></form></div>
+    </div></div>`;
+}
+function viewDay(evs, today){
+  const n = new Date();
+  const timed = eventsOn(today, evs).filter(e => !e.allDay);
+  const cur = timed.find(e => e.start <= n && e.end > n);
+  const next = timed.find(e => e.start > n);
+  const bit = (lbl, e, none) => `<span><span class="label">${lbl}</span>${e ? `<b>${esc(e.title.replace(/^✓\s*/,""))}</b> ${fmtTime(e.start)}` : esc(none)}</span>`;
+  return paneView("Day", fmtDay(today), today, evs, `<div class="nowstrip">${bit("Now", cur, "Open time")}${bit("Next", next, "Nothing else today")}</div>`);
+}
+function viewEvening(evs, today){
+  const tt = todayTodos(today);
+  const done = S.todos.filter(t => t.status === "done" && t.doneAt && sameDay(new Date(t.doneAt), today));
+  const left = tt.filter(t => t.status === "scheduled");
+  return head("Evening", "Close out " + fmtDay(today)) +
+    `<div class="grid2"><div class="section"><div class="label">Done today · ${done.length}</div>${todoList(done, "Nothing checked off yet.")}</div>
+     <div class="section"><div class="label">Still open from today · ${left.length}</div>${left.length ? agenda(left.map(t => allEvents().find(e => e.id === t.eventId)).filter(Boolean)) : `<div class="empty">Everything scheduled today is handled.</div>`}</div></div>
+     <div class="section"><div class="label">Tomorrow</div>${agenda(eventsOn(addDays(today,1), evs), {empty:"Tomorrow is open."})}</div>`;
+}
+function viewTomorrow(evs, day){
+  return paneView("Tomorrow", fmtDay(day), day, evs);
+}
+function viewWeek(evs, today){
+  const start = addDays(today, S.weekOff*7);
+  let h = `<div class="head"><div><h2>Week</h2><div class="sub">${esc(fmtDay(start))} to ${esc(fmtDay(addDays(start,6)))}</div></div>
+    <div class="wknav"><button class="btn" data-act="wk" data-d="-1" ${S.weekOff<=0?"disabled":""} aria-label="Previous week">‹</button><button class="btn" data-act="wk" data-d="0" ${S.weekOff===0?"disabled":""}>Today</button><button class="btn" data-act="wk" data-d="1" ${S.weekOff>=2?"disabled":""} aria-label="Next week">›</button></div></div><div class="week">`;
+  for (let i = 0; i < 7; i++){
+    const d = addDays(start, i); const list = eventsOn(d, evs);
+    h += `<div class="wday${sameDay(d, today)?" today":""}"><h4>${d.toLocaleDateString([], {weekday:"short"})} <span class="mono">${d.getDate()}</span></h4>${list.length ? list.map(e => `<div class="wev" style="border-left-color:${e.cal.color}"><small>${e.allDay?"all day":fmtTime(e.start)}</small>${esc(e.title)}</div>`).join("") : `<div class="sub">Open</div>`}</div>`;
+  }
+  return h + `</div>`;
+}
+function viewBacklog(){
+  const sched = S.todos.filter(t => (t.status === "scheduled" || (t.status === "done" && t.eventId)) && showT(t)).sort((a,b) => String(a.start).localeCompare(String(b.start)));
+  const nDone = S.todos.filter(t => t.status === "done").length;
+  return head("Backlog", `${openTodos().length} open · ${S.todos.filter(t => t.status === "scheduled").length} scheduled · ${nDone} done${S.hideDone && nDone ? " (hidden)" : ""}`) +
+    topSection() + `<div class="section"><div class="label">Backlog</div>${todoList(listTodos(), "Nothing waiting. Add a to-do on the right.", "backlog")}</div>
+     <div class="section"><div class="label">Scheduled</div>${todoList(sched, "Nothing scheduled from the backlog.")}</div>`;
+}
+function renderSide(){
+  const a = document.activeElement;
+  const o = openTodos();
+  $("blcount").textContent = o.length ? o.length + " open" : "";
+  if (!(a && $("sidebacklog").contains(a) && /INPUT|SELECT/.test(a.tagName)))
+    $("sidebacklog").innerHTML = ["backlog","morning","tomorrow"].includes(S.tab) ? `<button class="btn" data-tab-go="backlog">${S.tab === "backlog" ? "Shown in this view" : "Open Backlog tab"}</button>` : todoList(listTodos().slice(0,8), "Nothing waiting.");
+  const sEv = allEvents().filter(e => /^Sample ·/.test(e.title)).length, sTd = S.todos.filter(t => t.sample).length;
+  $("samplebox").hidden = !(sEv || sTd);
+  $("samplecount").textContent = `${sEv} sample event${sEv===1?"":"s"} and ${sTd} sample to-do${sTd===1?"":"s"}.`;
+  $("clearbtn").textContent = S.busy.has("clear") ? "Removing…" : (Date.now() - S.confirmClear < 5000 ? "Confirm: remove all samples" : "Remove samples");
+  $("clearbtn").disabled = S.busy.has("clear");
+  renderConn();
+  $("callegend").innerHTML = S.calendars.length ? S.calendars.map(c => `<div style="display:flex;align-items:center;gap:8px"><i style="width:9px;height:9px;border-radius:3px;background:${c.color};display:block;flex:none"></i><span>${esc(c.name)}</span><span class="sub" style="margin:0;margin-left:auto">${c.writable?"":"read-only"}${S.events.get(c.id)?.error?" · not syncing":""}</span></div>`).join("") : `<div class="sub">Calendars appear once Google Calendar is connected.</div>`;
+}
+
+/* ---------- open time (studio available) ---------- */
+const SESSION = 90;
+const durTxt = (m) => { const h = Math.floor(m/60), x = m % 60; return (h ? h + "h" : "") + (x ? (h ? " " : "") + x + "m" : (h ? "" : "0m")); };
+function openGaps(day){
+  const d0 = startOfDay(day);
+  let from = TL.H0*60; const to = Math.min(TL.H1*60, 22*60);
+  const now = new Date();
+  if (sameDay(now, d0)) from = Math.max(from, Math.ceil((now.getHours()*60 + now.getMinutes()) / 15) * 15);
+  const busy = eventsOn(d0, allEvents()).filter(e => !e.allDay).map(e => [Math.max(0, minsOf(e.start, dayKey(d0))), Math.min(24*60, minsOf(e.end, dayKey(d0)))]).sort((a,b) => a[0]-b[0]);
+  const gaps = []; let t = from;
+  for (const [a, b] of busy){ if (b <= t) continue; if (a > t && a <= to) { if (Math.min(a, to) - t >= SESSION) gaps.push({s:t, e:Math.min(a, to)}); } t = Math.max(t, b); if (t >= to) break; }
+  if (to - t >= SESSION) gaps.push({s:t, e:to});
+  return gaps;
+}
+const openMins = (day) => openGaps(day).reduce((a, g) => a + g.e - g.s, 0);
+
+/* ---------- look (Day / BrooksOS) ---------- */
+const chromeHome = {};
+function placeChrome(){
+  const day = document.body.classList.contains("theme-day");
+  const tabs = $("tabs"), hide = document.querySelector(".hidetog"), sync = $("sync"), undo = $("undobtn"), now = $("syncnow");
+  if (!chromeHome.saved){ chromeHome.saved = true; chromeHome.titlebar = document.querySelector(".titlebar"); chromeHome.right = document.querySelector(".menubar .right"); chromeHome.clock = $("clock"); }
+  if (day){ $("dTabsSlot").append(tabs); $("dRightSlot").append(sync, hide, undo, now); }
+  else { chromeHome.titlebar.append(tabs, hide); chromeHome.right.insertBefore(sync, chromeHome.clock); chromeHome.right.insertBefore(undo, chromeHome.clock); chromeHome.right.insertBefore(now, chromeHome.clock); }
+}
+function applyTheme(name){
+  const day = name !== "brooksos";
+  if (document.body.classList.contains("theme-day") !== day){ document.body.classList.toggle("theme-day", day); placeChrome(); }
+  document.querySelectorAll("[data-theme-set]").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.themeSet === "day") === day)));
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-theme-set]"); if (!b) return;
+  const name = b.dataset.themeSet; applyTheme(name); schedule();
+  if (S.db) saveCfg({theme:name}).catch(() => {});
+});
+function renderDayHeader(){
+  if (!document.body.classList.contains("theme-day")) return;
+  const today = startOfDay(new Date());
+  const tab = TABS.find(t => t.id === S.tab);
+  $("dTitle").textContent = tab.label;
+  let eyebrow = fmtDay(today), resLabel = "Studio available", mins;
+  if (S.tab === "tomorrow"){ const t = addDays(today,1); eyebrow = fmtDay(t); mins = openMins(t); resLabel = "Studio tomorrow"; }
+  else if (S.tab === "week"){ const st = addDays(today, S.weekOff*7); eyebrow = `${fmtDay(st)} to ${fmtDay(addDays(st,6))}`; mins = 0; for (let i = 0; i < 7; i++) mins += openMins(addDays(st, i)); resLabel = "Studio this week"; }
+  else mins = openMins(today);
+  $("dEyebrow").textContent = eyebrow; $("dResLabel").textContent = resLabel;
+  const rv = $("dResidual"); rv.textContent = mins > 0 ? durTxt(mins) : "None"; rv.classList.toggle("none", !mins);
+}
+
+/* ---------- fixed pane sizing ---------- */
+function fitPane(){
+  const w = document.querySelector(".window");
+  if (!document.body.classList.contains("pane-mode")){ w.style.height = ""; return; }
+  window.scrollTo(0, 0);
+  const top = w.getBoundingClientRect().top;
+  const spot = document.querySelector(".spot-in").getBoundingClientRect();
+  w.style.height = Math.max(340, Math.floor(spot.top - top - 10)) + "px";
+}
+addEventListener("resize", fitPane);
+if (window.visualViewport) visualViewport.addEventListener("resize", fitPane);
+
+/* layout switch + divider */
+let divDrag = null;
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-mode]"); if (!b) return;
+  S.paneMode = b.dataset.mode; if (S.db) saveCfg({layout:S.paneMode}).catch(() => {});
+  const pane = b.closest(".pane");
+  if (pane){ pane.className = "pane m-" + S.paneMode; pane.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.mode === S.paneMode))); }
+});
+document.addEventListener("pointerdown", (e) => {
+  const el = e.target.closest("[data-divider]"); if (!el || e.button > 0) return;
+  e.preventDefault();
+  divDrag = {el, body:el.closest(".pane-body"), pane:el.closest(".pane"), pid:e.pointerId};
+  el.classList.add("active"); try { el.setPointerCapture(e.pointerId); } catch {}
+});
+document.addEventListener("pointermove", (e) => {
+  if (!divDrag || e.pointerId !== divDrag.pid) return;
+  e.preventDefault();
+  const r = divDrag.body.getBoundingClientRect();
+  S.split = Math.max(0.15, Math.min(0.85, (e.clientY - r.top) / r.height));
+  divDrag.pane.style.setProperty("--split", (S.split*100).toFixed(1) + "%");
+}, {passive:false});
+function endDiv(){ if (!divDrag) return; divDrag.el.classList.remove("active"); divDrag = null; if (S.db) saveCfg({split:Math.round(S.split*100)/100}).catch(() => {}); schedule(); }
+document.addEventListener("pointerup", (e) => { if (divDrag && e.pointerId === divDrag.pid) endDiv(); });
+document.addEventListener("pointercancel", (e) => { if (divDrag && e.pointerId === divDrag.pid) endDiv(); });
+document.addEventListener("submit", (e) => {
+  const f = e.target.closest("form[data-quick]"); if (!f) return;
+  e.preventDefault(); const inp = f.querySelector("input"); const v = inp.value.trim(); if (!v) return;
+  act("quick", async () => { await addTodo({title:v}); inp.value = ""; inp.blur(); });
+});
+
+/* ---------- interactions ---------- */
+function openSched(t){
+  const n = new Date(); n.setMinutes(n.getMinutes() < 30 ? 30 : 60, 0, 0);
+  const base = S.tab === "tomorrow" ? addDays(startOfDay(new Date()),1) : n;
+  if (S.tab === "tomorrow") base.setHours(10,0,0,0);
+  S.sched = {date:dayKey(base), time:`${pad(base.getHours())}:${pad(base.getMinutes())}`, min:t.est||30, cal:(calByName(t.cal)||defaultCal()||{}).name};
+  S.schedOpen = t.id;
+}
+document.addEventListener("click", (e) => {
+  const go = e.target.closest("[data-tab-go]");
+  if (go){ S.tab = go.dataset.tabGo; S.tabManual = Date.now(); schedule(); window.scrollTo({top:0}); return; }
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const id = b.dataset.id; const t = id && S.todos.find(x => x.id === id);
+  switch (b.dataset.act){
+    case "allowcal": startCalendar(); break;
+    case "gsignin": signIn(); break;
+    case "gsignout": signOut(); break;
+    case "storesync": storeSync().catch(() => {}); break;
+    case "savekey": { const v = ($("akey").value || "").trim(); if (v){ try { localStorage.setItem("anthropicKey", v); } catch {} toast("Claude key saved on this device."); renderConn(); } } break;
+    case "clearkey": try { localStorage.removeItem("anthropicKey"); } catch {} renderConn(); break;
+    case "setupsave": { const v = ($("cidin").value || "").trim(); if (/\.apps\.googleusercontent\.com$/.test(v)){ try { localStorage.setItem("gClientId", v); } catch {} location.reload(); } else toast("That doesn't look like a Google Client ID. It ends in .apps.googleusercontent.com"); } break;
+    case "undo": $("toast").hidden = true; undo(); break;
+    case "wk": { const dd = Number(b.dataset.d); S.weekOff = dd === 0 ? 0 : Math.max(0, Math.min(2, S.weekOff + dd)); schedule(); } break;
+    case "clearsamples":
+      if (Date.now() - S.confirmClear > 5000){ S.confirmClear = Date.now(); schedule(); setTimeout(schedule, 5100); break; }
+      S.confirmClear = 0; act("clear", clearSamples); break;
+    case "toggle": if (t) act(t.id, () => completeTodo(t, t.status !== "done")); break;
+    case "schedopen": if (t){ openSched(t); schedule(); } break;
+    case "schedx": S.schedOpen = null; schedule(); break;
+    case "schedgo": if (t){
+      const v = {date:$("sd-"+id).value, time:$("st-"+id).value, min:$("sm-"+id).value, cal:$("sc-"+id).value};
+      S.sched = v; b.blur();
+      act(t.id, async () => { await scheduleTodo(t, {start:`${v.date}T${v.time}:00`, minutes:v.min, calName:v.cal}); S.schedOpen = null; toast(`Added to ${v.cal}.`); });
+    } break;
+    case "unsched": if (t) act(t.id, () => unscheduleTodo(t)); break;
+    case "del": if (t) act(t.id, () => deleteTodo(t)); break;
+    case "tomorrow": {
+      const ev = allEvents().find(x => x.id === b.dataset.ev); if (!ev) break;
+      act("ev"+ev.id, async () => { await moveEvent(ev, addDays(ev.start,1)); toast("Moved to tomorrow."); });
+    } break;
+  }
+});
+document.addEventListener("focusout", () => setTimeout(schedule, 0));
+$("hidedone").checked = S.hideDone;
+$("hidedone").addEventListener("change", (e) => { S.hideDone = e.target.checked; try { localStorage.setItem("hideDone", S.hideDone ? "1" : "0"); } catch {} schedule(); });
+$("quickform").addEventListener("submit", (e) => {
+  e.preventDefault(); const v = $("quickin").value.trim(); if (!v) return;
+  act("quick", async () => { await addTodo({title:v}); $("quickin").value = ""; });
+});
+
+/* ---------- drag between Top three and Backlog, and onto the timeline ---------- */
+let drag = null, pendTouch = null, lastPt = null, scrollRAF = 0;
+function makeGhost(d, x, y){
+  const r = d.row.getBoundingClientRect();
+  const gh = d.row.cloneNode(true); gh.classList.add("drag-ghost"); gh.style.width = r.width + "px";
+  d.dx = x - r.left; d.dy = y - r.top;
+  gh.style.left = (x - d.dx) + "px"; gh.style.top = (y - d.dy) + "px";
+  document.body.appendChild(gh); d.ghost = gh; d.row.classList.add("dragging"); document.body.classList.add("is-dragging");
+  try { navigator.vibrate && navigator.vibrate(10); } catch {}
+  if (!scrollRAF) scrollRAF = requestAnimationFrame(autoScroll);
+}
+function scrollFrames(x, y){
+  const hosts = [...document.querySelectorAll(".pane-tl,.pane-list")].filter(h => h.offsetParent);
+  for (const h of hosts){
+    const r = h.getBoundingClientRect();
+    if (x < r.left || x > r.right || y < r.top - 30 || y > r.bottom + 30) continue;
+    const zone = Math.min(60, r.height / 4); let v = 0;
+    if (y < r.top + zone) v = -Math.ceil((r.top + zone - y) / 4); else if (y > r.bottom - zone) v = Math.ceil((y - (r.bottom - zone)) / 4);
+    if (v){ h.scrollTop += Math.max(-22, Math.min(22, v)); return true; }
+    return false;
+  }
+  const top = 90, bot = innerHeight - 170; let v = 0;
+  if (y < top) v = -Math.ceil((top - y) / 6); else if (y > bot) v = Math.ceil((y - bot) / 6);
+  if (v){ window.scrollBy(0, Math.max(-24, Math.min(24, v))); return true; }
+  return false;
+}
+function autoScroll(){
+  scrollRAF = 0;
+  const cardOn = drag && drag.ghost, evOn = evDrag && evDrag.active;
+  if ((!cardOn && !evOn) || !lastPt) return;
+  if (scrollFrames(lastPt.x, lastPt.y)){
+    if (cardOn) updateTarget(lastPt.x, lastPt.y); else if (!evZone(lastPt.x, lastPt.y)) evUpdate(lastPt.y);
+  }
+  scrollRAF = requestAnimationFrame(autoScroll);
+}
+document.addEventListener("pointerdown", (e) => {
+  if (e.button > 0 || drag) return;
+  const row = e.target.closest(".todo[data-drag]"); if (!row) return;
+  const onGrip = !!e.target.closest("[data-grip]");
+  if (!onGrip && e.target.closest("button,input,select,textarea,a")) return;
+  const id = row.dataset.id;
+  if (e.pointerType === "touch" && !onGrip){
+    pendTouch = {id, row, x0:e.clientX, y0:e.clientY, pid:e.pointerId};
+    pendTouch.timer = setTimeout(() => {
+      const p = pendTouch; pendTouch = null; if (!p) return;
+      drag = {id:p.id, row:p.row, x0:p.x0, y0:p.y0, pid:p.pid, ghost:null, zone:null, idx:-1};
+      makeGhost(drag, p.x0, p.y0); lastPt = {x:p.x0, y:p.y0}; updateTarget(p.x0, p.y0);
+    }, 300);
+    return;
+  }
+  e.preventDefault();
+  drag = {id, row, x0:e.clientX, y0:e.clientY, ghost:null, zone:null, idx:-1, pid:e.pointerId};
+  try { row.setPointerCapture(e.pointerId); } catch {}
+});
+function clearMarks(){ document.querySelectorAll(".drop-before,.drop-after,.drop-into").forEach(el => el.classList.remove("drop-before","drop-after","drop-into")); document.querySelectorAll(".tl-preview").forEach(el => el.remove()); }
+function updateTarget(x, y){
+  if (!drag) return;
+  clearMarks(); drag.zone = null; drag.tlDrop = null;
+  const el = document.elementFromPoint(x, y);
+  const tl = el && el.closest(".tl");
+  if (tl){
+    const t = findTodoLive(drag.id); const est = (t && t.est) || 30;
+    const r = tl.getBoundingClientRect();
+    let min = TL.H0*60 + Math.round(((y - r.top) / TL.PX * 60) / 15) * 15;
+    min = Math.max(TL.H0*60, Math.min(min, TL.H1*60 - est));
+    const st = new Date(tl.dataset.day + "T00:00:00"); st.setMinutes(min);
+    const pv = document.createElement("div"); pv.className = "tl-preview";
+    pv.style.top = ((min - TL.H0*60) / 60 * TL.PX) + "px"; pv.style.height = Math.max(18, est/60*TL.PX - 2) + "px";
+    pv.innerHTML = `${esc(t ? t.title : "")}<span>${fmtTime(st)}–${fmtTime(new Date(st.getTime()+est*60000))}</span>`;
+    tl.appendChild(pv);
+    drag.tlDrop = {start:st, est};
+    return;
+  }
+  const zone = el && el.closest("[data-zone]"); if (!zone) return;
+  const rows = [...zone.querySelectorAll(":scope > .todo")].filter(r => r !== drag.row);
+  let idx = rows.length;
+  for (let i = 0; i < rows.length; i++){ const b = rows[i].getBoundingClientRect(); if (y < b.top + b.height/2){ idx = i; break; } }
+  drag.zone = zone.dataset.zone; drag.idx = idx; drag.ids = rows.map(r => r.dataset.id);
+  if (!rows.length) zone.classList.add("drop-into");
+  else if (idx < rows.length) rows[idx].classList.add("drop-before"); else rows[rows.length-1].classList.add("drop-after");
+}
+document.addEventListener("pointermove", (e) => {
+  if (pendTouch && e.pointerId === pendTouch.pid){
+    if (Math.hypot(e.clientX-pendTouch.x0, e.clientY-pendTouch.y0) > 8){ clearTimeout(pendTouch.timer); pendTouch = null; }
+    return;
+  }
+  if (!drag || e.pointerId !== drag.pid) return;
+  if (!drag.ghost){
+    if (Math.hypot(e.clientX-drag.x0, e.clientY-drag.y0) < 5) return;
+    makeGhost(drag, drag.x0, drag.y0);
+  }
+  e.preventDefault();
+  lastPt = {x:e.clientX, y:e.clientY};
+  drag.ghost.style.left = (e.clientX - drag.dx) + "px"; drag.ghost.style.top = (e.clientY - drag.dy) + "px";
+  updateTarget(e.clientX, e.clientY);
+}, {passive:false});
+function endDrag(apply){
+  if (pendTouch){ clearTimeout(pendTouch.timer); pendTouch = null; }
+  if (!drag) return;
+  const d = drag; drag = null; lastPt = null;
+  if (scrollRAF){ cancelAnimationFrame(scrollRAF); scrollRAF = 0; }
+  clearMarks(); d.ghost && d.ghost.remove(); d.row.classList.remove("dragging"); document.body.classList.remove("is-dragging");
+  if (apply && d.ghost && d.tlDrop){
+    const t = findTodoLive(d.id);
+    if (t) act(t.id, async () => { await scheduleTodo(t, {start:localISO(d.tlDrop.start), minutes:d.tlDrop.est, calName:t.cal}); toast(`Scheduled for ${fmtTime(d.tlDrop.start)}.`, true); });
+  } else if (apply && d.ghost && d.zone) act("drag", () => moveTodo(d.id, d.zone, d.ids, d.idx));
+  schedule();
+}
+document.addEventListener("pointerup", (e) => {
+  if (pendTouch && e.pointerId === pendTouch.pid){ clearTimeout(pendTouch.timer); pendTouch = null; return; }
+  if (drag && e.pointerId === drag.pid) endDrag(true);
+});
+document.addEventListener("pointercancel", (e) => {
+  if (pendTouch && e.pointerId === pendTouch.pid){ clearTimeout(pendTouch.timer); pendTouch = null; return; }
+  if (drag && e.pointerId === drag.pid) endDrag(false);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && drag) endDrag(false); });
+/* stop the iOS long-press menu on cards */
+document.addEventListener("contextmenu", (e) => { if (e.target.closest(".todo[data-drag]")) e.preventDefault(); });
+
+let evDrag = null;
+const minsOf = (d, day) => Math.round((d - new Date(day + "T00:00:00")) / 60000);
+const ptMin = (tl, y) => TL.H0*60 + (y - tl.getBoundingClientRect().top) / TL.PX * 60;
+const snap15 = (m) => Math.round(m / 15) * 15;
+document.addEventListener("pointerdown", (e) => {
+  if (drag || divDrag || e.button > 0) return;
+  const el = e.target.closest(".ev.movable"); if (!el) return;
+  const tl = el.closest(".tl"); const day = tl.dataset.day;
+  const ev = allEvents().find(x => x.id === el.dataset.ev && x.calId === el.dataset.cal); if (!ev) return;
+  const rs = !!e.target.closest("[data-rs]");
+  const s0 = Math.max(TL.H0*60, minsOf(ev.start, day)), e0 = Math.min(TL.H1*60, minsOf(ev.end, day));
+  evDrag = {mode: rs ? "resize" : "move", ev, el, tl, day, y0:e.clientY, x0:e.clientX, pid:e.pointerId, s0, e0, ns:s0, ne:e0, grab:ptMin(tl, e.clientY) - s0, active:false, touch:e.pointerType === "touch"};
+  if (rs || !evDrag.touch){ e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch {} }
+  else evDrag.timer = setTimeout(() => { if (evDrag && !evDrag.active){ evDrag.active = true; el.classList.add("lifting"); lastPt = {x:evDrag.x0, y:evDrag.y0}; if (!scrollRAF) scrollRAF = requestAnimationFrame(autoScroll); try { navigator.vibrate && navigator.vibrate(10); } catch {} } }, 320);
+});
+function evUpdate(y){
+  const d = evDrag; if (!d) return;
+  const pm = ptMin(d.tl, y);
+  const base = new Date(d.day + "T00:00:00");
+  if (d.mode === "move"){
+    const dur = d.e0 - d.s0;
+    d.ns = Math.max(TL.H0*60, Math.min(snap15(pm - d.grab), TL.H1*60 - dur)); d.ne = d.ns + dur;
+    d.el.style.top = ((d.ns - TL.H0*60) / 60 * TL.PX + 1) + "px";
+  } else {
+    d.ne = Math.max(d.s0 + 15, Math.min(snap15(pm), TL.H1*60));
+    const hpx = Math.max(18, (d.ne - d.s0) / 60 * TL.PX - 2);
+    d.el.style.height = hpx + "px"; d.el.classList.toggle("short", hpx < 36); d.el.style.setProperty("--lines", Math.max(1, Math.floor((hpx - 22) / 15)));
+  }
+  const sp = d.el.querySelector("span"); if (sp) sp.textContent = `${fmtTime(new Date(base.getTime() + d.ns*60000))}–${fmtTime(new Date(base.getTime() + d.ne*60000))}`;
+}
+document.addEventListener("pointermove", (e) => {
+  const d = evDrag; if (!d || e.pointerId !== d.pid) return;
+  const dy = e.clientY - d.y0;
+  if (!d.active){
+    if (d.touch && d.mode === "move"){ if (Math.abs(dy) > 8 || Math.abs(e.clientX - d.x0) > 8){ clearTimeout(d.timer); evDrag = null; } return; }
+    if (Math.abs(dy) < 4) return;
+    d.active = true; d.el.classList.add("lifting");
+    if (!scrollRAF) scrollRAF = requestAnimationFrame(autoScroll);
+  }
+  e.preventDefault();
+  lastPt = {x:e.clientX, y:e.clientY};
+  if (!evZone(e.clientX, e.clientY)) evUpdate(e.clientY);
+}, {passive:false});
+/* dragging a scheduled to-do off the timeline onto Top three / Backlog */
+function evZone(x, y){
+  const d = evDrag; if (!d) return false;
+  clearMarks(); d.zoneDrop = null;
+  const t = todoForEvent(d.ev);
+  if (!t) { d.el.classList.remove("leaving"); return false; }
+  d.el.style.pointerEvents = "none";
+  const el = document.elementFromPoint(x, y);
+  if (!el || el.closest(".tl")) { d.el.classList.remove("leaving"); return false; }
+  const zone = el.closest("[data-zone]");
+  if (!zone) { d.el.classList.remove("leaving"); return false; }
+  const rows = [...zone.querySelectorAll(":scope > .todo")];
+  let idx = rows.length;
+  for (let i = 0; i < rows.length; i++){ const b = rows[i].getBoundingClientRect(); if (y < b.top + b.height/2){ idx = i; break; } }
+  d.zoneDrop = {zone:zone.dataset.zone, ids:rows.map(r => r.dataset.id), idx, todo:t.id};
+  if (!rows.length) zone.classList.add("drop-into");
+  else if (idx < rows.length) rows[idx].classList.add("drop-before"); else rows[rows.length-1].classList.add("drop-after");
+  d.el.classList.add("leaving");
+  return true;
+}
+function endEvDrag(apply){
+  const d = evDrag; if (!d) return; evDrag = null; clearTimeout(d.timer); lastPt = null;
+  if (scrollRAF){ cancelAnimationFrame(scrollRAF); scrollRAF = 0; }
+  d.el.classList.remove("lifting");
+  d.el.style.pointerEvents = ""; d.el.classList.remove("leaving"); clearMarks();
+  if (apply && d.active && d.zoneDrop){
+    const z = d.zoneDrop; const t = findTodoLive(z.todo);
+    if (t) act(t.id, async () => {
+      await unscheduleTodo(t);
+      await moveTodo(t.id, z.zone, z.ids, z.idx);
+      toast(`Unscheduled "${t.title}" and moved it to ${z.zone === "top" ? "Top three" : "Backlog"}.`, true);
+    });
+  } else if (apply && d.active && (d.ns !== d.s0 || d.ne !== d.e0)){
+    const base = new Date(d.day + "T00:00:00");
+    const ns = new Date(base.getTime() + d.ns*60000), ne = new Date(base.getTime() + d.ne*60000);
+    S.optim.set(d.ev.id, {start:ns, end:ne, at:Date.now()});
+    act("ev" + d.ev.id, async () => {
+      try { if (d.mode === "move") await moveEvent(d.ev, ns); else await resizeEvent(d.ev, ne); }
+      catch (err) { S.optim.delete(d.ev.id); throw err; }
+    });
+  }
+  schedule();
+}
+document.addEventListener("pointerup", (e) => { if (evDrag && e.pointerId === evDrag.pid) endEvDrag(true); });
+document.addEventListener("pointercancel", (e) => { if (evDrag && e.pointerId === evDrag.pid) endEvDrag(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && evDrag) endEvDrag(false); });
+/* keep iOS from scrolling once something is being dragged */
+document.addEventListener("touchmove", (e) => { if ((evDrag && evDrag.active) || (drag && drag.ghost) || divDrag) e.preventDefault(); }, {passive:false});
+
+async function resizeEvent(ev, endDate){
+  if (!ev.cal.writable) throw new Error(`${ev.cal.name} is read-only here.`);
+  if (ev.attendees > 1) throw new Error("This event has guests. Change it in Google Calendar so they're notified properly.");
+  const oldEnd = new Date(ev.end);
+  await S.mcp.callTool(GC, "update_event", {calendarId:ev.calId, eventId:ev.id, startTime:localISO(ev.start), endTime:localISO(endDate), notificationLevel:"NONE"});
+  const t = todoForEvent(ev); if (t) await todoRef(t.id).update({est:Math.round((endDate - ev.start)/60000)});
+  await afterWrite();
+  const resized = {...ev, end:endDate};
+  pushUndo(`Resized "${ev.title}"`, async () => { S.optim.set(ev.id, {start:ev.start, end:oldEnd, at:Date.now()}); await resizeEvent(resized, oldEnd); });
+}
+
+async function moveTodo(id, zone, ids, idx){
+  const t = findTodoLive(id); if (!t) return;
+  const get = (x) => findTodoLive(x);
+  const prev = idx > 0 ? get(ids[idx-1]) : null, next = idx < ids.length ? get(ids[idx]) : null;
+  let order;
+  if (prev && next) order = (eff(prev) + eff(next)) / 2;
+  else if (prev) order = eff(prev) + 1000;
+  else if (next) order = eff(next) - 1000;
+  else order = Date.now();
+  const toTop = zone === "top";
+  const before = [{id:t.id, top:!!t.top, order:eff(t)}];
+  const writes = [[t.id, {top:toTop, order}]];
+  if (toTop){
+    const after = [...ids]; after.splice(idx, 0, t.id);
+    const visibleTop = allTop().slice(0,3).map(x => x.id);
+    const final = after.filter(x => x === t.id || visibleTop.includes(x));
+    if (final.length > 3){
+      const bump = get(final[3]);
+      const minB = Math.min(...listTodos().map(eff), Date.now());
+      before.push({id:bump.id, top:true, order:eff(bump)});
+      writes.push([bump.id, {top:false, order:minB - 1000}]);
+    }
+  }
+  for (const [docId, data] of writes) await todoRef(docId).update(data);
+  pushUndo(`Moved "${t.title}" to ${toTop ? "Top three" : "Backlog"}`, async () => {
+    for (const b of before) if (findTodoLive(b.id)) await todoRef(b.id).update({top:b.top, order:b.order});
+  });
+}
+
+/* ---------- Claude bar ---------- */
+let ctl = null;
+function context(){
+  const evs = allEvents(); const today = startOfDay(new Date());
+  const upcoming = evs.filter(e => e.end > today && e.start < addDays(today, 8)).slice(0, 120).map(e => ({
+    event_id:e.id, calendar:e.cal.name, title:e.title, start:e.allDay ? dayKey(e.start) : localISO(e.start), end:e.allDay ? null : localISO(e.end), all_day:e.allDay, guests:e.attendees, todo_id:todoForEvent(e)?.id || null }));
+  const todos = S.todos.filter(t => t.status !== "done" || (t.doneAt && Date.now()-t.doneAt < 2*864e5)).slice(0, 150).map(t => ({
+    id:t.id, title:t.title, status:t.status, top_three:!!t.top, priority:t.pri, calendar:t.cal, estimate_minutes:t.est, start:t.start ? localISO(new Date(t.start)) : null, notes:t.notes||undefined }));
+  const cals = S.calendars.map(c => ({name:c.name, writable:c.writable, description:c.description || undefined}));
+  const c = cfg();
+  const settings = {timeline_start_hour:c.tlStart, timeline_end_hour:c.tlEnd, hour_height:c.hourHeight, tab_hours:c.tabHours, layout:c.layout, split_percent:Math.round(c.split*100), calendar_colors:c.calColors, default_calendar:c.defaultCal, theme:c.theme};
+  return {settings, now:localISO(new Date()), weekday:new Date().toLocaleDateString([], {weekday:"long"}), timezone:Intl.DateTimeFormat().resolvedOptions().timeZone, calendars:cals, todos, events:upcoming};
+}
+const need = (x, what) => { if (x === undefined || x === null || x === "") throw new Error(`Missing ${what}.`); return x; };
+const findTodo = (id) => { const t = S.todos.find(x => x.id === String(id)); if (!t) throw new Error(`No to-do with id ${id}.`); return t; };
+const TOOLS = [
+  {name:"add_todo", description:"Add an unscheduled to-do to the backlog. Returns its id. Use when there is no specific time.",
+    inputSchema:{type:"object", properties:{title:{type:"string"}, notes:{type:"string"}, priority:{type:"integer", enum:[1,2,3]}, calendar:{type:"string", description:"Calendar it should land on when scheduled, chosen by name"}, estimate_minutes:{type:"integer"}}, required:["title"]},
+    execute:async (i) => ({id: await addTodo({title:need(i.title,"title"), notes:i.notes, pri:i.priority, cal:i.calendar, est:i.estimate_minutes})})},
+  {name:"update_todo", description:"Change a backlog to-do's title, notes, priority, calendar, estimate, or whether it is in Top three.",
+    inputSchema:{type:"object", properties:{id:{type:"string"}, title:{type:"string"}, notes:{type:"string"}, priority:{type:"integer", enum:[1,2,3]}, calendar:{type:"string"}, estimate_minutes:{type:"integer"}, top_three:{type:"boolean", description:"Put in or take out of Top three (max three)"}}, required:["id"]},
+    execute:async (i) => { const t = findTodo(i.id); const u = {}; if (typeof i.top_three === "boolean"){ if (i.top_three && !t.top && allTop().length >= 3) throw new Error("Top three is full. Take one out first."); u.top = i.top_three; } if (i.title) u.title = String(i.title); if (i.notes !== undefined) u.notes = String(i.notes); if (i.priority) u.pri = Number(i.priority); if (i.calendar) u.cal = String(i.calendar); if (i.estimate_minutes) u.est = Number(i.estimate_minutes); await todoRef(t.id).update(u); return "updated"; }},
+  {name:"complete_todo", description:"Mark a to-do done (or not done with done=false). Also ticks its calendar event.",
+    inputSchema:{type:"object", properties:{id:{type:"string"}, done:{type:"boolean"}}, required:["id"]},
+    execute:async (i) => { await completeTodo(findTodo(i.id), i.done !== false); return "ok"; }},
+  {name:"schedule_todo", description:"Put a to-do on a Google Calendar at a time. start is local time YYYY-MM-DDTHH:MM. Calendar by name; pick by fit, default Personal.",
+    inputSchema:{type:"object", properties:{id:{type:"string"}, start:{type:"string"}, minutes:{type:"integer"}, calendar:{type:"string"}}, required:["id","start"]},
+    execute:async (i) => { const t = findTodo(i.id); if (t.status === "scheduled") await unscheduleTodo(t); return scheduleTodo(findTodo(i.id), {start:need(i.start,"start"), minutes:i.minutes, calName:i.calendar}); }},
+  {name:"unschedule_todo", description:"Remove a to-do's calendar event and return it to the backlog.",
+    inputSchema:{type:"object", properties:{id:{type:"string"}}, required:["id"]},
+    execute:async (i) => { await unscheduleTodo(findTodo(i.id)); return "ok"; }},
+  {name:"create_event", description:"Create a calendar event that is not a to-do (appointments, plans). Local times YYYY-MM-DDTHH:MM. For all-day pass all_day true and start YYYY-MM-DD.",
+    inputSchema:{type:"object", properties:{title:{type:"string"}, start:{type:"string"}, minutes:{type:"integer"}, calendar:{type:"string"}, all_day:{type:"boolean"}, location:{type:"string"}}, required:["title","start","calendar"]},
+    execute:async (i) => {
+      const cal = calByName(i.calendar) || defaultCal(); if (!cal || !cal.writable) throw new Error("That calendar is read-only.");
+      let st, en, allDay = !!i.all_day;
+      if (allDay){ st = String(i.start).slice(0,10) + "T00:00:00"; en = dayKey(addDays(new Date(st),1)) + "T00:00:00"; }
+      else { const s = new Date(need(i.start,"start")); if (isNaN(s)) throw new Error("Bad start."); st = localISO(s); en = localISO(new Date(s.getTime() + (Number(i.minutes)||60)*60000)); }
+      const res = await S.mcp.callTool(GC, "create_event", {calendarId:cal.id, summary:String(i.title), startTime:st, endTime:en, allDay, location:i.location || undefined, notificationLevel:"NONE"});
+      await afterWrite();
+      const newId = res.payload?.id;
+      if (newId) pushUndo(`Created "${String(i.title)}"`, async () => { await S.mcp.callTool(GC, "delete_event", {calendarId:cal.id, eventId:newId, notificationLevel:"NONE"}); await afterWrite(); });
+      return {calendar:cal.name};
+    }},
+  {name:"update_settings", description:"Change how the planner looks and behaves. Only pass what should change. reset:true restores every default. Returns the new settings.",
+    inputSchema:{type:"object", properties:{
+      timeline_start_hour:{type:"integer", description:"0-20, first hour shown on timelines"},
+      timeline_end_hour:{type:"integer", description:"4-24, last hour shown (24 = midnight)"},
+      hour_height:{type:"integer", description:"Timeline zoom, pixels per hour, 30-120"},
+      tab_hours:{type:"object", description:"Hour each time-of-day tab starts (0-23), in order morning < day < evening < tomorrow", properties:{morning:{type:"integer"}, day:{type:"integer"}, evening:{type:"integer"}, tomorrow:{type:"integer"}}},
+      layout:{type:"string", enum:["timeline","split","list"], description:"Day and Tomorrow layout"},
+      split_percent:{type:"integer", description:"Timeline share of the split, 15-85"},
+      calendar_colors:{type:"object", description:"Map of calendar name to hex color like #3b7be8; empty string restores the default"},
+      default_calendar:{type:"string", description:"Calendar used when nothing else fits; must be writable"},
+      theme:{type:"string", enum:["day","brooksos"], description:"Overall look: day (dark, oxidized, Day app) or brooksos (macOS desktop)"},
+      reset:{type:"boolean"}}},
+    execute:async (i) => {
+      const before = JSON.parse(JSON.stringify(cfgRaw));
+      if (i.reset){ cfgRaw = {}; applyCfg(); schedule(); await cfgRef().set({}); }
+      else {
+        const c = cfg(), p = {};
+        const int = (v, lo, hi, what) => { const n = Math.round(Number(v)); if (!Number.isFinite(n) || n < lo || n > hi) throw new Error(`${what} must be ${lo} to ${hi}.`); return n; };
+        if (i.timeline_start_hour !== undefined) p.tlStart = int(i.timeline_start_hour, 0, 20, "Timeline start");
+        if (i.timeline_end_hour !== undefined) p.tlEnd = int(i.timeline_end_hour, 4, 24, "Timeline end");
+        if ((p.tlEnd ?? c.tlEnd) - (p.tlStart ?? c.tlStart) < 4) throw new Error("Timeline needs at least 4 hours.");
+        if (i.hour_height !== undefined) p.hourHeight = int(i.hour_height, 30, 120, "Hour height");
+        if (i.tab_hours){
+          const th = {...c.tabHours};
+          for (const k of ["morning","day","evening","tomorrow"]) if (i.tab_hours[k] !== undefined) th[k] = int(i.tab_hours[k], 0, 23, k + " hour");
+          if (!(th.morning < th.day && th.day < th.evening && th.evening < th.tomorrow)) throw new Error("Tab hours must run morning < day < evening < tomorrow.");
+          p.tabHours = th;
+        }
+        if (i.layout !== undefined){ if (!["timeline","split","list"].includes(i.layout)) throw new Error("Layout must be timeline, split or list."); p.layout = i.layout; }
+        if (i.split_percent !== undefined) p.split = int(i.split_percent, 15, 85, "Split") / 100;
+        if (i.calendar_colors && typeof i.calendar_colors === "object"){
+          const cc = {...c.calColors};
+          for (const [name, col] of Object.entries(i.calendar_colors)){
+            const cal = calByName(name); if (!cal) throw new Error(`No calendar named ${name}.`);
+            if (!col) delete cc[cal.name];
+            else if (/^#[0-9a-f]{6}$/i.test(String(col))) cc[cal.name] = String(col);
+            else throw new Error("Colors must be hex like #3b7be8.");
+          }
+          p.calColors = cc;
+        }
+        if (i.theme !== undefined){ if (!["day","brooksos"].includes(i.theme)) throw new Error("Look must be day or brooksos."); p.theme = i.theme; }
+        if (i.default_calendar !== undefined){ const cal = calByName(i.default_calendar); if (!cal || !cal.writable) throw new Error("Default calendar must be a writable calendar."); p.defaultCal = cal.name; }
+        const next = {...cfgRaw, ...p};
+        cfgRaw = next; applyCfg(); schedule();
+        await cfgRef().set(next);
+      }
+      autoTab = timeTab();
+      pushUndo("Changed settings", async () => { cfgRaw = before; applyCfg(); schedule(); await cfgRef().set(before); });
+      return cfg();
+    }},
+  {name:"move_event", description:"Move an existing calendar event to a new start time (local YYYY-MM-DDTHH:MM), keeping its length unless minutes is given. Refuses events with guests or on read-only calendars.",
+    inputSchema:{type:"object", properties:{event_id:{type:"string"}, start:{type:"string"}, minutes:{type:"integer"}}, required:["event_id","start"]},
+    execute:async (i) => {
+      const ev = allEvents().find(e => e.id === String(i.event_id)); if (!ev) throw new Error("Event not found in the loaded week.");
+      const s = new Date(need(i.start,"start")); if (isNaN(s)) throw new Error("Bad start.");
+      if (i.minutes) ev.end = new Date(ev.start.getTime() + Number(i.minutes)*60000);
+      await moveEvent(ev, s); return "moved";
+    }},
+];
+$("spotform").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const q = $("spotin").value.trim(); if (!q) return;
+  const out = $("spotout");
+  if (!S.sample){ out.className = "out err"; out.textContent = "Claude isn't available in this view."; return; }
+  ctl?.abort(); ctl = new AbortController();
+  out.className = "out"; out.textContent = "Thinking…"; $("spotstop").hidden = false;
+  const prompt = `You are the command bar of Brooks's daily planner. Carry out the request with the tools, then reply in one or two short plain sentences saying what changed. No em dashes.
+
+Rules:
+- Google Calendar is the record for anything with a time. Unscheduled to-dos live in the backlog.
+- Choose the calendar by fit using calendar names and descriptions: food goes to Meal, social or leisure to Fun, Between by its name, otherwise Personal. Never write to read-only calendars.
+- Resolve relative dates against "now". Times are local. Default to-do length is its estimate or 30 minutes.
+- If something to schedule is not yet a to-do and is a task, add_todo first then schedule_todo. Appointments or plans with other people use create_event.
+- Requests about how the planner looks or behaves (look, timeline hours, zoom, tab times, layout, split, calendar colors, default calendar) use update_settings. Current values are in settings. Pick tasteful hex colors that read on dark and light backgrounds.
+- If the request is ambiguous or touches an event with guests, do nothing and ask one short question.
+
+Planner state (JSON):
+${JSON.stringify(context())}
+
+Request: ${q}`;
+  try {
+    const r = await S.sample(prompt, {tools:TOOLS, modelTier:"quick", signal:ctl.signal, onText:({text}) => { out.textContent = text; }});
+    out.textContent = r.text.trim(); $("spotin").value = "";
+  } catch (err) {
+    const c = err && err.code;
+    if (c === "cancelled") out.textContent = err.text || "Stopped.";
+    else if (c === "not_granted" || c === "sampling_disabled" || c === "tools_unavailable" || c === "capability_disabled"){ out.className = "out err"; out.textContent = err.message || "Add your Anthropic API key in the sidebar under Connections."; }
+    else if (c === "rate_limited"){ out.className = "out err"; out.textContent = "Usage limit reached for now. Try again later."; }
+    else if (c === "session_expired"){ out.className = "out err"; out.textContent = "Check your Anthropic API key."; }
+    else { out.className = "out err"; out.textContent = (err && err.text ? err.text + "\n\n" : "") + "That didn't finish. Check the calendar before retrying."; }
+  } finally { $("spotstop").hidden = true; ctl = null; schedule(); }
+});
+$("spotstop").addEventListener("click", () => ctl?.abort());
+
+/* =====================================================================
+   Standalone services: Google sign-in, Calendar REST, Drive storage, Claude API
+   ===================================================================== */
+const CLAUDE_MODEL = (() => { try { return localStorage.getItem("claudeModel") || "claude-haiku-5-5"; } catch { return "claude-haiku-5-5"; } })();
+const SCOPES = "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.appdata";
+const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+const lsSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} };
+const AUTH = {clientId:lsGet("gClientId"), token:null, exp:0, state:"signedout", client:null, waiters:[]};
+try { const t = JSON.parse(lsGet("gTok") || "null"); if (t && t.exp > Date.now() + 60000){ AUTH.token = t.token; AUTH.exp = t.exp; AUTH.state = "signedin"; } else if (t) AUTH.state = "expired"; } catch {}
+
+function gisReady(){ return new Promise(res => { const tick = () => (window.google && google.accounts && google.accounts.oauth2) ? res() : setTimeout(tick, 120); tick(); }); }
+async function initGis(){
+  if (!AUTH.clientId) return;
+  await gisReady();
+  AUTH.client = google.accounts.oauth2.initTokenClient({
+    client_id: AUTH.clientId, scope: SCOPES,
+    callback: (r) => {
+      if (r && r.access_token){
+        AUTH.token = r.access_token; AUTH.exp = Date.now() + (Number(r.expires_in || 3600) - 90) * 1000; AUTH.state = "signedin";
+        lsSet("gTok", JSON.stringify({token:AUTH.token, exp:AUTH.exp})); lsSet("gConsented", "1");
+        onSignedIn();
+      } else { toast("Google sign-in didn't complete."); }
+      schedule();
+    },
+    error_callback: (e) => { if (e && e.type !== "popup_closed") toast("Google sign-in was blocked. Try again."); schedule(); }
+  });
+}
+function signIn(){
+  if (!AUTH.clientId){ $("setup").hidden = false; return; }
+  if (!AUTH.client){ toast("Google sign-in is still loading."); return; }
+  AUTH.client.requestAccessToken({prompt: lsGet("gConsented") ? "" : "consent"});
+}
+function signOut(){
+  try { if (AUTH.token) google.accounts.oauth2.revoke(AUTH.token, () => {}); } catch {}
+  AUTH.token = null; AUTH.exp = 0; AUTH.state = "signedout"; lsSet("gTok", null); lsSet("gConsented", null);
+  S.mcp = null; S.calendars = []; S.events.clear(); schedule();
+}
+function markExpired(){ if (AUTH.state !== "expired"){ AUTH.state = "expired"; lsSet("gTok", null); schedule(); } }
+function tokenNow(){ if (AUTH.token && Date.now() < AUTH.exp) return AUTH.token; if (AUTH.token) markExpired(); return null; }
+setInterval(() => { if (AUTH.state === "signedin" && Date.now() > AUTH.exp) markExpired(); }, 30000);
+
+async function gfetch(url, opts = {}){
+  const tok = tokenNow();
+  if (!tok) throw {code:"needs_reauth", message:"Google sign-in expired."};
+  const headers = Object.assign({Authorization:"Bearer " + tok}, opts.headers || {});
+  if (opts.body && typeof opts.body === "string" && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
+  let r;
+  try { r = await fetch(url, Object.assign({}, opts, {headers})); }
+  catch { throw {code:"server_unavailable", message:"You're offline or Google didn't answer.", retryable:true}; }
+  if (r.status === 401){ markExpired(); throw {code:"needs_reauth", message:"Google sign-in expired."}; }
+  if (r.status === 204) return null;
+  const j = await r.json().catch(() => null);
+  if (!r.ok){
+    if (r.status === 410 || r.status === 404) throw {code:"tool_error", message:"Not found.", status:r.status};
+    throw {code: (r.status >= 500 || r.status === 429) ? "server_unavailable" : "tool_error", message:(j && j.error && j.error.message) || ("HTTP " + r.status), retryable: r.status >= 500};
+  }
+  return j;
+}
+
+/* ----- Google Calendar, shaped like the claude.ai connector the app was built on ----- */
+const CAL = "https://www.googleapis.com/calendar/v3";
+const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const enc = encodeURIComponent;
+const toRFC = (local) => new Date(local).toISOString();
+async function gcall(tool, i = {}){
+  if (tool === "list_calendars"){
+    const j = await gfetch(`${CAL}/users/me/calendarList?maxResults=250`);
+    return {calendars:(j.items || []).filter(c => !c.deleted && !c.hidden).map(c => ({id:c.id, summary:c.summaryOverride || c.summary, description:c.description || "", accessRole:c.accessRole, primary:!!c.primary}))};
+  }
+  if (tool === "list_events"){
+    const now = new Date();
+    const q = new URLSearchParams({singleEvents:"true", orderBy:"startTime", maxResults:String(Math.min(2500, i.pageSize || 250)),
+      timeMin:toRFC(i.startTime || now), timeMax:toRFC(i.endTime || addDays(now, 7))});
+    if (i.fullText) q.set("q", i.fullText);
+    const j = await gfetch(`${CAL}/calendars/${enc(i.calendarId || "primary")}/events?${q}`);
+    return {events:j.items || []};
+  }
+  if (tool === "create_event"){
+    const b = {summary:i.summary};
+    if (i.description) b.description = i.description;
+    if (i.location) b.location = i.location;
+    if (i.allDay){ b.start = {date:String(i.startTime).slice(0,10)}; b.end = {date:String(i.endTime).slice(0,10)}; }
+    else { b.start = {dateTime:toRFC(i.startTime), timeZone:TZ}; b.end = {dateTime:toRFC(i.endTime), timeZone:TZ}; }
+    if (i.useDefaultReminders === false) b.reminders = {useDefault:false, overrides:[]};
+    return gfetch(`${CAL}/calendars/${enc(i.calendarId || "primary")}/events?sendUpdates=none`, {method:"POST", body:JSON.stringify(b)});
+  }
+  if (tool === "update_event"){
+    const b = {};
+    if (i.summary !== undefined) b.summary = i.summary;
+    if (i.description !== undefined) b.description = i.description;
+    if (i.startTime) b.start = {dateTime:toRFC(i.startTime), timeZone:TZ};
+    if (i.endTime) b.end = {dateTime:toRFC(i.endTime), timeZone:TZ};
+    return gfetch(`${CAL}/calendars/${enc(i.calendarId || "primary")}/events/${enc(i.eventId)}?sendUpdates=none`, {method:"PATCH", body:JSON.stringify(b)});
+  }
+  if (tool === "delete_event"){
+    await gfetch(`${CAL}/calendars/${enc(i.calendarId || "primary")}/events/${enc(i.eventId)}?sendUpdates=none`, {method:"DELETE"});
+    return {deleted:true};
+  }
+  throw {code:"bad_request", message:"Unknown tool " + tool};
+}
+const gwatches = new Set();
+async function runWatch(w){
+  try { const p = await gcall(w.tool, w.input); if (gwatches.has(w)) w.handler({type:"data", result:{payload:p}}); }
+  catch (e){ if (gwatches.has(w)) w.handler({type:"error", error:e}); }
+}
+const GCAL = Object.freeze({
+  callTool: async (server, tool, input) => ({payload: await gcall(tool, input || {})}),
+  watchTool: (server, tool, input, handler) => { const w = {tool, input, handler}; gwatches.add(w); setTimeout(() => runWatch(w), 0); return () => gwatches.delete(w); },
+  invalidate: async (server, tool) => { await Promise.all([...gwatches].filter(w => !tool || w.tool === tool).map(runWatch)); }
+});
+setInterval(() => { if (!document.hidden && S.mcp) gwatches.forEach(w => { if (w.tool === "list_events") runWatch(w); }); }, 60000);
+setInterval(() => { if (!document.hidden && S.mcp) gwatches.forEach(w => { if (w.tool === "list_calendars") runWatch(w); }); }, 600000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && S.mcp){ gwatches.forEach(runWatch); storeSync().catch(() => {}); } });
+
+/* ----- To-dos and settings: one JSON file in your Google Drive's hidden app folder, cached on device ----- */
+const DRIVE = "https://www.googleapis.com/drive/v3", UPLOAD = "https://www.googleapis.com/upload/drive/v3", FILE = "planner.json";
+const STORE = {data:{cols:{}, tomb:{}}, fileId:null, listeners:new Set(), dirty:false, error:false, chain:Promise.resolve(), saveT:0, emitT:0};
+try { const c = JSON.parse(lsGet("plannerStore") || "null"); if (c && c.data){ STORE.data = c.data; STORE.fileId = c.fileId || null; STORE.dirty = !!c.dirty; } } catch {}
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const colObj = (n) => (STORE.data.cols[n] = STORE.data.cols[n] || {});
+const strip = (d) => { const x = Object.assign({}, d); delete x._u; return x; };
+function persistLocal(){ lsSet("plannerStore", JSON.stringify({data:STORE.data, fileId:STORE.fileId, dirty:STORE.dirty})); }
+function emit(){ clearTimeout(STORE.emitT); STORE.emitT = setTimeout(() => STORE.listeners.forEach(l => { try { l(); } catch (e) { console.error(e); } }), 0); }
+function touch(){ STORE.dirty = true; persistLocal(); emit(); clearTimeout(STORE.saveT); STORE.saveT = setTimeout(() => storeSync().catch(() => {}), 900); }
+const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+function docRef(col, id){
+  const snap = () => { const d = colObj(col)[id]; return {id, exists:!!d, data:() => d ? strip(d) : undefined, metadata:{}}; };
+  return {
+    id, path:col + "/" + id,
+    get: async () => snap(),
+    set: async (data) => { colObj(col)[id] = Object.assign(clone(data), {_u:Date.now()}); delete STORE.data.tomb[col + "/" + id]; touch(); },
+    update: async (data) => { const cur = colObj(col)[id]; if (!cur) throw {code:"invalid_argument", message:"No such document."}; colObj(col)[id] = Object.assign({}, cur, clone(data), {_u:Date.now()}); touch(); },
+    delete: async () => { delete colObj(col)[id]; STORE.data.tomb[col + "/" + id] = Date.now(); touch(); },
+    onSnapshot: (next) => { const l = () => next(snap()); STORE.listeners.add(l); setTimeout(l, 0); return () => STORE.listeners.delete(l); }
+  };
+}
+function colRef(col){
+  const qsnap = () => { const docs = Object.keys(colObj(col)).map(id => { const d = colObj(col)[id]; return {id, exists:true, data:() => strip(d), metadata:{}}; }); return {docs, size:docs.length, empty:!docs.length, metadata:{}}; };
+  return {
+    path:col,
+    doc: (id) => docRef(col, id || genId()),
+    add: async (data) => { const r = docRef(col, genId()); await r.set(data); return r; },
+    onSnapshot: (next) => { const l = () => next(qsnap()); STORE.listeners.add(l); setTimeout(l, 0); return () => STORE.listeners.delete(l); }
+  };
+}
+const DB = Object.freeze({collection: colRef});
+function mergeStores(a, b){
+  const out = {cols:{}, tomb:Object.assign({}, a.tomb || {})};
+  for (const [k, t] of Object.entries((b && b.tomb) || {})) out.tomb[k] = Math.max(out.tomb[k] || 0, t);
+  const cols = new Set([...Object.keys(a.cols || {}), ...Object.keys((b && b.cols) || {})]);
+  for (const c of cols){
+    const A = (a.cols || {})[c] || {}, B = ((b && b.cols) || {})[c] || {}; out.cols[c] = {};
+    for (const id of new Set([...Object.keys(A), ...Object.keys(B)])){
+      const x = A[id], y = B[id]; const pick = !x ? y : !y ? x : ((y._u || 0) > (x._u || 0) ? y : x);
+      if (pick && !(out.tomb[c + "/" + id] >= (pick._u || 0))) out.cols[c][id] = pick;
+    }
+  }
+  const cutoff = Date.now() - 30 * 864e5;
+  for (const k of Object.keys(out.tomb)) if (out.tomb[k] < cutoff) delete out.tomb[k];
+  return out;
+}
+async function driveFind(){ const j = await gfetch(`${DRIVE}/files?spaces=appDataFolder&q=${enc("name='" + FILE + "'")}&fields=files(id,modifiedTime)&pageSize=5`); return (j.files || [])[0] || null; }
+async function driveRead(id){ return gfetch(`${DRIVE}/files/${enc(id)}?alt=media`); }
+async function driveWrite(id, obj){ return gfetch(`${UPLOAD}/files/${enc(id)}?uploadType=media`, {method:"PATCH", body:JSON.stringify(obj)}); }
+async function driveCreate(obj){
+  const b = "plnr" + Date.now();
+  const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name:FILE, parents:["appDataFolder"]})}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(obj)}\r\n--${b}--`;
+  return gfetch(`${UPLOAD}/files?uploadType=multipart&fields=id`, {method:"POST", body, headers:{"Content-Type":"multipart/related; boundary=" + b}});
+}
+function storeSync(){
+  STORE.chain = STORE.chain.then(async () => {
+    if (!tokenNow()) return;
+    try {
+      if (!STORE.fileId){ const f = await driveFind(); if (f) STORE.fileId = f.id; }
+      let remote = null;
+      if (STORE.fileId){ try { remote = await driveRead(STORE.fileId); } catch (e){ if (e.status === 404){ STORE.fileId = null; } else throw e; } }
+      const merged = remote ? mergeStores(STORE.data, remote) : STORE.data;
+      const localChanged = JSON.stringify(merged) !== JSON.stringify(STORE.data);
+      STORE.data = merged;
+      if (localChanged) emit();
+      if (!remote || STORE.dirty || JSON.stringify(merged) !== JSON.stringify(remote)){
+        if (STORE.fileId) await driveWrite(STORE.fileId, merged); else { const f = await driveCreate(merged); STORE.fileId = f.id; }
+      }
+      STORE.dirty = false; STORE.error = false; persistLocal();
+    } catch (e){ STORE.error = e.code !== "needs_reauth"; persistLocal(); schedule(); }
+  });
+  return STORE.chain;
+}
+setInterval(() => { if (!document.hidden) storeSync().catch(() => {}); }, 45000);
+
+/* ----- Claude bar via the Anthropic API, key kept on this device ----- */
+async function claudeSample(prompt, opts = {}){
+  const key = lsGet("anthropicKey");
+  if (!key) throw {code:"not_granted", message:"Add your Anthropic API key in the sidebar under Connections."};
+  const tools = (opts.tools || []).map(t => ({name:t.name, description:t.description, input_schema:t.inputSchema || {type:"object", properties:{}}}));
+  const messages = [{role:"user", content:prompt}];
+  let text = "";
+  for (let round = 0; round < 8; round++){
+    let r;
+    try {
+      r = await fetch("https://api.anthropic.com/v1/messages", {method:"POST", signal:opts.signal, headers:{
+        "content-type":"application/json", "x-api-key":key, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model:CLAUDE_MODEL, max_tokens:1024, tools, messages})});
+    } catch (e){ if (e && e.name === "AbortError") throw {code:"cancelled", text}; throw {code:"upstream_error", message:"Couldn't reach Claude.", text}; }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok){
+      if (r.status === 401 || r.status === 403) throw {code:"session_expired", text};
+      if (r.status === 429) throw {code:"rate_limited", text};
+      throw {code:"upstream_error", message:(j.error && j.error.message) || ("HTTP " + r.status), text};
+    }
+    const part = (j.content || []).filter(c => c.type === "text").map(c => c.text).join("");
+    if (part){ text += (text ? "\n\n" : "") + part; opts.onText && opts.onText({text, delta:part}); }
+    if (j.stop_reason !== "tool_use") return {text:text.trim() || "Done.", truncated:j.stop_reason === "max_tokens"};
+    messages.push({role:"assistant", content:j.content});
+    const results = [];
+    for (const c of j.content.filter(c => c.type === "tool_use")){
+      const t = (opts.tools || []).find(x => x.name === c.name);
+      let out, isErr = false;
+      try { out = t ? await t.execute(c.input || {}, {signal:opts.signal}) : "Error: unknown tool"; }
+      catch (e){ out = "Error: " + ((e && e.message) || e); isErr = true; }
+      results.push({type:"tool_result", tool_use_id:c.id, content: typeof out === "string" ? out : JSON.stringify(out), is_error:isErr});
+    }
+    messages.push({role:"user", content:results});
+  }
+  return {text:text.trim() || "Done."};
+}
+
+/* ----- connections panel ----- */
+function renderConn(){
+  const box = $("conn"); if (!box) return;
+  const a = document.activeElement; if (a && box.contains(a) && a.tagName === "INPUT") return;
+  const g = AUTH.state === "signedin" ? `<div style="display:flex;align-items:center;gap:8px"><span class="dot ok"></span><span>Google</span><button class="btn ghost" data-act="gsignout" style="margin-left:auto">Sign out</button></div>`
+    : `<div style="display:flex;align-items:center;gap:8px"><span class="dot ${AUTH.state === "expired" ? "warn" : ""}"></span><span>Google</span><button class="btn" data-act="gsignin" style="margin-left:auto">${AUTH.state === "expired" ? "Continue" : "Sign in"}</button></div>`;
+  const k = lsGet("anthropicKey")
+    ? `<div style="display:flex;align-items:center;gap:8px"><span class="dot ok"></span><span>Claude key on this device</span><button class="btn ghost" data-act="clearkey" style="margin-left:auto">Remove</button></div>`
+    : `<form class="quick" onsubmit="return false"><input id="akey" type="password" placeholder="Anthropic API key (sk-ant-…)" autocomplete="off"><button class="btn" data-act="savekey" type="button">Save</button></form>`;
+  box.innerHTML = g + k;
+}
+
+/* ---------- boot ---------- */
+function onSignedIn(){
+  if (!S.mcp){ S.mcp = GCAL; startCalendar(); } else { GCAL.invalidate(); }
+  storeSync().catch(() => {});
+}
+applyTheme(cfg().theme);
+S.db = DB; startDb();
+S.sample = claudeSample;
+render();
+$("origin").textContent = location.origin;
+if (!AUTH.clientId) $("setup").hidden = false;
+initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+
+</body>
+</html>
