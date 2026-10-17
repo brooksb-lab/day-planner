@@ -456,9 +456,17 @@ body.theme-day .tab.is-now{color:var(--accent)}
 body.theme-day .tab .now{display:none}
 body.theme-day .tab-pill{border-radius:2px;background:var(--fg);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none}
 @media (max-width:560px){body.theme-day .tabs{gap:18px} body.theme-day .tab{font-size:17px}}
-body.spot-off .spot{display:none}
-#spottog[aria-pressed="true"]{background:rgba(217,119,87,.22);box-shadow:inset 0 0 0 1px rgba(217,119,87,.5)}
-#spottog.off img{opacity:.85}
+/* Claude chat overlay */
+body:not(.spot-open) .spot{display:none!important}
+body.spot-open .spot{position:fixed!important;left:0!important;right:0!important;top:var(--vvTop,0px)!important;bottom:auto!important;height:var(--vvH,100vh)!important;
+  z-index:40!important;display:grid!important;place-items:center;padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))!important;
+  pointer-events:auto!important;background:rgba(8,9,11,.38);-webkit-backdrop-filter:blur(16px) saturate(140%);backdrop-filter:blur(16px) saturate(140%);animation:spotFade .18s ease}
+body.spot-open .spot-in{width:min(680px,100%);margin:0;box-shadow:0 24px 60px -12px rgba(0,0,0,.7),inset 0 0 0 .5px rgba(232,234,237,.14);animation:spotPop .32s cubic-bezier(.32,.72,0,1)}
+@keyframes spotFade{from{opacity:0}}
+@keyframes spotPop{from{opacity:0;transform:scale(.96) translateY(8px)}}
+#spotin:focus,#spotin:focus-visible{outline:none;box-shadow:none}
+.spot-x{flex:none;width:28px;height:28px;margin:-2px -4px -2px 0;border:0;border-radius:50%;display:grid;place-items:center;background:rgba(232,234,237,.08);color:var(--fg-2);cursor:pointer}
+.spot-x:hover{background:rgba(232,234,237,.14);color:var(--fg)}
 @media (prefers-reduced-motion:reduce){.tab-pill{transition:none}}
 /* Phone: the header bar is pinned to the bottom of the screen, Claude bar sits just above it */
 @media (max-width:560px){
@@ -466,7 +474,7 @@ body.spot-off .spot{display:none}
     padding:12px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
     box-shadow:0 -.5px 0 rgba(232,234,237,.09)}
   body.theme-day .spot{bottom:var(--hdrH,0px);padding-bottom:8px}
-  body.theme-day{padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(var(--hdrH,0px) + 90px)}
+  body.theme-day{padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(var(--hdrH,0px) + 24px)}
   body.theme-day.pane-mode{padding-bottom:0}
   body.theme-day .toast{top:calc(12px + env(safe-area-inset-top,0px))}
 }
@@ -497,7 +505,7 @@ body.spot-off .spot{display:none}
     <span class="sync" id="sync"><span class="dot" id="syncdot"></span><span id="synctxt">Connecting</span></span>
     <span class="undogrp" id="undogrp"><button class="mbtn icon" id="undobtn" type="button" data-act="undo" disabled title="Undo (⌘Z)" aria-label="Undo"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 5 4 8.5 7.5 12"/><path d="M4.5 8.5h7.25a4.25 4.25 0 0 1 0 8.5H9"/></svg></button><button class="mbtn icon" id="redobtn" type="button" data-act="redo" disabled title="Redo (⇧⌘Z)" aria-label="Redo"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 5 16 8.5 12.5 12"/><path d="M15.5 8.5H8.25a4.25 4.25 0 0 0 0 8.5H11"/></svg></button></span>
     <button class="mbtn icon" id="syncnow" type="button" title="Sync now" aria-label="Sync now"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10a6 6 0 1 1-1.76-4.24"/><path d="M16 3.5v3.3h-3.3"/></svg></button>
-    <button class="mbtn icon" id="spottog" type="button" title="Hide Claude" aria-label="Show Claude" aria-pressed="false"><img src="icons/claude.png" alt="" width="18" height="18" style="display:block;border-radius:5px"></button>
+    <button class="mbtn icon" id="spottog" type="button" title="Ask Claude (⌘K)" aria-label="Ask Claude"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M6.35 0.10 L5.58 1.06 L5.58 1.70 L5.78 2.41 L9.43 8.76 L9.24 8.95 L3.59 4.65 L2.44 4.52 L1.86 5.17 L1.99 6.19 L2.57 6.83 L9.24 11.33 L9.56 11.71 L9.43 11.84 L6.16 11.52 L0.39 11.20 L0.06 11.45 L0.00 11.78 L0.51 12.48 L1.22 12.61 L9.37 12.93 L9.50 13.19 L9.18 13.51 L4.62 16.01 L2.76 17.29 L2.57 17.55 L2.50 18.26 L2.95 18.64 L4.11 18.51 L10.40 14.41 L10.52 14.47 L10.52 14.66 L9.24 16.14 L5.45 21.08 L5.33 21.85 L6.10 22.17 L6.42 22.04 L8.15 20.18 L11.55 15.50 L11.87 15.24 L11.94 15.43 L11.74 16.01 L11.49 18.00 L10.46 22.68 L10.72 23.45 L11.23 23.90 L11.94 23.78 L12.39 23.33 L12.96 16.46 L13.16 16.01 L13.35 16.14 L14.31 17.87 L16.04 20.50 L17.20 22.04 L17.97 22.11 L18.35 21.98 L18.55 21.66 L18.42 20.50 L15.72 16.52 L15.72 16.14 L18.55 18.51 L20.66 20.12 L21.18 20.18 L21.37 19.86 L21.30 19.28 L15.66 14.02 L15.72 13.89 L16.11 13.89 L22.59 15.50 L23.87 14.92 L23.94 14.41 L23.42 13.76 L22.72 13.32 L20.47 13.12 L18.03 13.12 L15.79 12.87 L15.98 12.67 L23.29 11.07 L23.55 10.94 L23.74 10.56 L23.81 9.91 L23.04 9.47 L20.21 9.91 L16.75 10.68 L16.43 10.56 L17.58 8.63 L20.47 4.91 L20.73 3.75 L20.02 2.73 L18.99 2.73 L18.48 3.11 L17.01 4.72 L14.44 8.05 L13.99 8.50 L13.80 8.50 L13.73 8.37 L14.70 3.63 L15.02 1.25 L14.50 0.61 L14.12 0.42 L13.93 0.42 L13.41 0.74 L12.90 1.76 L12.26 9.14 L12.06 9.21 L11.68 8.05 L9.43 3.69 L8.09 0.55 L7.64 0.16 L6.93 0.03Z"/></svg></button>
     <span class="mono" id="clock"></span>
   </div>
 </div>
@@ -561,6 +569,7 @@ body.spot-off .spot{display:none}
       <span class="glyph">⌘</span>
       <input id="spotin" placeholder="Ask Claude: schedule the trims run tomorrow at 11, push gym to 7" autocomplete="off">
       <button class="btn ghost" type="button" id="spotstop" hidden>Stop</button>
+      <button class="spot-x" type="button" id="spotclose" aria-label="Close Claude" title="Close (Esc)"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
     </form>
     <div class="out" id="spotout"></div>
   </div>
@@ -1344,18 +1353,20 @@ function wxLine(){
 }
 
 /* ---------- fixed pane sizing ---------- */
-/* show / hide the Claude bar */
-function applySpot(on){
-  document.body.classList.toggle("spot-off", !on);
-  const b = $("spottog"); if (b){ b.setAttribute("aria-pressed", String(on)); b.title = b.ariaLabel = on ? "Hide Claude" : "Show Claude"; b.classList.toggle("off", !on); }
-  if (typeof fitPane === "function") fitPane();
+/* Claude chat: opens centered over a blurred backdrop */
+function syncVV(){
+  const v = window.visualViewport, r = document.documentElement.style;
+  r.setProperty("--vvH", (v ? v.height : innerHeight) + "px"); r.setProperty("--vvTop", (v ? v.offsetTop : 0) + "px");
 }
-let spotOn = false; try { spotOn = localStorage.getItem("spotOff") === "0"; } catch {}
-applySpot(spotOn);
-$("spottog").addEventListener("click", () => {
-  spotOn = !spotOn; try { localStorage.setItem("spotOff", spotOn ? "0" : "1"); } catch {}
-  applySpot(spotOn);
-  if (spotOn){ const i = document.querySelector(".spot input"); if (i && matchMedia("(hover:hover)").matches) i.focus(); }
+if (window.visualViewport){ visualViewport.addEventListener("resize", syncVV); visualViewport.addEventListener("scroll", syncVV); }
+function openSpot(){ syncVV(); document.body.classList.add("spot-open"); const i = $("spotin"); if (i) setTimeout(() => i.focus(), 30); }
+function closeSpot(){ document.body.classList.remove("spot-open"); const i = $("spotin"); if (i) i.blur(); }
+$("spottog").addEventListener("click", openSpot);
+$("spotclose").addEventListener("click", closeSpot);
+document.querySelector(".spot").addEventListener("pointerdown", (e) => { if (e.target.classList && e.target.classList.contains("spot")) closeSpot(); });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && document.body.classList.contains("spot-open")){ e.preventDefault(); closeSpot(); }
+  else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k"){ e.preventDefault(); document.body.classList.contains("spot-open") ? closeSpot() : openSpot(); }
 });
 function fitPane(){
   const w = document.querySelector(".window");
@@ -1363,7 +1374,7 @@ function fitPane(){
   window.scrollTo(0, 0);
   const top = w.getBoundingClientRect().top;
   const hdrH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--hdrH")) || 0;
-  const bottom = document.body.classList.contains("spot-off") ? innerHeight - hdrH : document.querySelector(".spot-in").getBoundingClientRect().top;
+  const bottom = innerHeight - hdrH;
   w.style.height = Math.max(340, Math.floor(bottom - top - 10)) + "px";
 }
 addEventListener("resize", fitPane);
@@ -2108,7 +2119,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.17-15";
+const APP_VERSION = "2026.10.17-17";
 try { $("appver").textContent = "Version " + APP_VERSION; } catch {}
 if ("serviceWorker" in navigator){
   const hadController = !!navigator.serviceWorker.controller;
