@@ -1,5 +1,5 @@
 // App shell cache. Network first so updates land; cache is the offline fallback.
-const CACHE = "day-v11";
+const CACHE = "day-v12";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-180.png", "./icons/sun-mask.png", "./icons/moon-mask.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", (e) => {
@@ -8,5 +8,5 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const u = new URL(e.request.url);
   if (e.request.method !== "GET" || u.origin !== location.origin) return;
-  e.respondWith(fetch(e.request).then((r) => { const copy = r.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); return r; }).catch(() => caches.match(e.request)));
+  e.respondWith(fetch(e.request, {cache:"no-cache"}).then((r) => { const copy = r.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); return r; }).catch(() => caches.match(e.request)));
 });

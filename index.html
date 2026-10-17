@@ -457,6 +457,16 @@ body.theme-day .tab .now{display:none}
 body.theme-day .tab-pill{border-radius:2px;background:var(--fg);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none}
 @media (max-width:560px){body.theme-day .tabs{gap:18px} body.theme-day .tab{font-size:17px}}
 @media (prefers-reduced-motion:reduce){.tab-pill{transition:none}}
+/* Phone: the header bar is pinned to the bottom of the screen, Claude bar sits just above it */
+@media (max-width:560px){
+  body.theme-day .dhdr{position:fixed;top:auto;bottom:0;left:0;right:0;margin:0;
+    padding:12px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+    box-shadow:0 -.5px 0 rgba(232,234,237,.09)}
+  body.theme-day .spot{bottom:var(--hdrH,0px);padding-bottom:8px}
+  body.theme-day{padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(var(--hdrH,0px) + 90px)}
+  body.theme-day.pane-mode{padding-bottom:0}
+  body.theme-day .toast{top:calc(12px + env(safe-area-inset-top,0px))}
+}
 /* icon controls */
 .mbtn.icon,body.theme-day .mbtn.icon{display:inline-grid;place-items:center;width:30px;height:30px;min-height:30px;padding:0;border:0;background:transparent;box-shadow:none;color:var(--fg-2);border-radius:8px}
 .mbtn.icon:hover,body.theme-day .mbtn.icon:hover{color:var(--fg);background:var(--line-2)}
@@ -929,7 +939,16 @@ async function syncNow(){
   } catch {}
   setTimeout(() => { S.syncing = false; schedule(); }, 1200);
 }
-$("syncnow").addEventListener("click", syncNow);
+/* Refresh = pull the latest app version and reload; the calendar refetches on load */
+async function appRefresh(){
+  if (S.syncing) return;
+  S.syncing = true; tick();
+  try { sessionStorage.setItem("reloadTab", S.tab); sessionStorage.setItem("reloadScroll", String(scrollY)); } catch {}
+  try { const r = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (r) await Promise.race([r.update(), new Promise(ok => setTimeout(ok, 2500))]); } catch {}
+  try { await Promise.race([fetch("index.html", {cache:"reload"}), new Promise(ok => setTimeout(ok, 2500))]); } catch {}
+  location.reload();
+}
+$("syncnow").addEventListener("click", appRefresh);
 async function clearSamples(){
   let n = 0; const base = startOfDay(new Date());
   for (const c of writableCals()){
@@ -958,6 +977,7 @@ function timeTab(d = new Date()){
 }
 let autoTab = timeTab();
 S.tab = (() => { try { const h = location.hash.slice(1); if (TABS.some(t => t.id === h)) return h; } catch {} return autoTab; })();
+try { const t = sessionStorage.getItem("reloadTab"); if (t && TABS.some(x => x.id === t)){ sessionStorage.removeItem("reloadTab"); S.tab = t; S.tabManual = Date.now(); const y = +sessionStorage.getItem("reloadScroll") || 0; sessionStorage.removeItem("reloadScroll"); setTimeout(() => scrollTo(0, y), 300); } } catch {}
 let tabsKey = "";
 function renderTabs(){
   const el = $("tabs");
@@ -1004,8 +1024,8 @@ function tick(){
   $("clock").textContent = d.toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"}) + "  " + fmtTime(d);
   const dot = $("syncdot"), tx = $("synctxt");
   const errs = [...S.events.values()].filter(r => r.error).length;
-  $("syncnow").disabled = !S.mcp || S.syncing;
-  $("syncnow").classList.toggle("spin", !!S.syncing); $("syncnow").title = S.syncing ? "Syncing" : "Sync now";
+  $("syncnow").disabled = !!S.syncing;
+  $("syncnow").classList.toggle("spin", !!S.syncing); $("syncnow").title = S.syncing ? "Refreshing" : "Refresh app and calendar";
   if (S.syncing){ dot.className = "dot"; tx.textContent = "Syncing"; }
   else if (!S.mcp){ dot.className = "dot"; tx.textContent = "Calendar off"; }
   else if (S.calStatus === "error"){ dot.className = "dot bad"; tx.textContent = "Calendar error"; }
@@ -1253,6 +1273,13 @@ document.addEventListener("click", (e) => {
   const name = b.dataset.themeSet; applyTheme(name); schedule();
   if (S.db) saveCfg({theme:name}).catch(() => {});
 });
+function syncHdrH(){
+  const h = $("dhdr"); if (!h) return;
+  const fixedBottom = getComputedStyle(h).position === "fixed";
+  document.documentElement.style.setProperty("--hdrH", fixedBottom ? h.offsetHeight + "px" : "0px");
+}
+if (window.ResizeObserver) new ResizeObserver(() => { syncHdrH(); if (typeof fitPane === "function") fitPane(); }).observe(document.getElementById("dhdr"));
+addEventListener("resize", syncHdrH);
 function sizeMark(){
   const m = $("dmain"), k = $("dmark"); if (!m || !k || !document.body.classList.contains("theme-day")) return;
   const h = m.offsetHeight; if (!h) return;
