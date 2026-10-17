@@ -536,6 +536,7 @@ body.theme-day .tab-pill{border-radius:2px;background:var(--fg);-webkit-backdrop
       <div class="section">
         <div class="label">Connections</div>
         <div id="conn" style="display:flex;flex-direction:column;gap:10px;font-size:12.5px"></div>
+        <div id="appver" style="margin-top:10px;font:11px var(--mono);color:var(--fg-3)"></div>
       </div>
       <div class="section">
         <div class="label">Look</div>
@@ -2089,7 +2090,15 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+const APP_VERSION = "2026.10.17-13";
+try { $("appver").textContent = "Version " + APP_VERSION; } catch {}
+if ("serviceWorker" in navigator){
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register("sw.js", {updateViaCache: "none"}).then(r => r.update()).catch(() => {});
+  // When a new version takes over, reload once so it's on screen right away
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !reloaded){ reloaded = true; location.reload(); } });
+}
 })();
 </script>
 
