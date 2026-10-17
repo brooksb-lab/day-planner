@@ -432,6 +432,21 @@ body.theme-day :focus-visible{outline:2.5px solid var(--accent);outline-offset:2
   .todo .acts{grid-column:2;justify-content:flex-start}
 }
 .row .ttl,.todo .tt{min-width:0;overflow-wrap:break-word;word-break:normal}
+/* icon controls */
+.mbtn.icon,body.theme-day .mbtn.icon{display:inline-grid;place-items:center;width:30px;height:30px;min-height:30px;padding:0;border:0;background:transparent;box-shadow:none;color:var(--fg-2);border-radius:8px}
+.mbtn.icon:hover,body.theme-day .mbtn.icon:hover{color:var(--fg);background:var(--line-2)}
+.mbtn.icon:disabled{opacity:.4}
+.mbtn.icon.spin svg{animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.eyetog{position:relative;display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;color:var(--fg-2);cursor:pointer}
+.eyetog:hover{color:var(--fg);background:var(--line-2)}
+.eyetog:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.eyetog input{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}
+.eyetog svg{grid-area:1/1}
+.eyetog .eye-closed{display:none}
+.eyetog input:checked ~ .eye-open{display:none}
+.eyetog input:checked ~ .eye-closed{display:block;color:var(--fg)}
+@media (prefers-reduced-motion:reduce){.mbtn.icon.spin svg{animation:none}}
 @media (prefers-reduced-motion:no-preference){.tab,.btn{transition:background .12s}}
 </style>
 
@@ -442,7 +457,7 @@ body.theme-day :focus-visible{outline:2.5px solid var(--accent);outline-offset:2
   <div class="right">
     <span class="sync" id="sync"><span class="dot" id="syncdot"></span><span id="synctxt">Connecting</span></span>
     <button class="mbtn" id="undobtn" type="button" data-act="undo" disabled title="Undo (⌘Z)">Undo</button>
-    <button class="mbtn" id="syncnow" type="button">Sync now</button>
+    <button class="mbtn icon" id="syncnow" type="button" title="Sync now" aria-label="Sync now"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10a6 6 0 1 1-1.76-4.24"/><path d="M16 3.5v3.3h-3.3"/></svg></button>
     <span class="mono" id="clock"></span>
   </div>
 </div>
@@ -459,7 +474,7 @@ body.theme-day :focus-visible{outline:2.5px solid var(--accent);outline-offset:2
     <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
     <span class="wtitle" id="wtitle">Planner</span>
     <div class="tabs" role="tablist" id="tabs"></div>
-    <label class="hidetog"><input type="checkbox" id="hidedone"> Hide completed</label>
+    <label class="hidetog eyetog" id="hidelabel" title="Hide completed"><input type="checkbox" id="hidedone" aria-label="Hide completed"><svg class="eye-open" viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.8 10S4.8 4.5 10 4.5 18.2 10 18.2 10 15.2 15.5 10 15.5 1.8 10 1.8 10Z"/><circle cx="10" cy="10" r="2.6"/></svg><svg class="eye-closed" viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.2c1.7 2.6 4.3 4.3 7.5 4.3s5.8-1.7 7.5-4.3"/><path d="M5.2 11.3 3.8 13.4M10 12.5v2.4M14.8 11.3l1.4 2.1"/></svg></label>
   </div>
   <div class="content">
     <div class="main" id="main"></div>
@@ -912,7 +927,7 @@ function tick(){
   const dot = $("syncdot"), tx = $("synctxt");
   const errs = [...S.events.values()].filter(r => r.error).length;
   $("syncnow").disabled = !S.mcp || S.syncing;
-  $("syncnow").textContent = S.syncing ? "Syncing…" : "Sync now";
+  $("syncnow").classList.toggle("spin", !!S.syncing); $("syncnow").title = S.syncing ? "Syncing" : "Sync now";
   if (S.syncing){ dot.className = "dot"; tx.textContent = "Syncing"; }
   else if (!S.mcp){ dot.className = "dot"; tx.textContent = "Calendar off"; }
   else if (S.calStatus === "error"){ dot.className = "dot bad"; tx.textContent = "Calendar error"; }
@@ -1273,7 +1288,9 @@ document.addEventListener("click", (e) => {
 });
 document.addEventListener("focusout", () => setTimeout(schedule, 0));
 $("hidedone").checked = S.hideDone;
-$("hidedone").addEventListener("change", (e) => { S.hideDone = e.target.checked; try { localStorage.setItem("hideDone", S.hideDone ? "1" : "0"); } catch {} schedule(); });
+const eyeTitle = () => { const t = S.hideDone ? "Show completed" : "Hide completed"; $("hidelabel").title = t; $("hidedone").setAttribute("aria-label", t); };
+eyeTitle();
+$("hidedone").addEventListener("change", (e) => { S.hideDone = e.target.checked; eyeTitle(); try { localStorage.setItem("hideDone", S.hideDone ? "1" : "0"); } catch {} schedule(); });
 $("quickform").addEventListener("submit", (e) => {
   e.preventDefault(); const v = $("quickin").value.trim(); if (!v) return;
   act("quick", async () => { await addTodo({title:v}); $("quickin").value = ""; });
