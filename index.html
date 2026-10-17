@@ -965,9 +965,17 @@ function renderTabs(){
   let pill = el.querySelector(".tab-pill"), fresh = false;
   if (html !== tabsKey){ tabsKey = html; el.innerHTML = '<span class="tab-pill" aria-hidden="true"></span>' + html; pill = el.querySelector(".tab-pill"); fresh = true; }
   el.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === S.tab)));
-  placePill(fresh);
+  if (!tabsCentered) centerNowTab(); else placePill(fresh);
 }
-function placePill(instant){
+/* On load, center the tab for the current time of day (not the open one) in the tab row */
+let tabsCentered = false;
+function centerNowTab(){
+  const el = $("tabs"), b = el && (el.querySelector(".tab.is-now") || el.querySelector('.tab[aria-selected="true"]'));
+  if (!b || !b.offsetWidth) return;
+  el.scrollLeft = Math.max(0, b.offsetLeft + b.offsetWidth/2 - el.clientWidth/2);
+  tabsCentered = true; placePill(true, true);
+}
+function placePill(instant, noScroll){
   const el = $("tabs"), pill = el && el.querySelector(".tab-pill"), b = el && el.querySelector('.tab[aria-selected="true"]');
   if (!pill || !b || !b.offsetWidth) return;
   const ul = document.body.classList.contains("theme-day");
@@ -977,10 +985,10 @@ function placePill(instant){
   if (instant || !pill.dataset.w){ pill.offsetWidth; pill.style.transition = ""; }
   pill.dataset.w = w;
   const sl = el.scrollLeft, vw = el.clientWidth;
-  if (x < sl || x + w > sl + vw) el.scrollTo({left: x - (vw - w)/2, behavior: "smooth"});
+  if (!noScroll && (x < sl || x + w > sl + vw)) el.scrollTo({left: x - (vw - w)/2, behavior: "smooth"});
 }
 addEventListener("resize", () => placePill(true));
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => placePill(true));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { tabsCentered = false; centerNowTab(); });
 $("tabs").addEventListener("click", (e) => {
   const b = e.target.closest("[data-tab]"); if (!b) return;
   S.tab = b.dataset.tab; S.tabManual = Date.now(); S.schedOpen = null; schedule();
