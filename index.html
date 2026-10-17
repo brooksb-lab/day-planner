@@ -143,9 +143,6 @@ h2{font-size:20px;line-height:1.2;margin:0;text-wrap:balance;letter-spacing:-.01
 .tl{position:relative;margin-left:52px;border-left:1px solid var(--line)}
 .hr{position:absolute;left:-52px;right:0;border-top:1px solid var(--line-2);font-size:10.5px;color:var(--fg-3)}
 .hr span{position:absolute;left:6px;top:-7px;background:var(--win);padding-right:4px;font-family:var(--mono);line-height:14px;white-space:nowrap}
-.hr span i{font-style:normal;font-size:.82em;margin-left:1px;letter-spacing:.02em}
-.hr span i.am{color:var(--warn)}
-.hr span i.pm{color:var(--accent)}
 .tl-wrap{padding-block:12px}
 .ev{position:absolute;border-radius:6px;padding:3px 7px;font-size:12px;overflow:hidden;border-left:3px solid;min-width:0}
 .ev{display:flex;flex-direction:column;line-height:1.25}
@@ -443,6 +440,14 @@ body.theme-day :focus-visible{outline:2.5px solid var(--accent);outline-offset:2
 .dmark.night{background:#c9d3ee;-webkit-mask-image:url("icons/moon-mask.png");mask-image:url("icons/moon-mask.png")}
 .dh-l .eyebrow{display:flex;gap:4px 12px;flex-wrap:wrap;align-items:baseline}
 .wx{font-size:11.5px;color:var(--fg-3);letter-spacing:.01em;white-space:nowrap}
+.dmark{cursor:pointer}
+.tabs{position:relative}
+.tab{z-index:1;background:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;transition:color .25s ease}
+.tab-pill{position:absolute;left:0;top:0;z-index:0;pointer-events:none;border-radius:6px;background:var(--win);box-shadow:0 1px 2px rgba(0,0,0,.12);will-change:transform,width;
+  transition:transform .7s linear(0.0, 0.0362, 0.1237, 0.2375, 0.3601, 0.4802, 0.5904, 0.6872, 0.7689, 0.8358, 0.8888, 0.9296, 0.9599, 0.9816, 0.9965, 1.0061, 1.0117, 1.0144, 1.0152, 1.0146, 1.0133, 1.0116, 1.0097, 1.0079, 1.0062, 1.0047, 1.0035, 1.0025, 1.0017, 1.0011, 1.0006, 1.0003, 1.0001, 0.9999, 0.9998, 0.9998, 1),width .7s linear(0.0, 0.0362, 0.1237, 0.2375, 0.3601, 0.4802, 0.5904, 0.6872, 0.7689, 0.8358, 0.8888, 0.9296, 0.9599, 0.9816, 0.9965, 1.0061, 1.0117, 1.0144, 1.0152, 1.0146, 1.0133, 1.0116, 1.0097, 1.0079, 1.0062, 1.0047, 1.0035, 1.0025, 1.0017, 1.0011, 1.0006, 1.0003, 1.0001, 0.9999, 0.9998, 0.9998, 1)}
+body.theme-day .tab-pill{border-radius:9px;corner-shape:squircle;background:rgba(232,234,237,.10);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  box-shadow:inset 0 0 0 .5px rgba(232,234,237,.16),inset 0 .5px 0 rgba(255,255,255,.14),0 2px 6px -3px rgba(0,0,0,.7)}
+@media (prefers-reduced-motion:reduce){.tab-pill{transition:none}}
 /* icon controls */
 .mbtn.icon,body.theme-day .mbtn.icon{display:inline-grid;place-items:center;width:30px;height:30px;min-height:30px;padding:0;border:0;background:transparent;box-shadow:none;color:var(--fg-2);border-radius:8px}
 .mbtn.icon:hover,body.theme-day .mbtn.icon:hover{color:var(--fg);background:var(--line-2)}
@@ -476,7 +481,7 @@ body.theme-day :focus-visible{outline:2.5px solid var(--accent);outline-offset:2
 
 <header class="dhdr" id="dhdr">
   <div class="dh-grid">
-    <span class="dmark" id="dmark" role="img" aria-label="Day"></span>
+    <span class="dmark" id="dmark" role="button" tabindex="0" aria-label="Day" title="Toggle night mode"></span>
     <div class="dh-main" id="dmain">
       <div class="dh-row"><div class="dh-l"><div class="eyebrow"><span id="dEyebrow"></span><span class="wx" id="dWx"></span></div><h1 id="dTitle">Planner</h1></div></div>
       <div class="dh-ctrl"><div class="dh-tabs" id="dTabsSlot"></div><div class="dh-right" id="dRightSlot"></div></div>
@@ -592,12 +597,12 @@ function calKind(c){
 }
 const KIND_NAME = {personal:"Personal", work:"Work", hol:"Holidays"};
 /* ---------- settings (stored with the page, editable by the Claude bar) ---------- */
-const CFG_DEFAULTS = {tlStart:6, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day"};
+const CFG_DEFAULTS = {tlStart:0, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day"};
 let cfgRaw = {};
 const cfg = () => ({...CFG_DEFAULTS, ...cfgRaw, tabHours:{...CFG_DEFAULTS.tabHours, ...(cfgRaw.tabHours || {})}, calColors:{...(cfgRaw.calColors || {})}});
 function applyCfg(){
   const c = cfg();
-  TL.H0 = c.tlStart; TL.H1 = c.tlEnd; TL.PX = c.hourHeight;
+  TL.H0 = 0; TL.H1 = 24; TL.PX = c.hourHeight;
   const th = c.tabHours;
   const set = (id, from, to) => { const t = TABS.find(x => x.id === id); t.from = from; t.to = to; };
   set("morning", th.morning, th.day); set("day", th.day, th.evening); set("evening", th.evening, th.tomorrow); set("tomorrow", th.tomorrow, th.morning + 24);
@@ -944,9 +949,28 @@ function timeTab(d = new Date()){
 }
 let autoTab = timeTab();
 S.tab = (() => { try { const h = location.hash.slice(1); if (TABS.some(t => t.id === h)) return h; } catch {} return autoTab; })();
+let tabsKey = "";
 function renderTabs(){
-  $("tabs").innerHTML = TABS.map(t => `<button class="tab" role="tab" data-tab="${t.id}" aria-selected="${S.tab===t.id}">${t.label}${t.id===autoTab?'<span class="now" title="Now"></span>':""}</button>`).join("");
+  const el = $("tabs");
+  const html = TABS.map(t => `<button class="tab" role="tab" data-tab="${t.id}" aria-selected="false">${t.label}${t.id===autoTab?'<span class="now" title="Now"></span>':""}</button>`).join("");
+  let pill = el.querySelector(".tab-pill"), fresh = false;
+  if (html !== tabsKey){ tabsKey = html; el.innerHTML = '<span class="tab-pill" aria-hidden="true"></span>' + html; pill = el.querySelector(".tab-pill"); fresh = true; }
+  el.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === S.tab)));
+  placePill(fresh);
 }
+function placePill(instant){
+  const el = $("tabs"), pill = el && el.querySelector(".tab-pill"), b = el && el.querySelector('.tab[aria-selected="true"]');
+  if (!pill || !b || !b.offsetWidth) return;
+  const x = b.offsetLeft, w = b.offsetWidth, h = b.offsetHeight, y = b.offsetTop;
+  if (instant || !pill.dataset.w){ pill.style.transition = "none"; }
+  pill.style.width = w + "px"; pill.style.height = h + "px"; pill.style.transform = `translate(${x}px,${y}px)`;
+  if (instant || !pill.dataset.w){ pill.offsetWidth; pill.style.transition = ""; }
+  pill.dataset.w = w;
+  const sl = el.scrollLeft, vw = el.clientWidth;
+  if (x < sl || x + w > sl + vw) el.scrollTo({left: x - (vw - w)/2, behavior: "smooth"});
+}
+addEventListener("resize", () => placePill(true));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => placePill(true));
 $("tabs").addEventListener("click", (e) => {
   const b = e.target.closest("[data-tab]"); if (!b) return;
   S.tab = b.dataset.tab; S.tabManual = Date.now(); S.schedOpen = null; schedule();
@@ -1041,7 +1065,7 @@ function agenda(list, {empty="Nothing on the calendar.", actions=true}={}){
       <span class="acts">${acts}</span></div>`;
   }).join("") + `</div>`;
 }
-const TL = {H0:6, H1:24, PX:46};
+const TL = {H0:0, H1:24, PX:46};
 function timeline(evs, day){
   const list = eventsOn(day, evs);
   const allday = list.filter(e => e.allDay);
@@ -1061,7 +1085,7 @@ function timeline(evs, day){
   for (const cl of clusters){ const lanes = []; for (const it of cl){ let l = lanes.findIndex(end => end <= it.s); if (l < 0){ l = lanes.length; lanes.push(0); } lanes[l] = it.en; it.lane = l; } cl.forEach(it => it.lanes = lanes.length); }
   let grid = "";
   const dayLook = document.body.classList.contains("theme-day");
-  for (let hr = H0; hr <= H1; hr++){ const h24 = hr % 24, am = h24 < 12; const lbl = `${h24 % 12 || 12}<i class="${am ? "am" : "pm"}">${am ? "am" : "pm"}</i>`; grid += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${lbl}</span></div>`; }
+  for (let hr = H0; hr <= H1; hr++){ const h24 = hr % 24, am = h24 < 12; const lbl = `${h24 % 12 || 12}${am ? "A" : "P"}`; grid += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${lbl}</span></div>`; }
   const evh = items.map(it => {
     const t = todoForEvent(it.e); const done = t && t.status === "done" || /^✓/.test(it.e.title);
     const w = 100/it.lanes;
@@ -1247,10 +1271,15 @@ async function loadWeather(force){
   WX.loading = false;
 }
 setInterval(() => { if (!document.hidden) loadWeather(); }, 10*60000);
+/* TEMP: tap the mark to force sun/moon. Remove later. */
+function toggleMoon(){ const n = !isNight(); try { localStorage.setItem("moonForce", n ? "1" : "0"); } catch {} schedule(); }
+document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("#dmark")) toggleMoon(); });
+document.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && document.activeElement && document.activeElement.id === "dmark"){ e.preventDefault(); toggleMoon(); } });
 function isNight(){
+  try { const f = localStorage.getItem("moonForce"); if (f === "1") return true; if (f === "0") return false; } catch {}
   const c = WX.data && WX.data.current;
   if (c && typeof c.is_day === "number" && Date.now() - WX.at < 2*3600000) return c.is_day === 0;
-  const h = new Date().getHours(); return h < 6 || h >= 19;
+  const h = new Date().getHours(); return h < 6 || h >= 18;
 }
 function wxLine(){
   const d = WX.data; if (!d || !d.daily) return "";
