@@ -456,6 +456,8 @@ body.theme-day .tab.is-now{color:var(--accent)}
 body.theme-day .tab .now{display:none}
 body.theme-day .tab-pill{border-radius:2px;background:var(--fg);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none}
 @media (max-width:560px){body.theme-day .tabs{gap:18px} body.theme-day .tab{font-size:17px}}
+body.spot-off .spot{display:none}
+#spottog.off{opacity:.45}
 @media (prefers-reduced-motion:reduce){.tab-pill{transition:none}}
 /* Phone: the header bar is pinned to the bottom of the screen, Claude bar sits just above it */
 @media (max-width:560px){
@@ -494,6 +496,7 @@ body.theme-day .tab-pill{border-radius:2px;background:var(--fg);-webkit-backdrop
     <span class="sync" id="sync"><span class="dot" id="syncdot"></span><span id="synctxt">Connecting</span></span>
     <span class="undogrp" id="undogrp"><button class="mbtn icon" id="undobtn" type="button" data-act="undo" disabled title="Undo (⌘Z)" aria-label="Undo"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 5 4 8.5 7.5 12"/><path d="M4.5 8.5h7.25a4.25 4.25 0 0 1 0 8.5H9"/></svg></button><button class="mbtn icon" id="redobtn" type="button" data-act="redo" disabled title="Redo (⇧⌘Z)" aria-label="Redo"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 5 16 8.5 12.5 12"/><path d="M15.5 8.5H8.25a4.25 4.25 0 0 0 0 8.5H11"/></svg></button></span>
     <button class="mbtn icon" id="syncnow" type="button" title="Sync now" aria-label="Sync now"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10a6 6 0 1 1-1.76-4.24"/><path d="M16 3.5v3.3h-3.3"/></svg></button>
+    <button class="mbtn icon" id="spottog" type="button" title="Hide Claude" aria-label="Hide Claude" aria-pressed="true"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.8l1.6 4.1 4.1 1.6-4.1 1.6L10 14.2l-1.6-4.1-4.1-1.6 4.1-1.6z"/><path d="M15.6 13.4l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7z"/></svg></button>
     <span class="mono" id="clock"></span>
   </div>
 </div>
@@ -1259,10 +1262,10 @@ const durTxt = (m) => { const h = Math.floor(m/60), x = m % 60; return (h ? h + 
 const chromeHome = {};
 function placeChrome(){
   const day = document.body.classList.contains("theme-day");
-  const tabs = $("tabs"), hide = document.querySelector(".hidetog"), sync = $("sync"), undo = $("undogrp"), now = $("syncnow");
+  const tabs = $("tabs"), hide = document.querySelector(".hidetog"), sync = $("sync"), undo = $("undogrp"), now = $("syncnow"), stog = $("spottog");
   if (!chromeHome.saved){ chromeHome.saved = true; chromeHome.titlebar = document.querySelector(".titlebar"); chromeHome.right = document.querySelector(".menubar .right"); chromeHome.clock = $("clock"); }
-  if (day){ $("dTabsSlot").append(tabs); $("dRightSlot").append(sync, hide, undo, now); }
-  else { chromeHome.titlebar.append(tabs, hide); chromeHome.right.insertBefore(sync, chromeHome.clock); chromeHome.right.insertBefore(undo, chromeHome.clock); chromeHome.right.insertBefore(now, chromeHome.clock); }
+  if (day){ $("dTabsSlot").append(tabs); $("dRightSlot").append(sync, hide, undo, now, stog); }
+  else { chromeHome.titlebar.append(tabs, hide); chromeHome.right.insertBefore(sync, chromeHome.clock); chromeHome.right.insertBefore(undo, chromeHome.clock); chromeHome.right.insertBefore(now, chromeHome.clock); chromeHome.right.insertBefore(stog, chromeHome.clock); }
 }
 function applyTheme(name){
   const day = name !== "brooksos";
@@ -1340,13 +1343,27 @@ function wxLine(){
 }
 
 /* ---------- fixed pane sizing ---------- */
+/* show / hide the Claude bar */
+function applySpot(on){
+  document.body.classList.toggle("spot-off", !on);
+  const b = $("spottog"); if (b){ b.setAttribute("aria-pressed", String(on)); b.title = b.ariaLabel = on ? "Hide Claude" : "Show Claude"; b.classList.toggle("off", !on); }
+  if (typeof fitPane === "function") fitPane();
+}
+let spotOn = true; try { spotOn = localStorage.getItem("spotOff") !== "1"; } catch {}
+applySpot(spotOn);
+$("spottog").addEventListener("click", () => {
+  spotOn = !spotOn; try { localStorage.setItem("spotOff", spotOn ? "0" : "1"); } catch {}
+  applySpot(spotOn);
+  if (spotOn){ const i = document.querySelector(".spot input"); if (i && matchMedia("(hover:hover)").matches) i.focus(); }
+});
 function fitPane(){
   const w = document.querySelector(".window");
   if (!document.body.classList.contains("pane-mode")){ w.style.height = ""; return; }
   window.scrollTo(0, 0);
   const top = w.getBoundingClientRect().top;
-  const spot = document.querySelector(".spot-in").getBoundingClientRect();
-  w.style.height = Math.max(340, Math.floor(spot.top - top - 10)) + "px";
+  const hdrH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--hdrH")) || 0;
+  const bottom = document.body.classList.contains("spot-off") ? innerHeight - hdrH : document.querySelector(".spot-in").getBoundingClientRect().top;
+  w.style.height = Math.max(340, Math.floor(bottom - top - 10)) + "px";
 }
 addEventListener("resize", fitPane);
 if (window.visualViewport) visualViewport.addEventListener("resize", fitPane);
@@ -2090,7 +2107,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.17-13";
+const APP_VERSION = "2026.10.17-14";
 try { $("appver").textContent = "Version " + APP_VERSION; } catch {}
 if ("serviceWorker" in navigator){
   const hadController = !!navigator.serviceWorker.controller;
