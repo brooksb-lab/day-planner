@@ -145,6 +145,7 @@ h2{font-size:20px;line-height:1.2;margin:0;text-wrap:balance;letter-spacing:-.01
   -webkit-mask:linear-gradient(90deg,#000 0 100%);mask:linear-gradient(90deg,#000 0 100%)}
 .hr span i{font-style:normal;color:var(--fg-3);opacity:.7;margin-left:-1px}
 .tint{position:absolute;left:0;right:0;top:0;z-index:0;pointer-events:none;border-radius:6px}
+.hr span b.tl-tmp{display:block;font-weight:400;font-size:9px;line-height:10px;color:var(--fg-3);opacity:.6;margin-top:1px}
 .hr span b.tz2{display:block;font-weight:400;font-size:9px;line-height:10px;color:var(--accent);opacity:.7;margin-top:1px}
 .tzsel{width:100%;font:inherit;font-size:13px;color:var(--fg);background:var(--win-2);border:1px solid var(--line);border-radius:9px;padding:7px 10px}
 @media (max-width:560px){.tzsel{font-size:16px}}
@@ -1156,8 +1157,9 @@ function timeline(evs, day){
   for (const cl of clusters){ const lanes = []; for (const it of cl){ let l = lanes.findIndex(end => end <= it.s); if (l < 0){ l = lanes.length; lanes.push(0); } lanes[l] = it.en; it.lane = l; } cl.forEach(it => it.lanes = lanes.length); }
   let grid = "";
   const dayLook = document.body.classList.contains("theme-day");
+  HOUR_TEMPS = {};
   grid += wxLayer(day, H0, H1, PX) + rainBlocks(day, H0, H1, PX);
-  for (let hr = H0; hr <= H1; hr++){ const h24 = hr % 24, am = h24 < 12; const lbl = `${h24 % 12 || 12}<i>${am ? "a" : "p"}</i>${tz2Label(day, hr)}`; grid += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${lbl}</span></div>`; }
+  for (let hr = H0; hr <= H1; hr++){ const h24 = hr % 24, am = h24 < 12; const lbl = `${h24 % 12 || 12}<i>${am ? "a" : "p"}</i>${tz2Label(day, hr)}${HOUR_TEMPS[hr] != null ? `<b class="tl-tmp">${HOUR_TEMPS[hr]}°</b>` : ""}`; grid += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${lbl}</span></div>`; }
   const evh = items.map(it => {
     const t = todoForEvent(it.e); const done = t && t.status === "done" || /^✓/.test(it.e.title);
     const w = 100/it.lanes;
@@ -1385,18 +1387,19 @@ function tempTint(t){
   if (t >= 68){ const k = Math.min(1, (t - 68) / 25); return `rgba(255,170,90,${(0.025 + 0.06*k).toFixed(3)})`; }
   return "rgba(0,0,0,0)";
 }
+let HOUR_TEMPS = {};
 function wxLayer(day, H0, H1, PX){
   const d = WX.data; if (!d || !d.hourly || !d.hourly.temperature_2m) return "";
-  const hz = d.hourly, key = dayKey(startOfDay(day)), stops = [], labels = [];
+  const hz = d.hourly, key = dayKey(startOfDay(day)), stops = [], labels = {};
+  HOUR_TEMPS = labels;
   for (let hr = H0; hr < H1; hr++){
     const i = hz.time.indexOf(`${key}T${pad(hr)}:00`); if (i < 0) continue;
     const t = hz.temperature_2m[i]; if (t == null) continue;
     const pc = ((hr - H0 + 0.5) / (H1 - H0) * 100).toFixed(2);
     stops.push(`${tempTint(t)} ${pc}%`);
-    labels.push(`<span class="tmp" style="top:${(hr - H0) * PX}px">${Math.round(t)}°</span>`);
+    labels[hr] = Math.round(t);
   }
   let h = stops.length > 1 ? `<div class="tint" style="height:${(H1 - H0) * PX}px;background:linear-gradient(180deg,${stops.join(",")})"></div>` : "";
-  h += labels.join("");
   const di = d.daily && d.daily.time ? d.daily.time.indexOf(key) : -1;
   if (di >= 0){
     for (const [k, name] of [["sunrise","sunrise"],["sunset","sunset"]]){
@@ -2210,7 +2213,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.17-22";
+const APP_VERSION = "2026.10.17-23";
 try { $("appver").textContent = "Version " + APP_VERSION; } catch {}
 if ("serviceWorker" in navigator){
   const hadController = !!navigator.serviceWorker.controller;
