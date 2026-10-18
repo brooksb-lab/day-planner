@@ -485,7 +485,7 @@ body.spot-open .spot-in{width:min(680px,100%);margin:0;box-shadow:0 24px 60px -1
 /* Phone: the header bar is pinned to the bottom of the screen, Claude bar sits just above it */
 @media (max-width:560px){
   body.theme-day .dhdr{position:fixed;top:auto;bottom:0;left:0;right:0;margin:0;
-    padding:12px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+    padding:12px max(16px,env(safe-area-inset-right,0px)) max(8px, calc(env(safe-area-inset-bottom,0px) - 18px)) max(16px,env(safe-area-inset-left,0px));
     box-shadow:0 -.5px 0 rgba(232,234,237,.09)}
   body.theme-day .spot{bottom:var(--hdrH,0px);padding-bottom:8px}
   body.theme-day{padding-bottom:calc(var(--hdrH,0px) + 24px)} /* top safe area is already padded on :root */
@@ -2213,8 +2213,16 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.17-23";
-try { $("appver").textContent = "Version " + APP_VERSION; } catch {}
+const APP_VERSION = "2026.10.17-24";
+function showVer(){
+  try {
+    const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
+    const sb = pr.offsetHeight - (parseFloat(getComputedStyle(pr).paddingTop) || 0), st = parseFloat(getComputedStyle(pr).paddingTop) || 0; pr.remove();
+    const h = $("dhdr"), r = h ? h.getBoundingClientRect() : null;
+    $("appver").textContent = `Version ${APP_VERSION} · ${innerWidth}×${innerHeight} · safe ${Math.round(st)}/${Math.round(sb)} · bar ${r ? Math.round(innerHeight - r.bottom) : "?"}`;
+  } catch {}
+}
+showVer(); addEventListener("resize", showVer); setTimeout(showVer, 1500);
 if ("serviceWorker" in navigator){
   const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register("sw.js", {updateViaCache: "none"}).then(r => r.update()).catch(() => {});
