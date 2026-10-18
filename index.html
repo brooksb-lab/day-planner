@@ -482,23 +482,34 @@ body.spot-open .spot-in{width:min(680px,100%);margin:0;box-shadow:0 24px 60px -1
 .spot-x{flex:none;width:28px;height:28px;margin:-2px -4px -2px 0;border:0;border-radius:50%;display:grid;place-items:center;background:rgba(232,234,237,.08);color:var(--fg-2);cursor:pointer}
 .spot-x:hover{background:rgba(232,234,237,.14);color:var(--fg)}
 @media (prefers-reduced-motion:reduce){.tab-pill{transition:none}}
-/* Phone: the header bar is pinned to the bottom of the screen, Claude bar sits just above it */
+/* Phone: compact header at the top. Row 1: mark, date + title, tool icons. Row 2: tabs, full width. */
 @media (max-width:560px){
-  body.theme-day .dhdr{position:fixed;top:auto;bottom:0;left:0;right:0;margin:0;
-    padding:12px max(16px,env(safe-area-inset-right,0px)) max(8px, calc(env(safe-area-inset-bottom,0px) - 18px)) max(16px,env(safe-area-inset-left,0px));
-    padding-bottom:var(--barPadB, max(8px, calc(env(safe-area-inset-bottom,0px) - 18px)));
-    box-shadow:0 -.5px 0 rgba(232,234,237,.09)}
-  body.theme-day .spot{bottom:var(--hdrH,0px);padding-bottom:8px}
-  body.theme-day{padding-bottom:calc(var(--hdrH,0px) + 24px)} /* top safe area is already padded on :root */
+  body.theme-day .dhdr{padding:10px max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px))}
+  body.theme-day .dh-grid{display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:10px;grid-template-areas:"mark eyebrow eyebrow" "mark title right" "tabs tabs tabs";align-items:center;gap:2px 12px}
+  body.theme-day #dmain, body.theme-day .dh-ctrl, body.theme-day .dh-row, body.theme-day .dh-row .dh-l{display:contents}
+  body.theme-day .dh-l .eyebrow{grid-area:eyebrow;align-self:end;min-width:0}
+  body.theme-day .dhdr h1{grid-area:title;min-width:0;align-self:center;margin:0}
+  body.theme-day #dmark{grid-area:mark;width:58px!important;height:58px!important}
+  body.theme-day .dh-row{grid-area:row;min-width:0;align-self:center}
+  body.theme-day .dh-row .dh-l{min-width:0}
+  body.theme-day .dhdr h1{font-size:23px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.theme-day .dh-l .eyebrow{font-size:12px;gap:0 8px}
+  body.theme-day .dh-right{grid-area:right;width:auto;order:0;justify-self:end;align-self:center;flex-wrap:nowrap;gap:0 2px}
+  body.theme-day .dh-right #undogrp{margin-left:0;display:flex;gap:2px}
+  body.theme-day .dh-right .sync{margin:0 -2px 0 0;padding:0;gap:0}
+  body.theme-day .dh-tabs{grid-area:tabs;margin-top:6px}
+  body.theme-day .dh-l .eyebrow .wx{white-space:normal}
+  body.theme-day .dh-right .mbtn.icon{width:31px;height:34px;min-height:34px}
+  body.theme-day .dh-right .mbtn.icon svg{width:20px;height:20px}
   body.theme-day .window{margin-top:4px}
-  body.theme-day.pane-mode{padding-bottom:0}
   body.theme-day.pane-mode .main{padding-bottom:6px}
-  body.theme-day .toast{top:calc(12px + env(safe-area-inset-top,0px))}
 }
+@media (max-width:380px){body.theme-day #dmark{width:46px!important;height:46px!important} body.theme-day .dh-right .mbtn.icon{width:30px}}
 /* icon controls */
-.mbtn.icon,body.theme-day .mbtn.icon{display:inline-grid;place-items:center;width:30px;height:30px;min-height:30px;padding:0;border:0;background:transparent;box-shadow:none;color:var(--fg-2);border-radius:8px}
+.mbtn.icon,body.theme-day .mbtn.icon{display:inline-grid;place-items:center;width:34px;height:34px;min-height:34px;padding:0;border:0;background:transparent;box-shadow:none;color:var(--fg-2);border-radius:8px}
 .mbtn.icon:hover,body.theme-day .mbtn.icon:hover{color:var(--fg);background:var(--line-2)}
 .mbtn.icon:disabled{opacity:.35}
+body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
 .undogrp{display:inline-flex;gap:2px}
 .mbtn.icon.spin svg{animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -2229,7 +2240,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.18-28";
+const APP_VERSION = "2026.10.18-29";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
