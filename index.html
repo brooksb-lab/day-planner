@@ -484,7 +484,7 @@ body.spot-open .spot-in{width:min(680px,100%);margin:0;box-shadow:0 24px 60px -1
 @media (prefers-reduced-motion:reduce){.tab-pill{transition:none}}
 /* Phone: the header bar is pinned to the bottom of the screen, Claude bar sits just above it */
 @media (max-width:560px){
-  body.theme-day .dhdr{position:fixed;top:auto;bottom:0;left:0;right:0;margin:0;
+  body.theme-day .dhdr{position:fixed;top:auto;bottom:calc(-1 * var(--vpGap,0px));left:0;right:0;margin:0;
     padding:12px max(16px,env(safe-area-inset-right,0px)) max(8px, calc(env(safe-area-inset-bottom,0px) - 18px)) max(16px,env(safe-area-inset-left,0px));
     box-shadow:0 -.5px 0 rgba(232,234,237,.09)}
   body.theme-day .spot{bottom:var(--hdrH,0px);padding-bottom:8px}
@@ -1313,7 +1313,17 @@ document.addEventListener("click", (e) => {
 function syncHdrH(){
   const h = $("dhdr"); if (!h) return;
   const fixedBottom = getComputedStyle(h).position === "fixed";
-  document.documentElement.style.setProperty("--hdrH", fixedBottom ? h.offsetHeight + "px" : "0px");
+  // iOS Home Screen apps can report a viewport shorter than the screen, leaving a band under
+  // bottom-pinned bars. Measure it and push the bar down into that band.
+  let gap = 0;
+  try {
+    const sa = navigator.standalone || matchMedia("(display-mode: standalone)").matches;
+    const portrait = innerHeight > innerWidth, sh = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    if (sa && fixedBottom && Math.abs(Math.min(screen.width, screen.height) - Math.min(innerWidth, innerHeight)) < 2) gap = Math.max(0, Math.min(80, sh - innerHeight));
+  } catch {}
+  const r = document.documentElement.style;
+  r.setProperty("--vpGap", gap + "px");
+  r.setProperty("--hdrH", fixedBottom ? Math.max(0, h.offsetHeight - gap) + "px" : "0px");
 }
 if (window.ResizeObserver) new ResizeObserver(() => { syncHdrH(); if (typeof fitPane === "function") fitPane(); }).observe(document.getElementById("dhdr"));
 addEventListener("resize", syncHdrH);
@@ -2215,13 +2225,13 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.17-25";
+const APP_VERSION = "2026.10.17-26";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
     const sb = pr.offsetHeight - (parseFloat(getComputedStyle(pr).paddingTop) || 0), st = parseFloat(getComputedStyle(pr).paddingTop) || 0; pr.remove();
     const h = $("dhdr"), r = h ? h.getBoundingClientRect() : null;
-    $("appver").textContent = `Version ${APP_VERSION} · ${innerWidth}×${innerHeight} · safe ${Math.round(st)}/${Math.round(sb)} · bar ${r ? Math.round(innerHeight - r.bottom) : "?"}`;
+    $("appver").textContent = `Version ${APP_VERSION} · ${innerWidth}×${innerHeight} · safe ${Math.round(st)}/${Math.round(sb)} · bar ${r ? Math.round(innerHeight - r.bottom) : "?"} · scr ${screen.width}×${screen.height} · gap ${getComputedStyle(document.documentElement).getPropertyValue("--vpGap")}`;
   } catch {}
 }
 showVer(); addEventListener("resize", showVer); setTimeout(showVer, 1500);
