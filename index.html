@@ -484,8 +484,9 @@ body.spot-open .spot-in{width:min(680px,100%);margin:0;box-shadow:0 24px 60px -1
 @media (prefers-reduced-motion:reduce){.tab-pill{transition:none}}
 /* Phone: the header bar is pinned to the bottom of the screen, Claude bar sits just above it */
 @media (max-width:560px){
-  body.theme-day .dhdr{position:fixed;top:auto;bottom:calc(-1 * var(--vpGap,0px));left:0;right:0;margin:0;
+  body.theme-day .dhdr{position:fixed;top:auto;bottom:0;left:0;right:0;margin:0;
     padding:12px max(16px,env(safe-area-inset-right,0px)) max(8px, calc(env(safe-area-inset-bottom,0px) - 18px)) max(16px,env(safe-area-inset-left,0px));
+    padding-bottom:var(--barPadB, max(8px, calc(env(safe-area-inset-bottom,0px) - 18px)));
     box-shadow:0 -.5px 0 rgba(232,234,237,.09)}
   body.theme-day .spot{bottom:var(--hdrH,0px);padding-bottom:8px}
   body.theme-day{padding-bottom:calc(var(--hdrH,0px) + 24px)} /* top safe area is already padded on :root */
@@ -1322,8 +1323,11 @@ function syncHdrH(){
     if (sa && fixedBottom && Math.abs(Math.min(screen.width, screen.height) - Math.min(innerWidth, innerHeight)) < 2) gap = Math.max(0, Math.min(80, sh - innerHeight));
   } catch {}
   const r = document.documentElement.style;
+  // When iOS stops the web view short of the screen bottom, the home indicator area is already
+  // outside the page, so the bar doesn't need its own safe-area padding.
+  if (gap > 20) r.setProperty("--barPadB", "8px"); else r.removeProperty("--barPadB");
   r.setProperty("--vpGap", gap + "px");
-  r.setProperty("--hdrH", fixedBottom ? Math.max(0, h.offsetHeight - gap) + "px" : "0px");
+  r.setProperty("--hdrH", fixedBottom ? h.offsetHeight + "px" : "0px");
 }
 if (window.ResizeObserver) new ResizeObserver(() => { syncHdrH(); if (typeof fitPane === "function") fitPane(); }).observe(document.getElementById("dhdr"));
 addEventListener("resize", syncHdrH);
@@ -2225,7 +2229,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.17-26";
+const APP_VERSION = "2026.10.17-27";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
