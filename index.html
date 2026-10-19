@@ -508,6 +508,25 @@ body.spot-open .spot-in{width:min(680px,100%);margin:0;box-shadow:0 24px 60px -1
 .wk-sun{font:10px var(--mono);color:rgba(231,187,64,.75);white-space:nowrap}
 .wk .rain span{right:3px}
 @media (max-width:560px){.pane-week{--gut:40px;--colw:92px}}
+/* low-profile header (applies when the sun/moon icon is off, which is the default) */
+body.theme-day.no-mark #dmark{display:none!important}
+body.theme-day.no-mark .dhdr{padding-top:8px;padding-bottom:6px}
+body.theme-day.no-mark .dh-grid{gap:0}
+body.theme-day.no-mark .dhdr h1{font-size:20px;letter-spacing:-.015em}
+body.theme-day.no-mark .dh-l .eyebrow{font-size:12px}
+body.theme-day.no-mark .dh-ctrl{margin-top:6px}
+body.theme-day.no-mark .tabs{gap:20px;padding-bottom:6px}
+body.theme-day.no-mark .tab{font-size:15px;font-weight:600}
+@media (max-width:560px){
+  body.theme-day.no-mark .dh-grid{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title right" "eyebrow eyebrow" "tabs tabs";gap:0 8px}
+  body.theme-day.no-mark .dhdr h1{font-size:19px}
+  body.theme-day.no-mark .dh-l .eyebrow{align-self:start;font-size:11.5px;margin-top:-1px}
+  body.theme-day.no-mark .dh-tabs{margin-top:6px}
+  body.theme-day.no-mark .tabs{gap:16px}
+  body.theme-day.no-mark .tab{font-size:14.5px}
+}
+.tog{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg-2);margin-top:10px;cursor:pointer}
+.tog input{width:16px;height:16px;accent-color:var(--accent)}
 @media (prefers-reduced-motion:reduce){.tab-pill{transition:none}}
 /* Phone: compact header at the top. Row 1: mark, date + title, tool icons. Row 2: tabs, full width. */
 @media (max-width:560px){
@@ -608,6 +627,7 @@ body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
       <div class="section">
         <div class="label">Look</div>
         <div class="lookseg" role="group" aria-label="Look"><button type="button" data-theme-set="day">Day</button><button type="button" data-theme-set="brooksos">BrooksOS</button></div>
+        <label class="tog"><input type="checkbox" id="markTog"> Sun and moon icon</label>
       </div>
       <div class="section">
         <div class="label">Second time zone</div>
@@ -689,7 +709,7 @@ function calKind(c){
 }
 const KIND_NAME = {personal:"Personal", work:"Work", hol:"Holidays"};
 /* ---------- settings (stored with the page, editable by the Claude bar) ---------- */
-const CFG_DEFAULTS = {tlStart:0, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day", tz2:""};
+const CFG_DEFAULTS = {tlStart:0, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day", tz2:"", showMark:false};
 let cfgRaw = {};
 const cfg = () => ({...CFG_DEFAULTS, ...cfgRaw, tabHours:{...CFG_DEFAULTS.tabHours, ...(cfgRaw.tabHours || {})}, calColors:{...(cfgRaw.calColors || {})}});
 function applyCfg(){
@@ -699,6 +719,8 @@ function applyCfg(){
   const set = (id, from, to) => { const t = TABS.find(x => x.id === id); t.from = from; t.to = to; };
   set("morning", th.morning, th.day); set("day", th.day, th.evening); set("evening", th.evening, th.tomorrow); set("tomorrow", th.tomorrow, th.morning + 24);
   S.paneMode = c.layout; S.split = c.split; applyTheme(c.theme);
+  document.body.classList.toggle("no-mark", !c.showMark);
+  const mt = document.getElementById("markTog"); if (mt) mt.checked = !!c.showMark;
   const tzs = document.getElementById("tz2sel"); if (tzs && document.activeElement !== tzs) tzs.value = c.tz2 || "";
   for (const cal of S.calendars) cal.color = c.calColors[cal.name] || `var(--c-${cal.kind})`;
 }
@@ -1396,6 +1418,7 @@ function syncHdrH(){
 if (window.ResizeObserver) new ResizeObserver(() => { syncHdrH(); if (typeof fitPane === "function") fitPane(); }).observe(document.getElementById("dhdr"));
 addEventListener("resize", syncHdrH);
 function sizeMark(){
+  if (document.body.classList.contains("no-mark")) return;
   const m = $("dmain"), k = $("dmark"); if (!m || !k || !document.body.classList.contains("theme-day")) return;
   const h = m.offsetHeight; if (!h) return;
   const sz = Math.round(innerWidth <= 560 ? Math.min(h, 104) : h);
@@ -1459,6 +1482,8 @@ function fillTzSelect(){
   sel.addEventListener("change", () => { saveCfg({tz2: sel.value}).catch(() => { cfgRaw = {...cfgRaw, tz2: sel.value}; applyCfg(); schedule(); }); });
 }
 fillTzSelect();
+$("markTog").addEventListener("change", (e) => { const v = e.target.checked; saveCfg({showMark: v}).catch(() => { cfgRaw = {...cfgRaw, showMark: v}; applyCfg(); schedule(); }); });
+document.body.classList.toggle("no-mark", !cfg().showMark);
 /* temperature tint per hour, faint hourly temps, sunrise and sunset */
 function tempTint(t){
   // cold blue below ~55F, warm amber above ~68F, neutral between; strength grows with distance
@@ -2308,7 +2333,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.18-30";
+const APP_VERSION = "2026.10.19-31";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
