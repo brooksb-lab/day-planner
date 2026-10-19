@@ -525,6 +525,7 @@ body.theme-day.no-mark .tab{font-size:15px;font-weight:600}
   body.theme-day.no-mark .tabs{gap:16px}
   body.theme-day.no-mark .tab{font-size:14.5px}
 }
+.chip.rep{border:0;cursor:pointer;font:inherit;font-size:11px;color:var(--accent);background:rgba(99,155,227,.12)}
 .qhint{font:11.5px var(--mono);color:var(--accent);margin:6px 2px 0;min-height:0}
 .qhint:empty{display:none}
 .tog{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg-2);margin-top:10px;cursor:pointer}
@@ -855,14 +856,14 @@ function startDb(){
   cfgRef().onSnapshot((snap) => { cfgRaw = snap.exists ? {...snap.data()} : {}; applyCfg(); const was = autoTab; autoTab = timeTab(); if (autoTab !== was && S.tab === was && Date.now() - S.tabManual > 20*60000) S.tab = autoTab; schedule(); }, () => {});
   S.db.collection("todos").onSnapshot((snap) => {
     S.todos = snap.docs.map(d => ({id:d.id, ...d.data()}));
-    S.todosReady = true; reconcile(); schedule();
+    S.todosReady = true; reconcile(); schedule(); setTimeout(() => rollRecurring().catch(() => {}), 400);
   }, (e) => { S.dbError = e && e.code || "error"; schedule(); });
 }
 const todoRef = (id) => S.db.collection("todos").doc(id);
-async function addTodo({title, notes="", pri=2, cal, est=30}){
+async function addTodo({title, notes="", pri=2, cal, est=30, extra={}}){
   if (!S.db) throw new Error("To-do storage is unavailable in this view.");
   const ref = await S.db.collection("todos").add({title:String(title).slice(0,200), notes:String(notes||"").slice(0,1000),
-    pri:Number(pri)||2, cal:cal || guessCal(title), est:Number(est)||30, status:"open", createdAt:Date.now(), order:Date.now()});
+    pri:Number(pri)||2, cal:cal || guessCal(title), est:Number(est)||30, status:"open", createdAt:Date.now(), order:Date.now(), ...extra});
   const added = (await ref.get()).data();
   pushUndo(`Added "${String(title).slice(0,40)}"`, () => ref.delete(), () => ref.set(added));
   return ref.id;
@@ -939,6 +940,7 @@ document.addEventListener("keydown", (e) => {
 const findTodoLive = (id) => S.todos.find(x => x.id === id);
 async function deleteTodo(t){
   const {id, ...data} = t;
+  if (t.seriesId && t.repeat){ for (const x of S.todos.filter(x => x.seriesId === t.seriesId && x.id !== t.id && x.repeat)) await todoRef(x.id).update({repeat:null}); }
   if (t.status === "scheduled" && t.eventId) await unscheduleTodoRaw(t);
   await todoRef(id).delete();
   pushUndo(`Deleted "${t.title}"`, async () => {
@@ -987,6 +989,7 @@ async function unscheduleTodoRaw(t){
 }
 async function completeTodo(t, done=true){
   await todoRef(t.id).update({status: done ? "done" : (t.eventId ? "scheduled" : "open"), doneAt: done ? Date.now() : null});
+  if (done && t.repeat) setTimeout(() => rollRecurring().catch(() => {}), 300);
   pushUndo(done ? `Checked off "${t.title}"` : `Unchecked "${t.title}"`, async () => { const f = findTodoLive(t.id); if (f) await completeTodo(f, !done); });
   if (t.eventId && t.calId){
     const ev = allEvents().find(e => e.id === t.eventId);
@@ -1287,7 +1290,7 @@ function todoRow(t){
   }
   const draggable = t.status !== "scheduled" && !t.eventId;
   return `<div class="todo${done?" is-done":""}" data-id="${t.id}"${draggable?" data-drag":""}><div class="lead">${draggable ? `<span class="grip" data-grip="${t.id}" aria-label="Drag to move" title="Drag to move">⠿</span>` : `<span class="nogrip"></span>`}<button class="check${done?" on":""}" data-act="toggle" data-id="${t.id}" aria-label="${done?"Mark not done":"Mark done"}">${done?"✓":""}</button></div>
-    <div class="tt"><div>${esc(t.title)}</div><div class="meta"><span class="pri p${t.pri}">P${t.pri||2}</span>${chip(t.cal)}${when?`<span class="chip mono">${esc(fmtDay(when).split(",")[0].slice(0,3))} ${fmtTime(when)}</span>`:""}${t.notes?`<span class="sub" style="margin:0">${esc(t.notes.slice(0,80))}</span>`:""}</div></div>
+    <div class="tt"><div>${esc(t.title)}</div><div class="meta"><span class="pri p${t.pri}">P${t.pri||2}</span>${chip(t.cal)}${when?`<span class="chip mono">${esc(fmtDay(when).split(",")[0].slice(0,3))} ${fmtTime(when)}</span>`:""}${t.repeat?`<button class="chip rep" data-act="repeatoff" data-id="${t.id}" title="Repeats ${esc(repeatLabel(t.repeat))}. Tap to stop repeating.">↻ ${esc(repeatLabel(t.repeat))}</button>`:""}${t.notes?`<span class="sub" style="margin:0">${esc(t.notes.slice(0,80))}</span>`:""}</div></div>
     ${actions ? `<div class="acts">${actions}</div>` : ""}${form}</div>`;
 }
 function todoList(list, empty, zone){
@@ -1296,13 +1299,13 @@ function todoList(list, empty, zone){
   if (!list.length) return `<div class="empty"${z}>${esc(empty)}</div>`;
   return `<div class="rows"${z}>${list.map(todoRow).join("")}</div>`;
 }
-const openTodos = () => S.todos.filter(t => t.status === "open").sort((a,b) => (a.pri||2)-(b.pri||2) || a.createdAt-b.createdAt);
+const openTodos = () => S.todos.filter(t => t.status === "open" && visibleNow(t)).sort((a,b) => (a.pri||2)-(b.pri||2) || a.createdAt-b.createdAt);
 const showT = (t) => !(S.hideDone && t.status === "done");
 const byPri = (a,b) => (a.pri||2)-(b.pri||2) || (a.createdAt||0)-(b.createdAt||0);
 /* backlog list: unscheduled items; checked ones stay in place unless hidden */
 const eff = (t) => (typeof t.order === "number" ? t.order : (t.createdAt || 0));
 const byOrder = (a,b) => eff(a) - eff(b);
-const unsched = (t) => (t.status === "open" || (t.status === "done" && !t.eventId));
+const unsched = (t) => (t.status === "open" || (t.status === "done" && !t.eventId)) && visibleNow(t);
 const allTop = () => S.todos.filter(t => t.top && unsched(t)).sort(byOrder);
 const topTodos = () => allTop().slice(0,3).filter(showT);
 const listTodos = () => { const ids = new Set(allTop().slice(0,3).map(t => t.id)); return S.todos.filter(t => unsched(t) && !ids.has(t.id) && showT(t)).sort(byOrder); };
@@ -1611,6 +1614,67 @@ document.addEventListener("submit", (e) => {
   act("quick", async () => { await quickAdd(v); inp.value = ""; inp.blur(); hintFor(inp); });
 });
 
+/* ---------- recurring to-dos ---------- */
+const WD_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const ord = (n) => n + (n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th");
+function repeatLabel(r){
+  if (!r) return "";
+  if (r.freq === "daily") return "daily";
+  if (r.freq === "weekdays") return "weekdays";
+  if (r.freq === "weekly") return (r.days || []).map(d => WD_SHORT[d]).join(" ") || "weekly";
+  if (r.freq === "monthly") return "monthly " + ord(r.dom || 1);
+  return "repeats";
+}
+function occursOn(r, d){
+  if (!r) return false;
+  const w = d.getDay();
+  if (r.freq === "daily") return true;
+  if (r.freq === "weekdays") return w >= 1 && w <= 5;
+  if (r.freq === "weekly") return (r.days || []).includes(w);
+  if (r.freq === "monthly"){ const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); return d.getDate() === Math.min(r.dom || 1, last); }
+  return false;
+}
+function nextOcc(r, from, inclusive){
+  let d = startOfDay(from); if (!inclusive) d = addDays(d, 1);
+  for (let i = 0; i < 400; i++, d = addDays(d, 1)) if (occursOn(r, d)) return d;
+  return null;
+}
+const visibleNow = (t) => !t.showFrom || t.showFrom <= dayKey(new Date());
+const rolling = new Set();
+async function rollRecurring(){
+  if (!S.db || !S.todosReady) return;
+  const series = new Map();
+  for (const t of S.todos) if (t.seriesId){ const a = series.get(t.seriesId) || []; a.push(t); series.set(t.seriesId, a); }
+  const todayD = startOfDay(new Date());
+  for (const [sid, list] of series){
+    list.sort((a, b) => String(a.showFrom || "").localeCompare(String(b.showFrom || "")) || (a.createdAt || 0) - (b.createdAt || 0));
+    const latest = list[list.length - 1];
+    if (!latest.repeat || latest.status !== "done") continue;
+    let next = nextOcc(latest.repeat, new Date((latest.showFrom || dayKey(todayD)) + "T00:00:00"), false);
+    while (next && next < todayD) next = nextOcc(latest.repeat, next, false);
+    if (!next) continue;
+    const key = sid + "|" + dayKey(next);
+    if (rolling.has(key) || list.some(x => x.showFrom === dayKey(next))) continue;
+    rolling.add(key);
+    try {
+      const ref = await S.db.collection("todos").add({title:latest.title, notes:latest.notes || "", pri:latest.pri || 2, cal:latest.cal, est:latest.est || 30,
+        status:"open", createdAt:Date.now(), order:Date.now(), top:!!latest.top, repeat:latest.repeat, repeatTime:latest.repeatTime || null, seriesId:sid, showFrom:dayKey(next)});
+      if (latest.repeatTime && S.mcp){
+        const st = new Date(dayKey(next) + "T" + latest.repeatTime + ":00");
+        const t = {id:ref.id, title:latest.title, notes:latest.notes || "", est:latest.est || 30, cal:latest.cal};
+        try { await scheduleTodo(t, {start:localISO(st), minutes:t.est, calName:t.cal}); undoStack.pop(); updateUndo(); } catch {}
+      }
+    } catch { rolling.delete(key); }
+  }
+}
+async function stopRepeat(t){
+  const sid = t.seriesId; if (!sid) return;
+  const prev = S.todos.filter(x => x.seriesId === sid && x.repeat).map(x => ({id:x.id, repeat:x.repeat}));
+  for (const x of prev) await todoRef(x.id).update({repeat:null});
+  pushUndo(`Stopped repeating "${t.title}"`, async () => { for (const x of prev) await todoRef(x.id).update({repeat:x.repeat}); });
+  toast(`"${t.title}" won't repeat anymore.`, true);
+}
+
 /* ---------- quick add: "trims thu 2pm 1h" goes straight onto the calendar ---------- */
 const WD = {sun:0,sunday:0,mon:1,monday:1,tue:2,tues:2,tuesday:2,wed:3,weds:3,wednesday:3,thu:4,thur:4,thurs:4,thursday:4,fri:5,friday:5,sat:6,saturday:6};
 const MON = {jan:0,january:0,feb:1,february:1,mar:2,march:2,apr:3,april:3,may:4,jun:5,june:5,jul:6,july:6,aug:7,august:7,sep:8,sept:8,september:8,oct:9,october:9,nov:10,november:10,dec:11,december:11};
@@ -1633,6 +1697,15 @@ function parseQuick(text, now = new Date()){
     if (!cut(/\s(?:at|@)\s*(\d{1,2})\b(?!\s*(?:\/|h|m))/i, m => { const x = +m[1]; if (x < 1 || x > 12) return false; h = x <= 6 || x === 12 ? (x % 12) + 12 : x; }))
     cut(/\s(?:at\s+)?(noon|midnight)\b/i, m => { h = m[1].toLowerCase() === "noon" ? 12 : 0; });
   }
+  let repeat = null;
+  cut(/\s(?:every\s*day|daily|each\s*day)\b/i, () => { repeat = {freq:"daily"}; });
+  if (!repeat) cut(/\s(?:every\s*weekday|weekdays|on\s+weekdays)\b/i, () => { repeat = {freq:"weekdays"}; });
+  if (!repeat) cut(/\s(?:every|each)\s+((?:(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday|sun|mon|tues|tue|weds|wed|thurs|thur|thu|fri|sat)s?(?:\s*(?:,|and|&|\/)\s*|\s+|(?=\s*$)|\b))+)/i, m => {
+    const days = [...new Set((m[1].toLowerCase().match(/[a-z]+/g) || []).map(w => WD[w.replace(/s$/, "")] ?? WD[w]).filter(x => x != null))].sort();
+    if (!days.length) return false; repeat = {freq:"weekly", days};
+  });
+  if (!repeat) cut(/\s(?:weekly|every\s*week)\b/i, () => { repeat = {freq:"weekly"}; });
+  if (!repeat) cut(/\s(?:monthly|every\s*month)\b/i, () => { repeat = {freq:"monthly"}; });
   const base = startOfDay(now);
   cut(/\s(?:on\s+)?(today|tonight|tomorrow|tmrw|tmr)\b/i, m => { const w = m[1].toLowerCase(); day = w.startsWith("to") && w !== "tomorrow" ? base : addDays(base, 1); if (w === "tonight" && h == null) h = 20; });
   if (!day) cut(/\s(?:on\s+)?(next\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday|sun|mon|tues|tue|weds|wed|thurs|thur|thu|fri|sat)\b/i, m => {
@@ -1649,22 +1722,33 @@ function parseQuick(text, now = new Date()){
     if (!day && start < now) start = addDays(start, 1);
     if (endH != null && mins == null){ const en = new Date(start); en.setHours(endH, endMi, 0, 0); if (en <= start) en.setDate(en.getDate() + 1); mins = Math.round((en - start) / 60000); }
   }
-  return {title: title || text.trim(), start, mins, day: start ? null : day};
+  if (repeat){
+    if (repeat.freq === "weekly" && !repeat.days) repeat.days = [(start || day || base).getDay()];
+    if (repeat.freq === "monthly") repeat.dom = (start || day || base).getDate();
+    const first = nextOcc(repeat, start || day || base, true);
+    if (first){ if (start){ const st = new Date(first); st.setHours(start.getHours(), start.getMinutes(), 0, 0); if (st < now) { const n2 = nextOcc(repeat, first, false); if (n2){ n2.setHours(start.getHours(), start.getMinutes(), 0, 0); start = n2; } } else start = st; } else day = first; }
+  }
+  return {title: title || text.trim(), start, mins, day: start ? null : day, repeat};
 }
 function quickHint(v){
   if (!v.trim()) return "";
   const q = parseQuick(v), cal = guessCal(q.title);
   if (q.start){
     const en = new Date(q.start.getTime() + (q.mins || 30) * 60000);
-    return `→ ${q.start.toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"})} · ${fmtTime(q.start)}–${fmtTime(en)} · ${cal}${S.mcp ? "" : " (sign in to schedule)"}`;
+    return `→ ${q.start.toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"})} · ${fmtTime(q.start)}–${fmtTime(en)} · ${cal}${q.repeat ? " · ↻ " + repeatLabel(q.repeat) : ""}${S.mcp ? "" : " (sign in to schedule)"}`;
   }
+  if (q.repeat) return `→ To-do · ↻ ${repeatLabel(q.repeat)} · first shows ${sameDay(q.day || new Date(), new Date()) ? "today" : (q.day || new Date()).toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"})}`;
   if (q.day) return `→ To-do. Add a time to put it on ${q.day.toLocaleDateString([], {weekday:"short"})}.`;
   return "";
 }
 async function quickAdd(v){
   const q = parseQuick(v);
   const est = q.mins || 30, cal = guessCal(q.title);
-  const id = await addTodo({title:q.title, est, cal});
+  const extra = {};
+  if (q.repeat){ extra.repeat = q.repeat; extra.showFrom = dayKey(q.start || q.day || new Date()); if (q.start) extra.repeatTime = `${pad(q.start.getHours())}:${pad(q.start.getMinutes())}`; }
+  const id = await addTodo({title:q.title, est, cal, extra});
+  if (q.repeat) await todoRef(id).update({seriesId:id});
+  if (q.repeat && !q.start && extra.showFrom !== dayKey(new Date())) toast(`"${q.title}" repeats ${repeatLabel(q.repeat)}. First one shows up ${q.day.toLocaleDateString([], {weekday:"long"})}.`);
   if (q.start && S.mcp){
     await scheduleTodo({id, title:q.title, notes:"", est, cal}, {start:localISO(q.start), minutes:est, calName:cal});
     toast(`Scheduled ${fmtTime(q.start)} ${q.start.toLocaleDateString([], {weekday:"short"})} on ${cal}.`, true);
@@ -1714,6 +1798,7 @@ document.addEventListener("click", (e) => {
     } break;
     case "unsched": if (t) act(t.id, () => unscheduleTodo(t)); break;
     case "del": if (t) act(t.id, () => deleteTodo(t)); break;
+    case "repeatoff": if (t) act(t.id, () => stopRepeat(t)); break;
     case "tomorrow": {
       const ev = allEvents().find(x => x.id === b.dataset.ev); if (!ev) break;
       act("ev"+ev.id, async () => { await moveEvent(ev, addDays(ev.start,1)); toast("Moved to tomorrow."); });
@@ -2401,7 +2486,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.19-32";
+const APP_VERSION = "2026.10.19-33";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
