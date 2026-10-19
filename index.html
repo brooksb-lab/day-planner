@@ -548,6 +548,16 @@ body.theme-day.no-mark .tab{font-size:15px;font-weight:600}
 .ev-leave{display:block;font-style:normal;font:10px var(--mono);color:#e7bb40;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ev.short .ev-leave{display:none}
 .leave-pill{font:11px var(--mono);color:#e7bb40;background:rgba(231,187,64,.12);padding:1px 6px;border-radius:6px;white-space:nowrap}
+.todo{position:relative;touch-action:pan-y}
+.todo.swiping > *{transform:translateX(var(--sx,0px));transition:none}
+.todo.sw-back > *{transition:transform .22s cubic-bezier(.32,.72,0,1)}
+.todo.swiping{overflow:hidden}
+.todo.swiping::before{position:absolute;inset:0;display:flex;align-items:center;padding:0 18px;font-size:13px;font-weight:600;border-radius:inherit;pointer-events:none}
+.todo.sw-r::before{content:"✓  Done";justify-content:flex-start;color:#5cb87e;background:rgba(92,184,126,.10)}
+.todo.sw-l::before{content:"Tomorrow  →";justify-content:flex-end;color:#e7bb40;background:rgba(231,187,64,.10)}
+.todo.is-done.sw-r::before{content:"↺  Not done"}
+.todo.sw-go.sw-r::before{background:rgba(92,184,126,.24)}
+.todo.sw-go.sw-l::before{background:rgba(231,187,64,.24)}
 .qhint{font:11.5px var(--mono);color:var(--accent);margin:6px 2px 0;min-height:0}
 .qhint:empty{display:none}
 .tog{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg-2);margin-top:10px;cursor:pointer}
@@ -2264,6 +2274,55 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && evDrag) 
 /* keep iOS from scrolling once something is being dragged */
 document.addEventListener("touchmove", (e) => { if ((evDrag && evDrag.active) || (drag && drag.ghost) || divDrag) e.preventDefault(); }, {passive:false});
 
+/* ---------- swipe on to-dos (touch): right = done, left = tomorrow ---------- */
+let swipe = null;
+async function snoozeTodo(t){
+  const tk = dayKey(addDays(startOfDay(new Date()), 1));
+  if (t.status === "scheduled" && t.eventId){
+    const ev = allEvents().find(e => e.id === t.eventId);
+    if (ev){ await moveEvent(ev, addDays(ev.start, 1)); toast(`Moved "${t.title}" to tomorrow.`, true); return; }
+  }
+  const prev = t.showFrom || null;
+  await todoRef(t.id).update({showFrom: tk});
+  pushUndo(`Snoozed "${t.title}"`, async () => { await todoRef(t.id).update({showFrom: prev}); });
+  toast(`"${t.title}" comes back tomorrow.`, true);
+}
+document.addEventListener("pointerdown", (e) => {
+  if (e.pointerType === "mouse" || drag || evDrag) return;
+  const row = e.target.closest(".todo"); if (!row || e.target.closest("button,input,select,textarea,a,[data-grip],.sched")) return;
+  swipe = {row, id:row.dataset.id, x0:e.clientX, y0:e.clientY, pid:e.pointerId, on:false, dx:0};
+}, true);
+document.addEventListener("pointermove", (e) => {
+  const s = swipe; if (!s || e.pointerId !== s.pid) return;
+  const dx = e.clientX - s.x0, dy = e.clientY - s.y0;
+  if (!s.on){
+    if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)){ swipe = null; return; }
+    if (Math.abs(dx) < 14 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+    if (drag && drag.ghost) { swipe = null; return; }
+    s.on = true; if (pendTouch){ clearTimeout(pendTouch.timer); pendTouch = null; }
+    s.row.classList.add("swiping");
+  }
+  e.preventDefault();
+  s.dx = Math.max(-140, Math.min(140, dx));
+  s.row.style.setProperty("--sx", s.dx + "px");
+  s.row.classList.toggle("sw-r", s.dx > 0); s.row.classList.toggle("sw-l", s.dx < 0);
+  s.row.classList.toggle("sw-go", Math.abs(s.dx) >= 80);
+}, {passive:false});
+function endSwipe(apply){
+  const s = swipe; swipe = null; if (!s || !s.on) return;
+  const row = s.row, go = apply && Math.abs(s.dx) >= 80, dir = s.dx > 0 ? "r" : "l";
+  row.classList.add("sw-back"); row.style.setProperty("--sx", go ? (dir === "r" ? "140px" : "-140px") : "0px");
+  setTimeout(() => { row.classList.remove("swiping","sw-r","sw-l","sw-go","sw-back"); row.style.removeProperty("--sx"); }, 220);
+  if (!go) return;
+  try { navigator.vibrate && navigator.vibrate(12); } catch {}
+  const t = findTodoLive(s.id); if (!t) return;
+  if (dir === "r") act(t.id, () => completeTodo(t, t.status !== "done"));
+  else act(t.id, () => snoozeTodo(t));
+}
+document.addEventListener("pointerup", (e) => { if (swipe && e.pointerId === swipe.pid) endSwipe(true); });
+document.addEventListener("pointercancel", (e) => { if (swipe && e.pointerId === swipe.pid) endSwipe(false); });
+document.addEventListener("touchmove", (e) => { if (swipe && swipe.on) e.preventDefault(); }, {passive:false});
+
 async function resizeEvent(ev, endDate){
   if (!ev.cal.writable) throw new Error(`${ev.cal.name} is read-only here.`);
   if (ev.attendees > 1) throw new Error("This event has guests. Change it in Google Calendar so they're notified properly.");
@@ -2708,7 +2767,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.19-36";
+const APP_VERSION = "2026.10.19-37";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
