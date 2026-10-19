@@ -540,6 +540,11 @@ body.theme-day.no-mark .tab{font-size:15px;font-weight:600}
 @media (max-width:560px){.studio-edit input,.studio-edit select{font-size:16px}}
 .wk-st{font-style:normal;font:10px var(--mono);color:#5cb87e;margin-left:6px}
 .wkbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--fg-2)}
+.mbrief{display:flex;flex-direction:column;gap:7px;padding:14px 16px;margin:4px 0 18px;border-radius:14px;corner-shape:squircle;background:var(--win);box-shadow:var(--hair);font-size:14px;line-height:1.4;color:var(--fg)}
+.mbrief .label{display:inline-block;min-width:78px;margin-right:6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-3)}
+.mb-dim{color:var(--fg-3)}
+.mb-rain{color:#8fb4ff}
+@media (max-width:560px){.mbrief .label{display:block;min-width:0;margin:0 0 1px}.mbrief{gap:10px}}
 .qhint{font:11.5px var(--mono);color:var(--accent);margin:6px 2px 0;min-height:0}
 .qhint:empty{display:none}
 .tog{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg-2);margin-top:10px;cursor:pointer}
@@ -1328,7 +1333,7 @@ const topSection = (empty) => `<div class="section"><div class="label">Top three
 const todayTodos = (day) => S.todos.filter(t => t.start && sameDay(new Date(t.start), day));
 
 function viewMorning(evs, today){
-  return head("Morning", fmtDay(today) + " · set the day") + topSection() +
+  return head("Morning", fmtDay(today) + " · set the day") + morningBrief(evs, today) + topSection() +
     `<div class="section"><div class="label">Today's calendar</div>${agenda(eventsOn(today, evs))}</div>
      <div class="section"><div class="label">Backlog</div>${todoList(listTodos(), "Backlog is clear.", "backlog")}</div>`;
 }
@@ -1628,6 +1633,62 @@ document.addEventListener("submit", (e) => {
   e.preventDefault(); const inp = f.querySelector("input"); const v = inp.value.trim(); if (!v) return;
   act("quick", async () => { await quickAdd(v); inp.value = ""; inp.blur(); hintFor(inp); });
 });
+
+/* ---------- morning brief ---------- */
+function rainWindows(day){
+  const hz = WX.data && WX.data.hourly; if (!hz || !hz.time) return [];
+  const key = dayKey(startOfDay(day)), out = []; let cur = null;
+  for (let h = 6; h < 24; h++){
+    const i = hz.time.indexOf(`${key}T${pad(h)}:00`); if (i < 0) continue;
+    const p = hz.precipitation_probability ? hz.precipitation_probability[i] || 0 : 0;
+    if (p >= 40){ if (cur && cur.e === h) { cur.e = h + 1; cur.p = Math.max(cur.p, p); } else { cur = {s:h, e:h + 1, p}; out.push(cur); } } else cur = null;
+  }
+  return out;
+}
+const hr12 = (h) => `${h % 12 || 12}${h < 12 || h === 24 ? "am" : "pm"}`;
+function openStretch(timed, day){
+  const d0 = startOfDay(day), now = new Date();
+  let from = new Date(d0); from.setHours(9, 0, 0, 0); const to = new Date(d0); to.setHours(21, 0, 0, 0);
+  if (sameDay(now, d0) && now > from) from = new Date(Math.ceil(now / 900000) * 900000);
+  let best = null, t = from;
+  for (const e of timed.filter(e => e.end > from && e.start < to).sort((a, b) => a.start - b.start)){
+    if (e.start > t && (!best || e.start - t > best.e - best.s)) best = {s:t, e:e.start};
+    if (e.end > t) t = e.end;
+  }
+  if (to > t && (!best || to - t > best.e - best.s)) best = {s:t, e:to};
+  return best && best.e - best.s >= 30 * 60000 ? best : null;
+}
+function morningBrief(evs, day){
+  const now = new Date(), list = eventsOn(day, evs), timed = list.filter(e => !e.allDay);
+  const upcoming = timed.filter(e => e.end > now);
+  const first = upcoming[0];
+  const booked = Math.round(timed.reduce((a, e) => a + Math.max(0, (Math.min(+e.end, +addDays(startOfDay(day), 1)) - Math.max(+e.start, +startOfDay(day))) / 60000), 0));
+  const lines = [];
+  // weather
+  const d = WX.data;
+  if (d && d.daily){
+    const i = d.daily.time ? d.daily.time.indexOf(dayKey(startOfDay(day))) : 0;
+    const hi = Math.round(d.daily.temperature_2m_max[i]), lo = Math.round(d.daily.temperature_2m_min[i]);
+    const nowT = d.current && sameDay(day, now) ? `${Math.round(d.current.temperature_2m)}° ${WX_WORD(d.current.weather_code)} now, ` : `${WX_WORD(d.daily.weather_code[i])}, `;
+    const rw = rainWindows(day).filter(r => !sameDay(day, now) || r.e > now.getHours());
+    const rain = rw.length ? ` <span class="mb-rain">Rain likely ${rw.map(r => `${hr12(r.s)}–${hr12(r.e)}`).join(", ")}${rw.length === 1 ? ` (${rw[0].p}%)` : ""}.</span>` : " No rain expected.";
+    const ss = d.daily.sunset && d.daily.sunset[i] ? ` Sunset ${(() => { const v = d.daily.sunset[i]; const h = +v.slice(11,13); return `${h % 12 || 12}:${v.slice(14,16)}`; })()}.` : "";
+    lines.push(`<div class="mb-l"><span class="label">Weather</span>${nowT}high ${hi}°, low ${lo}°.${rain}${ss}</div>`);
+  }
+  // first thing
+  if (first){
+    const mins = Math.round((first.start - now) / 60000);
+    const when = first.start <= now ? "happening now" : mins < 90 ? `in ${mins} min` : fmtTime(first.start);
+    lines.push(`<div class="mb-l"><span class="label">First up</span><b>${esc(first.title.replace(/^✓\s*/, ""))}</b> ${first.start > now && mins < 90 ? fmtTime(first.start) + " · " : ""}${when}${first.cal ? ` <span class="mb-dim">· ${esc(first.cal.name)}</span>` : ""}</div>`);
+  } else lines.push(`<div class="mb-l"><span class="label">First up</span>Nothing on the calendar${sameDay(day, now) ? " for the rest of today" : ""}.</div>`);
+  // shape of the day
+  const open = openStretch(timed, day), st = studioMins(startOfDay(day), addDays(startOfDay(day), 1), evs);
+  lines.push(`<div class="mb-l"><span class="label">Day</span>${timed.length} event${timed.length === 1 ? "" : "s"} · ${hrs(booked)} booked${st ? ` · ${hrs(st)} studio` : ""}${open ? ` · longest open stretch ${fmtTime(open.s)}–${fmtTime(open.e)}` : ""}</div>`);
+  // top three
+  const top = topTodos().filter(t => t.status !== "done");
+  if (top.length) lines.push(`<div class="mb-l"><span class="label">Top three</span>${top.map(t => esc(t.title)).join(" · ")}</div>`);
+  return `<div class="mbrief">${lines.join("")}</div>`;
+}
 
 /* ---------- studio time ---------- */
 function studioWords(){ return String(cfg().studioWords || "").split(",").map(w => w.trim().toLowerCase()).filter(Boolean); }
@@ -2548,7 +2609,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.19-34";
+const APP_VERSION = "2026.10.19-35";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
