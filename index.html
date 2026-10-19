@@ -526,6 +526,20 @@ body.theme-day.no-mark .tab{font-size:15px;font-weight:600}
   body.theme-day.no-mark .tab{font-size:14.5px}
 }
 .chip.rep{border:0;cursor:pointer;font:inherit;font-size:11px;color:var(--accent);background:rgba(99,155,227,.12)}
+.studio{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.sbar{position:relative;display:inline-block;width:56px;height:4px;border-radius:2px;background:rgba(232,234,237,.1);overflow:hidden;vertical-align:middle}
+.sbar b{position:absolute;inset:0 auto 0 0;background:rgba(92,184,126,.35);border-radius:2px}
+.sbar u{position:absolute;inset:0 auto 0 0;background:#5cb87e;border-radius:2px;text-decoration:none}
+.sbar.big{display:block;width:100%;height:6px;margin:6px 0}
+.studio-big b{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.studio-big span{color:var(--fg-2);font-size:13px}
+.studio-edit{margin-top:8px;font-size:12.5px;color:var(--fg-2)}
+.studio-edit summary{cursor:pointer;color:var(--fg-3)}
+.studio-edit label{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.studio-edit input,.studio-edit select{font:inherit;font-size:13px;color:var(--fg);background:var(--win-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+@media (max-width:560px){.studio-edit input,.studio-edit select{font-size:16px}}
+.wk-st{font-style:normal;font:10px var(--mono);color:#5cb87e;margin-left:6px}
+.wkbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--fg-2)}
 .qhint{font:11.5px var(--mono);color:var(--accent);margin:6px 2px 0;min-height:0}
 .qhint:empty{display:none}
 .tog{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg-2);margin-top:10px;cursor:pointer}
@@ -636,6 +650,7 @@ body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
         <div class="label">Second time zone</div>
         <select id="tz2sel" class="tzsel" aria-label="Second time zone"></select>
       </div>
+      <div class="section"><div class="label">Studio time</div><div id="studiobox"></div></div>
       <div class="section" id="samplebox" hidden>
         <div class="label">Sample data</div>
         <div class="sub" id="samplecount"></div>
@@ -712,7 +727,7 @@ function calKind(c){
 }
 const KIND_NAME = {personal:"Personal", work:"Work", hol:"Holidays"};
 /* ---------- settings (stored with the page, editable by the Claude bar) ---------- */
-const CFG_DEFAULTS = {tlStart:0, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day", tz2:"", showMark:false};
+const CFG_DEFAULTS = {tlStart:0, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day", tz2:"", showMark:false, studioGoal:10, studioWords:"studio, sketch, sew, pattern, drape, design, sample, fitting, POV", studioCal:""};
 let cfgRaw = {};
 const cfg = () => ({...CFG_DEFAULTS, ...cfgRaw, tabHours:{...CFG_DEFAULTS.tabHours, ...(cfgRaw.tabHours || {})}, calColors:{...(cfgRaw.calColors || {})}});
 function applyCfg(){
@@ -786,8 +801,8 @@ function eventsOn(day, evs){
 const todoForEvent = (ev) => S.todos.find(t => t.eventId && t.eventId === ev.id);
 
 function windowRange(){
-  const s = addDays(startOfDay(new Date()), -1);
-  return {startTime: localISO(s), endTime: localISO(addDays(s, 23))};
+  const t = startOfDay(new Date()), mon = addDays(t, -((t.getDay() + 6) % 7)), s = mon < addDays(t, -1) ? mon : addDays(t, -1);
+  return {startTime: localISO(s), endTime: localISO(addDays(t, 22))};
 }
 function syncWatches(){
   if (!S.mcp) return;
@@ -1226,7 +1241,7 @@ function weekTimeline(evs, start){
   let head = `<div class="wk-cell wk-corner"></div>`;
   for (const d of days){
     const ad = eventsOn(d, evs).filter(e => e.allDay);
-    head += `<div class="wk-cell wk-dh${sameDay(d, today) ? " today" : ""}"><div class="wk-dn"><b>${d.toLocaleDateString([], {weekday:"short"})}</b> <span>${d.getDate()}</span></div>${dayWx(d)}${ad.map(e => `<span class="ev-pill" style="--evc:${e.cal.color};border-left-color:${e.cal.color}" title="${esc(e.title)}">${esc(e.title)}</span>`).join("")}</div>`;
+    head += `<div class="wk-cell wk-dh${sameDay(d, today) ? " today" : ""}"><div class="wk-dn"><b>${d.toLocaleDateString([], {weekday:"short"})}</b> <span>${d.getDate()}</span>${(() => { const m = studioMins(startOfDay(d), addDays(startOfDay(d), 1), evs); return m ? `<em class="wk-st">${hrs(m)}</em>` : ""; })()}</div>${dayWx(d)}${ad.map(e => `<span class="ev-pill" style="--evc:${e.cal.color};border-left-color:${e.cal.color}" title="${esc(e.title)}">${esc(e.title)}</span>`).join("")}</div>`;
   }
   let gut = "";
   for (let hr = H0; hr <= H1; hr++) gut += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${hourLabel(start, hr, false)}</span></div>`;
@@ -1340,7 +1355,7 @@ function viewDay(evs, today){
   const cur = timed.find(e => e.start <= n && e.end > n);
   const next = timed.find(e => e.start > n);
   const bit = (lbl, e, none) => `<span><span class="label">${lbl}</span>${e ? `<b>${esc(e.title.replace(/^✓\s*/,""))}</b> ${fmtTime(e.start)}` : esc(none)}</span>`;
-  return paneView("Day", fmtDay(today), today, evs, `<div class="nowstrip">${bit("Now", cur, "Open time")}${bit("Next", next, "Nothing else today")}</div>`);
+  return paneView("Day", fmtDay(today), today, evs, `<div class="nowstrip">${bit("Now", cur, "Open time")}${bit("Next", next, "Nothing else today")}${studioStrip()}</div>`);
 }
 function viewEvening(evs, today){
   const tt = todayTodos(today);
@@ -1357,7 +1372,7 @@ function viewTomorrow(evs, day){
 function viewWeek(evs, today){
   const start = addDays(today, S.weekOff*7);
   const nav = `<div class="wknav"><button class="btn" data-act="wk" data-d="-1" ${S.weekOff<=0?"disabled":""} aria-label="Previous week">‹</button><button class="btn" data-act="wk" data-d="0" ${S.weekOff===0?"disabled":""}>Today</button><button class="btn" data-act="wk" data-d="1" ${S.weekOff>=2?"disabled":""} aria-label="Next week">›</button></div>`;
-  return paneView("Week", `${fmtDay(start)} to ${fmtDay(addDays(start,6))}`, start, evs, nav, weekTimeline(evs, start), "pane-week");
+  return paneView("Week", `${fmtDay(start)} to ${fmtDay(addDays(start,6))}`, start, evs, `<div class="wkbar">${nav}${studioStrip()}</div>`, weekTimeline(evs, start), "pane-week");
 }
 function viewBacklog(){
   const sched = S.todos.filter(t => (t.status === "scheduled" || (t.status === "done" && t.eventId)) && showT(t)).sort((a,b) => String(a.start).localeCompare(String(b.start)));
@@ -1376,7 +1391,7 @@ function renderSide(){
   $("samplebox").hidden = !(sEv || sTd);
   $("samplecount").textContent = `${sEv} sample event${sEv===1?"":"s"} and ${sTd} sample to-do${sTd===1?"":"s"}.`;
   $("clearbtn").textContent = S.busy.has("clear") ? "Removing…" : (Date.now() - S.confirmClear < 5000 ? "Confirm: remove all samples" : "Remove samples");
-  $("clearbtn").disabled = S.busy.has("clear");
+  $("clearbtn").disabled = S.busy.has("clear"); renderStudioSide();
   renderConn();
   $("callegend").innerHTML = S.calendars.length ? S.calendars.map(c => `<div style="display:flex;align-items:center;gap:8px"><i style="width:9px;height:9px;border-radius:3px;background:${c.color};display:block;flex:none"></i><span>${esc(c.name)}</span><span class="sub" style="margin:0;margin-left:auto">${c.writable?"":"read-only"}${S.events.get(c.id)?.error?" · not syncing":""}</span></div>`).join("") : `<div class="sub">Calendars appear once Google Calendar is connected.</div>`;
 }
@@ -1612,6 +1627,53 @@ document.addEventListener("submit", (e) => {
   const f = e.target.closest("form[data-quick]"); if (!f) return;
   e.preventDefault(); const inp = f.querySelector("input"); const v = inp.value.trim(); if (!v) return;
   act("quick", async () => { await quickAdd(v); inp.value = ""; inp.blur(); hintFor(inp); });
+});
+
+/* ---------- studio time ---------- */
+function studioWords(){ return String(cfg().studioWords || "").split(",").map(w => w.trim().toLowerCase()).filter(Boolean); }
+function isStudio(e){
+  if (e.allDay) return false;
+  const t = (e.title || "").toLowerCase(), words = studioWords();
+  return words.some(w => t.includes(w)) || (cfg().studioCal && e.cal && e.cal.name === cfg().studioCal);
+}
+const weekStart = (d) => { const x = startOfDay(d); return addDays(x, -((x.getDay() + 6) % 7)); }; // Monday
+function studioMins(from, to, evs, onlyElapsed){
+  const now = new Date(); let m = 0;
+  for (const e of evs || allEvents()){
+    if (!isStudio(e)) continue;
+    const s = Math.max(+e.start, +from), en = Math.min(+e.end, +to, onlyElapsed ? +now : Infinity);
+    if (en > s) m += (en - s) / 60000;
+  }
+  return Math.round(m);
+}
+const hrs = (m) => { const h = m / 60; return (Math.round(h * 2) / 2).toString().replace(/\.5$/, "½") + "h"; };
+function studioSummary(){
+  const evs = allEvents(), today = startOfDay(new Date()), ws = weekStart(today), we = addDays(ws, 7);
+  return {today:studioMins(today, addDays(today, 1), evs), doneWeek:studioMins(ws, we, evs, true), planWeek:studioMins(ws, we, evs), goal:Math.max(0, Number(cfg().studioGoal) || 0) * 60};
+}
+function studioStrip(){
+  const s = studioSummary();
+  const pct = s.goal ? Math.min(100, s.planWeek / s.goal * 100) : 0, dpct = s.goal ? Math.min(100, s.doneWeek / s.goal * 100) : 0;
+  return `<span class="studio" title="Studio time this week (Mon to Sun): ${hrs(s.doneWeek)} done, ${hrs(s.planWeek)} planned${s.goal ? ", goal " + hrs(s.goal) : ""}"><span class="label">Studio</span>${hrs(s.today)} today · ${hrs(s.planWeek)}${s.goal ? ` of ${hrs(s.goal)}` : ""} wk${s.goal ? `<i class="sbar"><b style="width:${pct.toFixed(1)}%"></b><u style="width:${dpct.toFixed(1)}%"></u></i>` : ""}</span>`;
+}
+function renderStudioSide(){
+  const box = $("studiobox"); if (!box) return;
+  const a = document.activeElement; if (a && box.contains(a) && /INPUT/.test(a.tagName)) return;
+  const s = studioSummary(), c = cfg();
+  const pct = s.goal ? Math.min(100, s.planWeek / s.goal * 100) : 0, dpct = s.goal ? Math.min(100, s.doneWeek / s.goal * 100) : 0;
+  box.innerHTML = `<div class="studio-big"><b>${hrs(s.planWeek)}</b>${s.goal ? ` <span>of ${hrs(s.goal)} this week</span>` : " <span>this week</span>"}</div>
+    ${s.goal ? `<i class="sbar big"><b style="width:${pct.toFixed(1)}%"></b><u style="width:${dpct.toFixed(1)}%"></u></i>` : ""}
+    <div class="sub">${hrs(s.doneWeek)} done · ${hrs(s.today)} today</div>
+    <details class="studio-edit"><summary>Edit</summary>
+      <label>Weekly goal (hours)<input id="stgoal" type="number" min="0" max="80" step="0.5" value="${esc(c.studioGoal)}"></label>
+      <label>Counts events with these words<input id="stwords" value="${esc(c.studioWords)}"></label>
+      <label>Or everything on calendar<select id="stcal"><option value="">None</option>${S.calendars.map(x => `<option ${x.name === c.studioCal ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>
+    </details>`;
+}
+document.addEventListener("change", (e) => {
+  const id = e.target && e.target.id; if (!["stgoal","stwords","stcal"].includes(id)) return;
+  const patch = id === "stgoal" ? {studioGoal: Math.max(0, Number(e.target.value) || 0)} : id === "stwords" ? {studioWords: e.target.value} : {studioCal: e.target.value};
+  saveCfg(patch).catch(() => { cfgRaw = {...cfgRaw, ...patch}; applyCfg(); schedule(); });
 });
 
 /* ---------- recurring to-dos ---------- */
@@ -2486,7 +2548,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.19-33";
+const APP_VERSION = "2026.10.19-34";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
