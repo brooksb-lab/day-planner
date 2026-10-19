@@ -545,6 +545,9 @@ body.theme-day.no-mark .tab{font-size:15px;font-weight:600}
 .mb-dim{color:var(--fg-3)}
 .mb-rain{color:#8fb4ff}
 @media (max-width:560px){.mbrief .label{display:block;min-width:0;margin:0 0 1px}.mbrief{gap:10px}}
+.ev-leave{display:block;font-style:normal;font:10px var(--mono);color:#e7bb40;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev.short .ev-leave{display:none}
+.leave-pill{font:11px var(--mono);color:#e7bb40;background:rgba(231,187,64,.12);padding:1px 6px;border-radius:6px;white-space:nowrap}
 .qhint{font:11.5px var(--mono);color:var(--accent);margin:6px 2px 0;min-height:0}
 .qhint:empty{display:none}
 .tog{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg-2);margin-top:10px;cursor:pointer}
@@ -656,6 +659,7 @@ body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
         <select id="tz2sel" class="tzsel" aria-label="Second time zone"></select>
       </div>
       <div class="section"><div class="label">Studio time</div><div id="studiobox"></div></div>
+      <div class="section"><div class="label">Travel</div><div id="travelbox"></div></div>
       <div class="section" id="samplebox" hidden>
         <div class="label">Sample data</div>
         <div class="sub" id="samplecount"></div>
@@ -732,7 +736,7 @@ function calKind(c){
 }
 const KIND_NAME = {personal:"Personal", work:"Work", hol:"Holidays"};
 /* ---------- settings (stored with the page, editable by the Claude bar) ---------- */
-const CFG_DEFAULTS = {tlStart:0, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day", tz2:"", showMark:false, studioGoal:10, studioWords:"studio, sketch, sew, pattern, drape, design, sample, fitting, POV", studioCal:""};
+const CFG_DEFAULTS = {tlStart:0, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day", tz2:"", showMark:false, studioGoal:10, studioWords:"studio, sketch, sew, pattern, drape, design, sample, fitting, POV", studioCal:"", homeAddr:"", travelMode:"transit", travelBuffer:5};
 let cfgRaw = {};
 const cfg = () => ({...CFG_DEFAULTS, ...cfgRaw, tabHours:{...CFG_DEFAULTS.tabHours, ...(cfgRaw.tabHours || {})}, calColors:{...(cfgRaw.calColors || {})}});
 function applyCfg(){
@@ -785,7 +789,7 @@ function parseEvent(e, cal){
   const start = allDay ? new Date(e.start.date + "T00:00:00") : new Date(e.start?.dateTime);
   const end = allDay ? new Date((e.end?.date || e.start.date) + "T00:00:00") : new Date(e.end?.dateTime || e.start?.dateTime);
   return {id:e.id, calId:cal.id, cal, title:e.summary || (cal.kind==="work" ? "Busy" : "(no title)"),
-    start, end, allDay, attendees:(e.attendees||[]).length, link:e.htmlLink, status:e.status};
+    start, end, allDay, attendees:(e.attendees||[]).length, location:e.location || "", link:e.htmlLink, status:e.status};
 }
 function allEvents(){
   const out = [];
@@ -1283,7 +1287,7 @@ function timeline(evs, day, opt = {}){
     const hpx = Math.max(18,(it.en-it.s)/60*PX-2);
     const short = hpx < 36, lines = Math.max(1, Math.floor((hpx - 22) / 15));
     return `<div class="ev${t?" ev-todo":""}${done?" done":""}${mv?" movable":""}${short?" short":""}" data-ev="${esc(it.e.id)}" data-cal="${esc(it.e.calId)}" title="${esc(it.e.title)}" style="--evc:${it.e.cal.color};--lines:${lines};top:${(it.s-H0*60)/60*PX+1}px;height:${hpx}px;left:calc(${it.lane*w}% + 4px);width:calc(${w}% - 8px);border-left-color:${it.e.cal.color};background:color-mix(in srgb, ${it.e.cal.color} 16%, var(--win))">
-      <b>${esc(it.e.title.replace(/^✓\s*/,""))}</b><span>${fmtTime(it.e.start)}–${fmtTime(it.e.end)}</span>${mv?'<i class="rs" data-rs></i>':""}</div>`;
+      <b>${esc(it.e.title.replace(/^✓\s*/,""))}</b><span>${fmtTime(it.e.start)}–${fmtTime(it.e.end)}</span>${leaveFor(it.e) ? `<em class="ev-leave">${leaveTxt(it.e)}</em>` : ""}${mv?'<i class="rs" data-rs></i>':""}</div>`;
   }).join("");
   let now = "";
   const n = new Date();
@@ -1359,7 +1363,7 @@ function viewDay(evs, today){
   const timed = eventsOn(today, evs).filter(e => !e.allDay);
   const cur = timed.find(e => e.start <= n && e.end > n);
   const next = timed.find(e => e.start > n);
-  const bit = (lbl, e, none) => `<span><span class="label">${lbl}</span>${e ? `<b>${esc(e.title.replace(/^✓\s*/,""))}</b> ${fmtTime(e.start)}` : esc(none)}</span>`;
+  const bit = (lbl, e, none) => `<span><span class="label">${lbl}</span>${e ? `<b>${esc(e.title.replace(/^✓\s*/,""))}</b> ${fmtTime(e.start)}${lbl === "Next" && leaveFor(e) ? ` <span class="leave-pill">leave ${fmtTime(leaveFor(e).leave)}</span>` : ""}` : esc(none)}</span>`;
   return paneView("Day", fmtDay(today), today, evs, `<div class="nowstrip">${bit("Now", cur, "Open time")}${bit("Next", next, "Nothing else today")}${studioStrip()}</div>`);
 }
 function viewEvening(evs, today){
@@ -1396,7 +1400,7 @@ function renderSide(){
   $("samplebox").hidden = !(sEv || sTd);
   $("samplecount").textContent = `${sEv} sample event${sEv===1?"":"s"} and ${sTd} sample to-do${sTd===1?"":"s"}.`;
   $("clearbtn").textContent = S.busy.has("clear") ? "Removing…" : (Date.now() - S.confirmClear < 5000 ? "Confirm: remove all samples" : "Remove samples");
-  $("clearbtn").disabled = S.busy.has("clear"); renderStudioSide();
+  $("clearbtn").disabled = S.busy.has("clear"); renderStudioSide(); renderTravelSide(); planTravel();
   renderConn();
   $("callegend").innerHTML = S.calendars.length ? S.calendars.map(c => `<div style="display:flex;align-items:center;gap:8px"><i style="width:9px;height:9px;border-radius:3px;background:${c.color};display:block;flex:none"></i><span>${esc(c.name)}</span><span class="sub" style="margin:0;margin-left:auto">${c.writable?"":"read-only"}${S.events.get(c.id)?.error?" · not syncing":""}</span></div>`).join("") : `<div class="sub">Calendars appear once Google Calendar is connected.</div>`;
 }
@@ -1634,6 +1638,101 @@ document.addEventListener("submit", (e) => {
   act("quick", async () => { await quickAdd(v); inp.value = ""; inp.blur(); hintFor(inp); });
 });
 
+/* ---------- leave-by: travel time to events that have a location ---------- */
+const TRAVEL = {res:new Map(), geo:{}, pending:new Set(), here:null, hereAt:0, warned:new Set()};
+try { TRAVEL.geo = JSON.parse(localStorage.getItem("geoCache") || "{}"); } catch {}
+const MODE_LBL = {transit:"subway + walk", walk:"walk", car:"car", bike:"bike"};
+function travelMins(km, mode){
+  const road = km * 1.3;
+  const walk = road / 4.8 * 60;
+  if (mode === "walk") return walk;
+  if (mode === "bike") return road / 14 * 60 + 3;
+  if (mode === "car") return road / 18 * 60 + 6;
+  return Math.min(walk, 10 + road * 2.4); // transit: access + wait, then ~25 km/h door to door
+}
+function km(a, b){
+  const R = 6371, r = (x) => x * Math.PI / 180, dLa = r(b.lat - a.lat), dLo = r(b.lon - a.lon);
+  const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+let geoQueue = Promise.resolve();
+function geocode(q){
+  const key = q.trim().toLowerCase(); if (!key) return Promise.resolve(null);
+  if (key in TRAVEL.geo) return Promise.resolve(TRAVEL.geo[key]);
+  // Nominatim asks for at most one request a second
+  geoQueue = geoQueue.then(() => new Promise(ok => setTimeout(ok, 1100))).then(async () => {
+    if (key in TRAVEL.geo) return;
+    try {
+      const u = `https://nominatim.openstreetmap.org/search?format=json&limit=1&viewbox=-74.30,40.95,-73.65,40.45&q=${encodeURIComponent(q)}`;
+      const r = await fetch(u, {headers:{"Accept-Language":"en"}}); const j = r.ok ? await r.json() : [];
+      TRAVEL.geo[key] = j[0] ? {lat:+j[0].lat, lon:+j[0].lon} : null;
+      try { localStorage.setItem("geoCache", JSON.stringify(TRAVEL.geo)); } catch {}
+    } catch {}
+  });
+  return geoQueue.then(() => TRAVEL.geo[key] ?? null);
+}
+function hereNow(){
+  if (TRAVEL.here && Date.now() - TRAVEL.hereAt < 20 * 60000) return Promise.resolve(TRAVEL.here);
+  if (!navigator.geolocation) return Promise.resolve(null);
+  return new Promise(ok => navigator.geolocation.getCurrentPosition(p => { TRAVEL.here = {lat:p.coords.latitude, lon:p.coords.longitude}; TRAVEL.hereAt = Date.now(); ok(TRAVEL.here); }, () => ok(null), {maximumAge:600000, timeout:8000}));
+}
+async function originFor(ev, evs){
+  // coming straight from an earlier event with a place? start there
+  const prev = evs.filter(e => !e.allDay && e.location && e.end <= ev.start && ev.start - e.end <= 90 * 60000 && sameDay(e.start, ev.start)).sort((a, b) => b.end - a.end)[0];
+  if (prev){ const g = await geocode(prev.location); if (g) return g; }
+  const home = (cfg().homeAddr || "").trim();
+  if (home){ const g = await geocode(home); if (g) return g; }
+  return hereNow();
+}
+let travelT = 0;
+function planTravel(){
+  clearTimeout(travelT); travelT = setTimeout(async () => {
+    const now = new Date(), horizon = addDays(startOfDay(now), 2), evs = allEvents();
+    const want = evs.filter(e => !e.allDay && e.location && e.start > now && e.start < horizon && !/^https?:|zoom|meet\.google|teams/i.test(e.location));
+    let changed = false;
+    for (const e of want){
+      const k = e.id + "|" + (+e.start) + "|" + e.location + "|" + cfg().travelMode + "|" + cfg().homeAddr + "|" + cfg().travelBuffer;
+      if (TRAVEL.res.get(e.id)?.k === k || TRAVEL.pending.has(k)) continue;
+      TRAVEL.pending.add(k);
+      const [to, from] = await Promise.all([geocode(e.location), originFor(e, evs)]);
+      TRAVEL.pending.delete(k);
+      if (!to || !from){ TRAVEL.res.set(e.id, {k, none:true}); continue; }
+      const d = km(from, to), m = Math.round(travelMins(d, cfg().travelMode || "transit"));
+      if (d < 0.25){ TRAVEL.res.set(e.id, {k, none:true}); continue; }
+      const leave = new Date(+e.start - (m + (Number(cfg().travelBuffer) || 0)) * 60000);
+      leave.setMinutes(Math.floor(leave.getMinutes() / 5) * 5, 0, 0);
+      TRAVEL.res.set(e.id, {k, mins:m, leave}); changed = true;
+    }
+    if (changed) schedule();
+  }, 600);
+}
+const leaveFor = (e) => { const r = e && TRAVEL.res.get(e.id); return r && !r.none ? r : null; };
+function leaveTxt(e){ const r = leaveFor(e); return r ? `leave ${fmtTime(r.leave)} · ${r.mins}m` : ""; }
+// heads-up while the app is open
+setInterval(() => {
+  const now = Date.now();
+  for (const e of allEvents()){
+    const r = leaveFor(e); if (!r || TRAVEL.warned.has(e.id)) continue;
+    const dt = (+r.leave - now) / 60000;
+    if (dt <= 10 && dt > -15 && e.start > now){ TRAVEL.warned.add(e.id); toast(dt > 0 ? `Leave in ${Math.ceil(dt)} min for ${e.title.replace(/^✓\s*/, "")}.` : `Time to leave for ${e.title.replace(/^✓\s*/, "")}.`); }
+  }
+}, 30000);
+function renderTravelSide(){
+  const box = $("travelbox"); if (!box) return;
+  const a = document.activeElement; if (a && box.contains(a) && /INPUT|SELECT/.test(a.tagName)) return;
+  const c = cfg();
+  box.innerHTML = `<div class="studio-edit" style="margin-top:0">
+    <label>Start from<input id="trhome" placeholder="Home address (blank uses your location)" value="${esc(c.homeAddr || "")}"></label>
+    <label>Get around by<select id="trmode">${Object.entries(MODE_LBL).map(([k, v]) => `<option value="${k}" ${k === (c.travelMode || "transit") ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+    <label>Extra buffer (min)<input id="trbuf" type="number" min="0" max="60" step="5" value="${esc(c.travelBuffer)}"></label>
+    <div class="sub" style="margin-top:8px">Events with a place get a leave-by time. Estimates use distance, not live transit.</div></div>`;
+}
+document.addEventListener("change", (e) => {
+  const id = e.target && e.target.id; if (!["trhome","trmode","trbuf"].includes(id)) return;
+  const patch = id === "trhome" ? {homeAddr: e.target.value.trim()} : id === "trmode" ? {travelMode: e.target.value} : {travelBuffer: Math.max(0, Number(e.target.value) || 0)};
+  saveCfg(patch).catch(() => { cfgRaw = {...cfgRaw, ...patch}; applyCfg(); schedule(); });
+});
+
 /* ---------- morning brief ---------- */
 function rainWindows(day){
   const hz = WX.data && WX.data.hourly; if (!hz || !hz.time) return [];
@@ -1679,7 +1778,7 @@ function morningBrief(evs, day){
   if (first){
     const mins = Math.round((first.start - now) / 60000);
     const when = first.start <= now ? "happening now" : mins < 90 ? `in ${mins} min` : fmtTime(first.start);
-    lines.push(`<div class="mb-l"><span class="label">First up</span><b>${esc(first.title.replace(/^✓\s*/, ""))}</b> ${first.start > now && mins < 90 ? fmtTime(first.start) + " · " : ""}${when}${first.cal ? ` <span class="mb-dim">· ${esc(first.cal.name)}</span>` : ""}</div>`);
+    lines.push(`<div class="mb-l"><span class="label">First up</span><b>${esc(first.title.replace(/^✓\s*/, ""))}</b> ${first.start > now && mins < 90 ? fmtTime(first.start) + " · " : ""}${when}${leaveFor(first) ? ` · <span class="leave-pill">leave ${fmtTime(leaveFor(first).leave)}</span> <span class="mb-dim">${leaveFor(first).mins}m ${MODE_LBL[cfg().travelMode || "transit"]}</span>` : ""}${first.cal ? ` <span class="mb-dim">· ${esc(first.cal.name)}</span>` : ""}</div>`);
   } else lines.push(`<div class="mb-l"><span class="label">First up</span>Nothing on the calendar${sameDay(day, now) ? " for the rest of today" : ""}.</div>`);
   // shape of the day
   const open = openStretch(timed, day), st = studioMins(startOfDay(day), addDays(startOfDay(day), 1), evs);
@@ -2609,7 +2708,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.19-35";
+const APP_VERSION = "2026.10.19-36";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
