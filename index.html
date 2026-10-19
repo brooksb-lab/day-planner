@@ -558,6 +558,12 @@ body.theme-day.no-mark .tab{font-size:15px;font-weight:600}
 .todo.is-done.sw-r::before{content:"↺  Not done"}
 .todo.sw-go.sw-r::before{background:rgba(92,184,126,.24)}
 .todo.sw-go.sw-l::before{background:rgba(231,187,64,.24)}
+.tl-new{position:absolute;left:4px;right:4px;z-index:9;display:flex;flex-direction:column;gap:4px;padding:5px 7px;border-radius:10px;background:color-mix(in srgb, var(--accent) 18%, var(--win));box-shadow:inset 0 0 0 1px var(--accent),0 8px 24px -8px rgba(0,0,0,.6);transition:height .18s ease}
+.tl-new input:focus,.tl-new input:focus-visible{outline:none;box-shadow:none}
+.tl-new input{border:0;background:transparent;color:var(--fg);font:600 13px var(--ui);outline:none;padding:0;min-width:0}
+.tl-new select{align-self:flex-start;border:0;background:rgba(232,234,237,.08);color:var(--fg-2);font-size:11px;border-radius:6px;padding:1px 4px}
+@media (max-width:560px){.tl-new input{font-size:16px}}
+.wk .tl-new input{font-size:12px}
 .qhint{font:11.5px var(--mono);color:var(--accent);margin:6px 2px 0;min-height:0}
 .qhint:empty{display:none}
 .tog{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg-2);margin-top:10px;cursor:pointer}
@@ -2150,6 +2156,7 @@ document.addEventListener("pointermove", (e) => {
   updateTarget(e.clientX, e.clientY);
 }, {passive:false});
 function endDrag(apply){
+  if (drag && drag.ghost) lastDragAt = Date.now();
   if (pendTouch){ clearTimeout(pendTouch.timer); pendTouch = null; }
   if (!drag) return;
   const d = drag; drag = null; lastPt = null;
@@ -2246,7 +2253,7 @@ function evZone(x, y){
   return true;
 }
 function endEvDrag(apply){
-  const d = evDrag; if (!d) return; evDrag = null; clearTimeout(d.timer); lastPt = null;
+  const d = evDrag; if (!d) return; if (d.active) lastDragAt = Date.now(); evDrag = null; clearTimeout(d.timer); lastPt = null;
   if (scrollRAF){ cancelAnimationFrame(scrollRAF); scrollRAF = 0; }
   d.el.classList.remove("lifting");
   d.el.style.pointerEvents = ""; d.el.classList.remove("leaving"); clearMarks();
@@ -2322,6 +2329,53 @@ function endSwipe(apply){
 document.addEventListener("pointerup", (e) => { if (swipe && e.pointerId === swipe.pid) endSwipe(true); });
 document.addEventListener("pointercancel", (e) => { if (swipe && e.pointerId === swipe.pid) endSwipe(false); });
 document.addEventListener("touchmove", (e) => { if (swipe && swipe.on) e.preventDefault(); }, {passive:false});
+
+/* ---------- tap empty timeline space to add an event there ---------- */
+let lastDragAt = 0;
+async function createEventAt(title, start, minutes, calName){
+  const cal = calByName(calName) || defaultCal(); if (!cal || !cal.writable) throw new Error("That calendar is read-only.");
+  const en = new Date(start.getTime() + minutes * 60000);
+  const res = await S.mcp.callTool(GC, "create_event", {calendarId:cal.id, summary:title, startTime:localISO(start), endTime:localISO(en), notificationLevel:"NONE"});
+  await afterWrite();
+  const newId = res.payload?.id || res.payload?.event?.id;
+  if (newId) pushUndo(`Created "${title}"`, async () => { await S.mcp.callTool(GC, "delete_event", {calendarId:cal.id, eventId:newId, notificationLevel:"NONE"}); await afterWrite(); });
+  toast(`Added "${title}" ${fmtTime(start)} on ${cal.name}.`, true);
+}
+function closeComposer(){ document.querySelectorAll(".tl-new").forEach(x => x.remove()); }
+document.addEventListener("click", (e) => {
+  if (drag || evDrag || divDrag || Date.now() - lastDragAt < 400) return;
+  const tl = e.target.closest(".tl"); if (!tl || !tl.dataset.day) return;
+  if (e.target.closest(".ev,.tl-new,.tl-preview,a,button,input,select")) return;
+  if (document.querySelector(".tl-new")){ closeComposer(); return; }
+  if (!S.mcp){ toast("Sign in with Google to add events."); return; }
+  const r = tl.getBoundingClientRect();
+  let min = TL.H0 * 60 + Math.floor(((e.clientY - r.top) / TL.PX * 60) / 15) * 15;
+  min = Math.max(TL.H0 * 60, Math.min(min, TL.H1 * 60 - 30));
+  const st = new Date(tl.dataset.day + "T00:00:00"); st.setMinutes(min);
+  const cals = writableCals(); if (!cals.length){ toast("No calendar you can write to."); return; }
+  const f = document.createElement("form"); f.className = "tl-new";
+  f.style.top = ((min - TL.H0 * 60) / 60 * TL.PX + 1) + "px"; f.style.height = Math.max(54, TL.PX - 2) + "px";
+  f.innerHTML = `<input name="t" placeholder="New event ${fmtTime(st)} · add 30m, 2h…" autocomplete="off" enterkeyhint="done">
+    <select name="c" aria-label="Calendar">${cals.map(c => `<option ${c.name === (defaultCal() || {}).name ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>`;
+  f.dataset.start = localISO(st);
+  tl.appendChild(f);
+  const inp = f.querySelector("input"), sel = f.querySelector("select"); let calTouched = false;
+  sel.addEventListener("change", () => { calTouched = true; inp.focus(); });
+  inp.addEventListener("input", () => {
+    if (!calTouched){ const g = guessCal(inp.value); if ([...sel.options].some(o => o.value === g)) sel.value = g; }
+    const q = parseQuick(inp.value), m = q.mins || 60; f.style.height = Math.max(54, m / 60 * TL.PX - 2) + "px";
+  });
+  inp.addEventListener("keydown", (k) => { if (k.key === "Escape"){ k.preventDefault(); closeComposer(); } });
+  f.addEventListener("submit", (k) => {
+    k.preventDefault(); const v = inp.value.trim(); if (!v){ closeComposer(); return; }
+    const q = parseQuick(v), start = q.start && !/(today|tomorrow|tonight|mon|tue|wed|thu|fri|sat|sun|\/)/i.test(v) ? (() => { const x = new Date(st); x.setHours(q.start.getHours(), q.start.getMinutes(), 0, 0); return x; })() : (q.start || st);
+    const title = q.title, mins = q.mins || 60, cal = sel.value;
+    closeComposer();
+    act("new-ev", () => createEventAt(title, start, mins, cal));
+  });
+  setTimeout(() => inp.focus(), 0);
+});
+document.addEventListener("pointerdown", (e) => { const f = document.querySelector(".tl-new"); if (f && !f.contains(e.target) && !e.target.closest(".tl")) closeComposer(); }, true);
 
 async function resizeEvent(ev, endDate){
   if (!ev.cal.writable) throw new Error(`${ev.cal.name} is read-only here.`);
@@ -2767,7 +2821,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.19-37";
+const APP_VERSION = "2026.10.19-38";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
