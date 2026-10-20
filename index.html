@@ -165,8 +165,12 @@ h2{font-size:20px;line-height:1.2;margin:0;text-wrap:balance;letter-spacing:-.01
 .ev.short{flex-direction:row;align-items:baseline;gap:6px;padding-top:1px;padding-bottom:1px}
 .ev.short b{display:block;white-space:nowrap;text-overflow:ellipsis;flex:1 1 auto}
 .ev.short span{flex:0 1 auto;min-width:0}
-.ev.ev-todo b::before{content:"☐ "}
-.ev.ev-todo.done b::before{content:"☑ "}
+.ev.can-chk{padding-right:26px}
+.ev .ev-chk{position:absolute;top:3px;right:4px;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--evc);background:color-mix(in srgb, var(--win) 70%, transparent);display:grid;place-items:center;padding:0;color:#fff;font:700 11px/1 var(--ui);cursor:pointer;z-index:2}
+.ev .ev-chk::after{content:"";position:absolute;inset:-8px}
+.ev .ev-chk.on{background:var(--evc)}
+.ev.short .ev-chk{top:50%;margin-top:-9px}
+.ev.done b{text-decoration:line-through;opacity:.6}
 .ev.movable{cursor:grab;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .ev .rs{position:absolute;left:0;right:0;bottom:0;height:9px;cursor:ns-resize;touch-action:none}
 .ev .rs::after{content:"";position:absolute;left:50%;bottom:3px;width:18px;height:2px;margin-left:-9px;border-radius:1px;background:currentColor;opacity:0;transition:opacity .12s}
@@ -680,26 +684,18 @@ body.ios #iosNav{display:flex}
 #iosNav .r .undogrp{display:flex}
 #iosNav .r .hidetog{color:var(--accent);width:36px;height:36px;justify-content:center}
 #iosNav .r .sync{display:none}
-#iosSeg{flex:none;margin:2px 16px 8px;padding:2px;border-radius:9px;background:rgba(118,118,128,.12);gap:0}
+/* iPhone: segmented controls styled like the desktop tab bar (sliding pill) */
+#iosSeg{flex:none;padding:2px 16px 8px;background:var(--win)}
 body.ios.ios-today #iosSeg{display:flex}
-#iosSeg button{flex:1;border:0;background:transparent;color:var(--fg);font:500 13px -apple-system,system-ui,sans-serif;padding:6px 0;border-radius:7px}
-#iosSeg button[aria-pressed="true"]{background:var(--win);font-weight:600;box-shadow:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04)}
-#iosTabs{flex:none;justify-content:space-around;padding:6px 4px var(--tabPadB,env(safe-area-inset-bottom,0px));background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--line)}
-body.ios #iosTabs{display:flex}
-#iosTabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:transparent;color:var(--fg-3);font:500 10px -apple-system,system-ui,sans-serif;padding:2px 0 3px}
-#iosTabs button svg{width:25px;height:25px}
-#iosTabs button[aria-current="page"]{color:var(--accent)}
-/* iPhone bottom row: desktop segmented tabs with the sliding pill */
-body.ios #iosTabs{align-items:center;padding:6px 12px var(--tabPadB,env(safe-area-inset-bottom,0px));background:var(--win);border-top:0;-webkit-backdrop-filter:none;backdrop-filter:none}
-#iosTabSlot{flex:1;min-width:0;display:flex}
-body.ios:not(.theme-day) #tabs{flex:1;width:auto;margin:0;order:0;overflow-x:auto;scrollbar-width:none;border-radius:10px;padding:2px}
-body.ios #tabs::-webkit-scrollbar{display:none}
-body.ios:not(.theme-day) #tabs .tab{flex:1 1 auto;font-size:13px;letter-spacing:-.01em;padding:7px 6px;border-radius:8px;min-height:0;white-space:nowrap;color:var(--fg);display:inline-flex;flex-direction:row;gap:0;align-items:center;justify-content:center}
-body.ios:not(.theme-day) #tabs .tab .now{margin-left:3px}
-body.ios:not(.theme-day) #tabs .tab[aria-selected="true"]{font-weight:600}
-body.ios:not(.theme-day) #tabs .tab-pill{border-radius:8px}
-body.ios.ios-more #tabs .tab-pill{opacity:0}
-body.ios.ios-more:not(.theme-day) #tabs .tab[aria-selected="true"]{font-weight:500}
+#iosTabs{flex:none}
+body.ios #iosTabs{display:flex;align-items:center;padding:6px 16px var(--tabPadB,env(safe-area-inset-bottom,0px));background:var(--win)}
+.iosseg{position:relative;display:flex;flex:1;min-width:0;padding:2px;gap:0;border-radius:10px;background:var(--fill)}
+.iosseg .tab{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--fg);font:500 13px var(--ui);letter-spacing:-.01em;padding:7px 4px;border-radius:8px;white-space:nowrap;position:relative;z-index:1}
+.iosseg .tab[aria-selected="true"]{font-weight:600}
+.iosseg .tab .now{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--accent);margin-left:4px}
+.iosseg .tab-pill{border-radius:8px}
+body.ios-more #iosTabs .tab-pill{opacity:0}
+body.ios-more #iosTabs .tab[aria-selected="true"]{font-weight:500}
 #iosNav .r .ios-more-btn[aria-current="page"]{background:var(--fill)}
 body.ios .spot-in{width:100%}
 body.ios .toast{top:calc(10px + env(safe-area-inset-top,0px));left:12px;right:12px}
@@ -707,7 +703,7 @@ body.ios .toast{top:calc(10px + env(safe-area-inset-top,0px));left:12px;right:12
 html:has(body.ios){padding:0!important;background:var(--win)}
 body.ios .window,body.ios:not(.theme-day) .window{position:fixed;top:0;left:0;right:0;margin:0;border-radius:0!important;box-shadow:none!important;height:var(--winH,100vh)}
 body.ios #iosNav{padding-top:calc(env(safe-area-inset-top,0px) + 2px)}
-body.ios #iosTabs{padding-bottom:var(--tabPadB,max(8px,env(safe-area-inset-bottom,0px)))}
+
 body.ios .main > .head:first-child{display:none}
 @media (prefers-color-scheme:dark){#iosSeg{background:rgba(118,118,128,.24)} #iosSeg button[aria-pressed="true"]{background:#636366}}
 
@@ -745,7 +741,8 @@ body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
   --accent:#007aff; --accent-soft:rgba(0,122,255,.12);
   --ok:#34c759; --warn:#ff9f0a; --bad:#ff3b30;
   --shadow:0 0 0 .5px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.05),0 22px 60px -12px rgba(20,24,40,.28);
-  --c-personal:#007aff; --c-work:#ffb800; --c-fun:#34c759; --c-meal:#ff6b5e; --c-between:#8e8e93; --c-hol:#af52de; --c-other:#a2845e;
+  --c-personal:#32ade6; --c-work:#ffcc00; --c-fun:#34c759; --c-meal:#ff9500; --c-between:#8e8e93; --c-hol:#aeaeb2; --c-other:#a2845e;
+  --c-studio:#5e5ce6; --c-social:#ff2d55; --c-body:#00c7be; --c-admin:#a2845e; --c-bday:#af52de;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --desk:#08090b; --desk-2:#14161b;
@@ -756,7 +753,8 @@ body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
   --accent:#0a84ff; --accent-soft:rgba(10,132,255,.18);
   --ok:#30d158; --warn:#ff9f0a; --bad:#ff453a;
   --shadow:0 0 0 .5px rgba(255,255,255,.10),0 2px 8px rgba(0,0,0,.35),0 30px 80px -20px rgba(0,0,0,.7);
-  --c-personal:#0a84ff; --c-work:#ffd60a; --c-fun:#30d158; --c-meal:#ff6961; --c-between:#98989d; --c-hol:#bf5af2; --c-other:#ac8e68;
+  --c-personal:#64d2ff; --c-work:#ffd60a; --c-fun:#30d158; --c-meal:#ff9f0a; --c-between:#98989d; --c-hol:#8e8e93; --c-other:#ac8e68;
+  --c-studio:#7d7aff; --c-social:#ff375f; --c-body:#63e6e2; --c-admin:#ac8e68; --c-bday:#bf5af2;
 }}
 body:not(.theme-day){font:14px/1.45 var(--ui);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-variant-numeric:tabular-nums;letter-spacing:-.006em;
   background:radial-gradient(1400px 800px at 15% -10%,var(--desk-2),transparent 70%),var(--desk)}
@@ -1021,9 +1019,9 @@ function calKind(c){
   if (c.primary) return "personal";
   if (c.accessRole === "freeBusyReader") return "work";
   const n = (c.summary||"").toLowerCase();
-  if (n === "fun") return "fun";
-  if (n === "meal") return "meal";
-  if (n === "between") return "between";
+  if (id.includes("#contacts") || n === "birthdays") return "bday";
+  if (n === "tasks") return "admin";
+  for (const k of ["fun","meal","between","studio","body","admin","social"]) if (n === k) return k;
   return "other";
 }
 const KIND_NAME = {personal:"Personal", work:"Work", hol:"Holidays"};
@@ -1070,7 +1068,11 @@ function guessCal(text){
   const has = (...w) => w.some(x => t.includes(x));
   let kind = "personal";
   if (has("lunch","dinner","breakfast","brunch","eat","cook","meal","grocer","restaurant","resy","coffee")) kind = "meal";
-  else if (has("party","drinks","show","concert","movie","club","bar ","friends","date","museum","gallery")) kind = "fun";
+  else if (has("studio","sew","sewing","pattern","drape","sample","fitting","sketch","clo ","3d","design","povonno","pov/on")) kind = "studio";
+  else if (has("gym","workout","train","garen","run","yoga","pilates","swim","doctor","dentist","therapy","haircut","hair","trims")) kind = "body";
+  else if (has("pay","bill","tax","email","call ","bank","laundry","clean","errand","return","dmv","admin","renew","book ")) kind = "admin";
+  else if (has("drinks","dinner with","date","friends","party","hang","birthday","visit","catch up")) kind = "social";
+  else if (has("show","concert","movie","club","bar ","museum","gallery","game")) kind = "fun";
   const c = S.calendars.find(x => x.kind === kind && x.writable) || defaultCal();
   return c ? c.name : "Personal";
 }
@@ -1524,7 +1526,7 @@ function agenda(list, {empty="Nothing on the calendar.", actions=true}={}){
     const tt = e.allDay ? "All day" : `${fmtTime(e.start)}–${fmtTime(e.end)}`;
     let acts = "";
     if (actions && t) acts = `<button class="btn" data-act="toggle" data-id="${t.id}">${done ? "Undo" : "Done"}</button>${done ? "" : `<button class="btn ghost" data-act="tomorrow" data-ev="${esc(e.id)}">Tomorrow</button><button class="btn ghost" data-act="unsched" data-id="${t.id}" ${S.busy.has(t.id)?"disabled":""}>Unschedule</button>`}`;
-    else if (actions && e.cal.writable && e.attendees <= 1 && !e.allDay) acts = `<button class="btn ghost" data-act="tomorrow" data-ev="${esc(e.id)}">Tomorrow</button>`;
+    else if (actions && e.cal.writable && e.attendees <= 1 && !e.allDay) acts = `<button class="btn" data-act="evdone" data-ev="${esc(e.id)}" data-cal="${esc(e.calId)}">${done ? "Undo" : "Done"}</button>${done ? "" : `<button class="btn ghost" data-act="tomorrow" data-ev="${esc(e.id)}">Tomorrow</button>`}`;
     return `<div class="row${done?" done":""}"><span class="t mono">${tt}</span><span class="sw" style="background:${e.cal.color}"></span>
       <span class="ttl">${esc(e.title.replace(/^✓\s*/,""))}<small>${esc(e.cal.name)}${t?" · to-do":""}${e.attendees>1?` · ${e.attendees} guests`:""}</small></span>
       <span class="acts">${acts}</span></div>`;
@@ -1602,8 +1604,9 @@ function timeline(evs, day, opt = {}){
     const mv = it.e.cal.writable && it.e.attendees <= 1;
     const hpx = Math.max(18,(it.en-it.s)/60*PX-2);
     const short = hpx < 36, lines = Math.max(1, Math.floor((hpx - 22) / 15));
-    return `<div class="ev${t?" ev-todo":""}${done?" done":""}${mv?" movable":""}${it.e.aliased?" aliased":""}${!it.e.cal.writable?" ro":""}${short?" short":""}" data-ev="${esc(it.e.id)}" data-cal="${esc(it.e.calId)}" title="${esc(it.e.title)}" style="--evc:${it.e.cal.color};--lines:${lines};top:${(it.s-H0*60)/60*PX+1}px;height:${hpx}px;left:calc(${it.lane*w}% + 4px);width:calc(${w}% - 8px);border-left-color:${it.e.cal.color};background:color-mix(in srgb, ${it.e.cal.color} 16%, var(--win))">
-      <b>${esc(it.e.title.replace(/^✓\s*/,""))}</b><span>${fmtTime(it.e.start)}–${fmtTime(it.e.end)}</span>${leaveFor(it.e) ? `<em class="ev-leave">${leaveTxt(it.e)}</em>` : ""}${mv?'<i class="rs" data-rs></i>':""}</div>`;
+    const chk = !it.e.allDay && (t || (it.e.cal.writable && !it.e.origCal && it.e.attendees <= 1));
+    return `<div class="ev${t?" ev-todo":""}${chk?" can-chk":""}${done?" done":""}${mv?" movable":""}${it.e.aliased?" aliased":""}${!it.e.cal.writable?" ro":""}${short?" short":""}" data-ev="${esc(it.e.id)}" data-cal="${esc(it.e.calId)}" title="${esc(it.e.title)}" style="--evc:${it.e.cal.color};--lines:${lines};top:${(it.s-H0*60)/60*PX+1}px;height:${hpx}px;left:calc(${it.lane*w}% + 4px);width:calc(${w}% - 8px);border-left-color:${it.e.cal.color};background:color-mix(in srgb, ${it.e.cal.color} 16%, var(--win))">
+      ${chk ? `<button type="button" class="ev-chk${done?" on":""}" data-evchk aria-label="${done?"Mark not done":"Mark done"}">${done?"✓":""}</button>` : ""}<b>${esc(it.e.title.replace(/^✓\s*/,""))}</b><span>${fmtTime(it.e.start)}–${fmtTime(it.e.end)}</span>${leaveFor(it.e) ? `<em class="ev-leave">${leaveTxt(it.e)}</em>` : ""}${mv?'<i class="rs" data-rs></i>':""}</div>`;
   }).join("");
   let now = "";
   const n = new Date();
@@ -1729,7 +1732,7 @@ function placeChrome(){
   const day = document.body.classList.contains("theme-day");
   const tabs = $("tabs"), hide = document.querySelector(".hidetog"), sync = $("sync"), undo = $("undogrp"), now = $("syncnow"), stog = $("spottog");
   if (!chromeHome.saved){ chromeHome.saved = true; chromeHome.titlebar = document.querySelector(".titlebar"); chromeHome.right = document.querySelector(".menubar .right"); chromeHome.clock = $("clock"); }
-  if (document.body.classList.contains("ios")){ buildIos(); $("iosTabSlot").append(tabs); $("iosRight").prepend(sync, undo, now, stog, hide); tabsCentered = false; requestAnimationFrame(() => { centerNowTab(); placePill(true); }); return; }
+  if (document.body.classList.contains("ios")){ buildIos(); $("iosRight").prepend(sync, undo, now, stog, hide); tabsCentered = false; requestAnimationFrame(() => { centerNowTab(); placePill(true); }); return; }
   if (day){ $("dTabsSlot").append(tabs); $("dRightSlot").append(sync, hide, undo, now, stog); }
   else { chromeHome.titlebar.insertBefore(tabs, $("sidetog")); chromeHome.titlebar.insertBefore(hide, $("sidetog")); chromeHome.right.insertBefore(sync, chromeHome.clock); chromeHome.right.insertBefore(undo, chromeHome.clock); chromeHome.right.insertBefore(now, chromeHome.clock); chromeHome.right.insertBefore(stog, chromeHome.clock); }
 }
@@ -1815,18 +1818,19 @@ function buildIos(){
   if ($("iosNav")) return;
   const w = document.querySelector(".window");
   const nav = document.createElement("div"); nav.id = "iosNav"; nav.innerHTML = `<div class="t"><h1 id="iosTitle">Today</h1><div class="s" id="iosSub"></div></div><div class="r" id="iosRight"></div>`;
-  // Bottom row: the same sliding segmented tabs as the desktop title bar, plus More
+  const pill = '<span class="tab-pill" aria-hidden="true"></span>';
+  const seg = document.createElement("div"); seg.id = "iosSeg";
+  seg.innerHTML = `<div class="iosseg" role="tablist">${pill}${TODAY_TABS.map(t => `<button type="button" class="tab" role="tab" data-ios-seg="${t}">${TABS.find(x => x.id === t).label}</button>`).join("")}</div>`;
   const bar = document.createElement("nav"); bar.id = "iosTabs";
-  bar.innerHTML = `<div id="iosTabSlot"></div>`;
-  w.prepend(nav); w.append(bar);
+  bar.innerHTML = `<div class="iosseg" role="tablist">${pill}${[["today","Today"],["tomorrow","Tomorrow"],["week","Week"],["backlog","Backlog"]].map(([k, l]) => `<button type="button" class="tab" role="tab" data-ios-tab="${k}">${l}</button>`).join("")}</div>`;
+  w.prepend(seg); w.prepend(nav); w.append(bar);
   const mb = document.createElement("button"); mb.type = "button"; mb.className = "mbtn icon ios-more-btn"; mb.dataset.iosTab = "more"; mb.setAttribute("aria-label", "More"); mb.dataset.tip = "More";
   mb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9.2"/><circle cx="7.8" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="16.2" cy="12" r="1.15" fill="currentColor" stroke="none"/></svg>';
   $("iosRight").append(mb);
 }
 document.addEventListener("click", (e) => {
   const sb = e.target.closest("[data-ios-seg]");
-  if (sb){ S.tab = sb.dataset.iosSeg; S.tabManual = Date.now(); schedule(); return; }
-  if (e.target.closest("#iosTabSlot [data-tab]")){ if (document.body.classList.contains("ios-more")){ document.body.classList.remove("ios-more"); const m = $("main"); if (m) m.scrollTop = 0; } return; }
+  if (sb){ document.body.classList.remove("ios-more"); S.tab = sb.dataset.iosSeg; S.tabManual = Date.now(); schedule(); return; }
   const tb = e.target.closest("[data-ios-tab]"); if (!tb) return;
   if (tb.dataset.iosTab === "more" && document.body.classList.contains("ios-more")){ document.body.classList.remove("ios-more"); schedule(); return; }
   const k = tb.dataset.iosTab;
@@ -1836,12 +1840,24 @@ document.addEventListener("click", (e) => {
   S.tabManual = Date.now(); schedule();
   const m = $("main"); if (m) m.scrollTop = 0;
 });
+function placeSegPill(host){
+  const el = host && host.querySelector(".iosseg"), pill = el && el.querySelector(".tab-pill"), b = el && el.querySelector('.tab[aria-selected="true"]');
+  if (!pill || !b || !b.offsetWidth) return;
+  const first = !pill.dataset.w;
+  if (first) pill.style.transition = "none";
+  pill.style.width = b.offsetWidth + "px"; pill.style.height = b.offsetHeight + "px"; pill.style.transform = `translate(${b.offsetLeft}px,${b.offsetTop}px)`;
+  if (first){ pill.offsetWidth; pill.style.transition = ""; }
+  pill.dataset.w = b.offsetWidth;
+}
 function renderIos(){
   if (!document.body.classList.contains("ios")) return;
   const more = document.body.classList.contains("ios-more"), it = iosTab();
   document.body.classList.toggle("ios-today", !more && it === "today");
   document.querySelectorAll("[data-ios-tab]").forEach(b => b.setAttribute("aria-current", (more ? b.dataset.iosTab === "more" : b.dataset.iosTab === it) ? "page" : "false"));
-  document.querySelectorAll("[data-ios-seg]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.iosSeg === S.tab)));
+  const nowT = timeTab();
+  document.querySelectorAll("#iosTabs [data-ios-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.iosTab === it)));
+  document.querySelectorAll("[data-ios-seg]").forEach(b => { b.setAttribute("aria-selected", String(b.dataset.iosSeg === S.tab)); const on = b.dataset.iosSeg === nowT; if (on !== !!b.querySelector(".now")){ if (on) b.insertAdjacentHTML("beforeend", '<span class="now" title="Now"></span>'); else b.querySelector(".now").remove(); } });
+  requestAnimationFrame(() => { placeSegPill($("iosTabs")); placeSegPill($("iosSeg")); });
   const today = startOfDay(new Date());
   let title = more ? "More" : it === "today" ? "Today" : TABS.find(t => t.id === S.tab).label, sub = "";
   if (!more){
@@ -2439,6 +2455,7 @@ document.addEventListener("click", (e) => {
       if (Date.now() - S.confirmClear > 5000){ S.confirmClear = Date.now(); schedule(); setTimeout(schedule, 5100); break; }
       S.confirmClear = 0; act("clear", clearSamples); break;
     case "toggle": if (t) act(t.id, () => completeTodo(t, t.status !== "done")); break;
+    case "evdone": { const ev = allEvents().find(x => x.id === b.dataset.ev && x.calId === b.dataset.cal); if (ev) toggleEventDone(ev).catch(err => toast(friendly(err))); } break;
     case "schedopen": if (t){ openSched(t); schedule(); } break;
     case "schedx": S.schedOpen = null; schedule(); break;
     case "schedgo": if (t){
@@ -2598,7 +2615,7 @@ const ptMin = (tl, y) => TL.H0*60 + (y - tl.getBoundingClientRect().top) / TL.PX
 const snap15 = (m) => Math.round(m / 15) * 15;
 document.addEventListener("pointerdown", (e) => {
   if (drag || divDrag || e.button > 0) return;
-  const el = e.target.closest(".ev.movable"); if (!el) return;
+  const el = e.target.closest(".ev.movable"); if (!el || e.target.closest("[data-evchk]")) return;
   const tl = el.closest(".tl"); const day = tl.dataset.day;
   const ev = allEvents().find(x => x.id === el.dataset.ev && x.calId === el.dataset.cal); if (!ev) return;
   const rs = !!e.target.closest("[data-rs]");
@@ -2865,9 +2882,20 @@ document.addEventListener("click", (e) => {
   if (drag || evDrag || Date.now() - lastDragAt < 400) return;
   const el = e.target.closest(".ev"); if (!el || e.target.closest("[data-rs]")) return;
   const p = allEvents().find(x => x.id === el.dataset.ev && x.calId === el.dataset.cal); if (!p) return;
-  e.stopPropagation(); if (p.cal.writable && !p.origCal) openEvSheet(p, el); else openRename(p, el);
+  e.stopPropagation();
+  if (e.target.closest("[data-evchk]")){ toggleEventDone(p).catch(err => toast(friendly(err))); return; } if (p.cal.writable && !p.origCal) openEvSheet(p, el); else openRename(p, el);
 }, true);
 
+/* ---------- check off anything on the calendar: linked to-dos complete the to-do; plain events get a ✓ in Google ---------- */
+async function toggleEventDone(ev){
+  const t = todoForEvent(ev);
+  if (t){ await completeTodo(t, t.status !== "done"); schedule(); return; }
+  if (!ev.cal.writable) throw new Error(`${ev.cal.name} is read-only here.`);
+  const done = /^✓/.test(ev.title), base = ev.title.replace(/^✓\s*/, "");
+  const setDone = async (d) => { await S.mcp.callTool(GC, "update_event", {calendarId:ev.calId, eventId:ev.id, summary: d ? "✓ " + base : base, notificationLevel:"NONE"}); await afterWrite(); };
+  await setDone(!done);
+  pushUndo(done ? `Unchecked "${base}"` : `Checked off "${base}"`, () => setDone(done));
+}
 /* ---------- tap an editable event: change which calendar it's on (moves it in Google) ---------- */
 async function changeEventCal(ev, toName){
   const to = calByName(toName); if (!to || !to.writable) throw new Error(`Can't write to ${toName}.`);
@@ -3354,7 +3382,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-49";
+const APP_VERSION = "2026.10.20-50";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
