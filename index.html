@@ -681,6 +681,162 @@ body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
 .eyetog input:checked ~ .eye-closed{display:block;color:var(--fg)}
 @media (prefers-reduced-motion:reduce){.mbtn.icon.spin svg{animation:none}}
 @media (prefers-reduced-motion:no-preference){.tab,.btn{transition:background .12s}}
+/* ===================== premium pass (BrooksOS) ===================== */
+@property --sideW{syntax:"<length>";inherits:true;initial-value:300px}
+@property --tlF{syntax:"<percentage>";inherits:true;initial-value:55%}
+:root{
+  --spring:linear(0.0, 0.0362, 0.1237, 0.2375, 0.3601, 0.4802, 0.5904, 0.6872, 0.7689, 0.8358, 0.8888, 0.9296, 0.9599, 0.9816, 0.9965, 1.0061, 1.0117, 1.0144, 1.0152, 1.0146, 1.0133, 1.0116, 1.0097, 1.0079, 1.0062, 1.0047, 1.0035, 1.0025, 1.0017, 1.0011, 1.0006, 1.0003, 1.0001, 0.9999, 0.9998, 0.9998, 1);
+  --ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro",system-ui,"Helvetica Neue",sans-serif;
+  --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro",system-ui,sans-serif;
+  --mono:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+  --desk:#e8eaef; --desk-2:#d9dde5;
+  --win:#ffffff; --win-2:#f6f6f8; --bar:rgba(250,250,252,.78);
+  --line:rgba(0,0,0,.10); --line-2:rgba(0,0,0,.06);
+  --fill:rgba(118,118,128,.12); --fill-2:rgba(118,118,128,.08);
+  --fg:#1d1d1f; --fg-2:#6e6e73; --fg-3:#a1a1a6;
+  --accent:#007aff; --accent-soft:rgba(0,122,255,.12);
+  --ok:#34c759; --warn:#ff9f0a; --bad:#ff3b30;
+  --shadow:0 0 0 .5px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.05),0 22px 60px -12px rgba(20,24,40,.28);
+  --c-personal:#007aff; --c-work:#8e8e93; --c-fun:#34c759; --c-meal:#ff6b5e; --c-between:#8e8e93; --c-hol:#af52de; --c-other:#a2845e;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --desk:#08090b; --desk-2:#14161b;
+  --win:#1c1c1e; --win-2:#232326; --bar:rgba(30,30,32,.74);
+  --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.06);
+  --fill:rgba(118,118,128,.24); --fill-2:rgba(118,118,128,.16);
+  --fg:#f5f5f7; --fg-2:#a1a1a6; --fg-3:#6e6e73;
+  --accent:#0a84ff; --accent-soft:rgba(10,132,255,.18);
+  --ok:#30d158; --warn:#ff9f0a; --bad:#ff453a;
+  --shadow:0 0 0 .5px rgba(255,255,255,.10),0 2px 8px rgba(0,0,0,.35),0 30px 80px -20px rgba(0,0,0,.7);
+  --c-personal:#0a84ff; --c-work:#98989d; --c-fun:#30d158; --c-meal:#ff6961; --c-between:#98989d; --c-hol:#bf5af2; --c-other:#ac8e68;
+}}
+body:not(.theme-day){font:14px/1.45 var(--ui);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-variant-numeric:tabular-nums;letter-spacing:-.006em;
+  background:radial-gradient(1400px 800px at 15% -10%,var(--desk-2),transparent 70%),var(--desk)}
+body:not(.theme-day) ::selection{background:var(--accent-soft)}
+:focus-visible{outline:none;box-shadow:0 0 0 3px var(--accent-soft),0 0 0 1px var(--accent)!important}
+/* menu bar */
+body:not(.theme-day) .menubar{height:28px;font-size:13px;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);border-bottom:.5px solid var(--line);gap:18px}
+body:not(.theme-day) .menubar .brand{font-weight:700;letter-spacing:-.01em}
+body:not(.theme-day) .menubar .app{font-weight:600}
+body:not(.theme-day) .menubar .item.live{color:var(--fg-2);font-size:12.5px}
+body:not(.theme-day) #clock{font:500 12.5px var(--ui);color:var(--fg)}
+/* window */
+body:not(.theme-day) .window{border:0;border-radius:14px;box-shadow:var(--shadow);background:var(--win)}
+body:not(.theme-day) .titlebar{min-height:52px;padding:8px 14px;gap:12px;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);border-bottom:.5px solid var(--line)}
+body:not(.theme-day) .lights i{width:12px;height:12px;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.18)}
+body:not(.theme-day) .wtitle{font:600 13px var(--ui);color:var(--fg)}
+/* segmented controls */
+body:not(.theme-day) .tabs,body:not(.theme-day) .modes{background:var(--fill);border-radius:9px;padding:2px;gap:0}
+body:not(.theme-day) .tab{font:500 12.5px var(--ui);color:var(--fg);padding:4px 12px;border-radius:7px;transition:color .2s}
+body:not(.theme-day) .tab[aria-selected="true"]{font-weight:600}
+body:not(.theme-day) .tab .now{width:4px;height:4px;margin-left:5px}
+body:not(.theme-day) .tab-pill{border-radius:7px;background:var(--win);box-shadow:0 0 0 .5px rgba(0,0,0,.04),0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04)}
+@media (prefers-color-scheme:dark){body:not(.theme-day) .tab-pill,body:not(.theme-day) .modes button[aria-pressed="true"]{background:#636366}}
+body:not(.theme-day) .modes button{width:34px;height:26px;border-radius:7px;color:var(--fg-2);transition:background .25s,color .2s}
+body:not(.theme-day) .modes button[aria-pressed="true"]{background:var(--win);color:var(--fg);box-shadow:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04)}
+body:not(.theme-day) .modes button svg{width:17px;height:17px}
+/* icon buttons */
+body:not(.theme-day) .mbtn.icon{width:30px;height:30px;min-height:30px;border-radius:8px;color:var(--fg-2);transition:background .15s,color .15s}
+body:not(.theme-day) .mbtn.icon:hover{background:var(--fill-2);color:var(--fg)}
+body:not(.theme-day) .mbtn.icon svg{width:17px;height:17px}
+body:not(.theme-day) #sidetog[aria-pressed="true"]{color:var(--accent)}
+/* type */
+body:not(.theme-day) h2{font:700 24px/1.15 var(--display);letter-spacing:-.022em}
+body:not(.theme-day) .sub{font-size:13px;color:var(--fg-2)}
+body:not(.theme-day) .label{font:500 12px var(--ui);text-transform:none;letter-spacing:0;color:var(--fg-2)}
+body:not(.theme-day) .section > .label,body:not(.theme-day) .section > .head .label:first-child{font:600 13px var(--ui);color:var(--fg);letter-spacing:-.005em}
+body:not(.theme-day) .zonehint{font-weight:400;color:var(--fg-3)}
+body:not(.theme-day) .section{gap:10px;margin-top:26px}
+body:not(.theme-day) .section:first-child{margin-top:0}
+/* surfaces */
+body:not(.theme-day) .main{padding:24px 28px 32px}
+body:not(.theme-day) .side{background:var(--win-2);border-left:.5px solid var(--line);padding:20px 18px 28px}
+body:not(.theme-day) .rows{border:0;border-radius:12px;background:var(--win);box-shadow:0 0 0 .5px var(--line),0 1px 2px rgba(0,0,0,.03)}
+body:not(.theme-day) .side .rows{background:var(--win)}
+body:not(.theme-day) .row,body:not(.theme-day) .todo{border-top:.5px solid var(--line-2);padding:10px 14px}
+body:not(.theme-day) .row:first-child,body:not(.theme-day) .todo:first-child{border-top:0}
+body:not(.theme-day) .empty{border:0;border-radius:12px;background:var(--fill-2);color:var(--fg-2);padding:14px 16px;font-size:13px}
+body:not(.theme-day) .chip{border:0;background:var(--fill-2);color:var(--fg-2);font-size:11.5px;padding:2px 8px}
+body:not(.theme-day) .pri{font:600 11px var(--ui);color:var(--fg-3)}
+body:not(.theme-day) .pri.p1{color:var(--bad)}
+/* controls */
+body:not(.theme-day) .btn{border:0;border-radius:8px;background:var(--fill);color:var(--fg);font:500 13px var(--ui);padding:5px 12px;transition:background .15s,transform .15s var(--spring)}
+body:not(.theme-day) .btn:hover{background:var(--fill)}
+body:not(.theme-day) .btn:active{transform:scale(.97)}
+body:not(.theme-day) .btn.primary{background:var(--accent);color:#fff}
+body:not(.theme-day) .btn.ghost{background:transparent;color:var(--accent)}
+body:not(.theme-day) .btn.ghost:hover{background:var(--accent-soft)}
+body:not(.theme-day) .quick input,body:not(.theme-day) .sched input,body:not(.theme-day) .sched select,body:not(.theme-day) .tzsel,body:not(.theme-day) .studio-edit input,body:not(.theme-day) .studio-edit select{border:0;border-radius:9px;background:var(--fill-2);padding:8px 11px;font:400 13px var(--ui);color:var(--fg);box-shadow:none;transition:box-shadow .15s,background .15s}
+body:not(.theme-day) .quick input:focus,body:not(.theme-day) .tzsel:focus,body:not(.theme-day) .studio-edit input:focus,body:not(.theme-day) .studio-edit select:focus{background:var(--win);box-shadow:0 0 0 3px var(--accent-soft),0 0 0 1px var(--accent)}
+body:not(.theme-day) .quick input::placeholder{color:var(--fg-3)}
+/* reminders-style round check */
+body:not(.theme-day) .check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--fg-3);margin-top:0;font-size:11px;color:transparent;transition:background .2s,border-color .2s,transform .3s var(--spring)}
+body:not(.theme-day) .check:active{transform:scale(.88)}
+body:not(.theme-day) .check.on{background:var(--accent);border-color:var(--accent);color:#fff}
+body:not(.theme-day) .todo.is-done .tt > div:first-child{color:var(--fg-3)}
+body:not(.theme-day) .grip{color:var(--fg-3);opacity:.6}
+/* timeline */
+body:not(.theme-day) .pane-tl,body:not(.theme-day) .tl-wrap{border:0;border-radius:14px;box-shadow:0 0 0 .5px var(--line),0 1px 3px rgba(0,0,0,.04);background:var(--win)}
+body:not(.theme-day) .tl{border-left:.5px solid var(--line-2)}
+body:not(.theme-day) .hr{border-top:.5px solid var(--line-2);color:var(--fg-3)}
+body:not(.theme-day) .hr span{font:500 11px var(--ui);color:var(--fg-3);background:var(--win)}
+body:not(.theme-day) .hr span i{color:var(--fg-3);opacity:.7;font-size:10px}
+body:not(.theme-day) .ev{border-radius:8px;border-left-width:3px;padding:4px 8px;box-shadow:none}
+body:not(.theme-day) .ev b{font:600 12.5px/1.25 var(--ui);letter-spacing:-.005em}
+body:not(.theme-day) .ev span{font:500 11px var(--ui);opacity:.75}
+body:not(.theme-day) .ev.lifting{box-shadow:0 12px 30px -8px rgba(0,0,0,.35);transform:scale(1.015)}
+body:not(.theme-day) .nowline{background:var(--bad)}
+body:not(.theme-day) .nowstrip{font-size:13px;gap:6px 16px}
+body:not(.theme-day) .nowstrip .label{margin-right:4px}
+body:not(.theme-day) .divider i{width:36px;height:5px;border-radius:3px;background:var(--fg-3);opacity:.4}
+body:not(.theme-day) .wk-head{background:var(--win);border-bottom:.5px solid var(--line)}
+body:not(.theme-day) .wk-dn{font:500 12px var(--ui)}
+body:not(.theme-day) .wk-load,body:not(.theme-day) .wk-open,body:not(.theme-day) .wk-wx,body:not(.theme-day) .wk-sun{font-family:var(--ui)}
+/* morning brief */
+body:not(.theme-day) .mbrief{border-radius:14px;background:var(--win);box-shadow:0 0 0 .5px var(--line),0 1px 3px rgba(0,0,0,.04);padding:16px 18px;gap:9px}
+body:not(.theme-day) .mbrief .label{font:500 12px var(--ui);text-transform:none;letter-spacing:0;color:var(--fg-2);min-width:84px}
+/* sidebar extras */
+body:not(.theme-day) .studio-big b{font:700 26px var(--display);letter-spacing:-.02em}
+body:not(.theme-day) #appver{font:400 11px var(--ui)!important;color:var(--fg-3)!important}
+body:not(.theme-day) .toast{border:0;border-radius:12px;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);box-shadow:var(--shadow);font-size:13px;padding:10px 14px}
+body:not(.theme-day) .spot-in{border-radius:16px}
+
+/* ---------- motion ---------- */
+/* sidebar slides and the main column reflows on a spring */
+body.shell .content{grid-template-columns:minmax(0,1fr) var(--sideW)!important;transition:--sideW .6s var(--spring)}
+body.shell.side-off .content{--sideW:0px}
+body.shell .side{min-width:0;transition:opacity .3s ease}
+body.shell .side > *{min-width:264px}
+body.shell.side-off .side{display:block!important;opacity:0;pointer-events:none;overflow:hidden!important;border-left-color:transparent}
+@media (max-width:860px){
+  body.shell .content{--sideW:0px}
+  body.shell .side{display:block!important;transform:translateX(105%);visibility:hidden;transition:transform .55s var(--spring),visibility 0s .55s}
+  body.shell.side-open .side{transform:none;visibility:visible;transition:transform .55s var(--spring),visibility 0s}
+}
+body.ios:not(.ios-more) .side{display:none!important}
+body.ios.ios-more .side{transform:none!important;visibility:visible!important;transition:none!important;position:static!important;width:auto!important;box-shadow:none!important}
+body.ios .side .section:has(#sidebacklog){display:none}
+/* split screen: the timeline share springs between timeline, split and list */
+.pane{--tlF:var(--split,55%)}
+.pane.m-timeline{--tlF:100%}
+.pane.m-list{--tlF:0%}
+.pane .pane-tl{display:block!important;flex:0 1 var(--tlF)!important;transition:--tlF .6s var(--spring),opacity .3s ease}
+.pane.dragging .pane-tl{transition:none}
+.pane .pane-list{display:block!important;flex:1 1 0!important;min-height:0!important;transition:opacity .3s ease}
+.pane .divider{display:grid!important;transition:height .35s var(--spring),opacity .25s ease}
+.pane.m-timeline .divider,.pane.m-list .divider{height:0;opacity:0;pointer-events:none;overflow:hidden}
+.pane.m-timeline .pane-list{opacity:0;pointer-events:none}
+.pane.m-list .pane-tl{opacity:0;pointer-events:none;min-height:0!important;box-shadow:none}
+/* view changes rise in */
+.main.enter > *{animation:viewIn .5s var(--spring) both}
+.main.enter > *:nth-child(2){animation-delay:.03s}
+.main.enter > *:nth-child(3){animation-delay:.06s}
+@keyframes viewIn{from{opacity:0;transform:translateY(8px)}}
+/* tooltips for icon-only controls */
+.tip{position:fixed;z-index:60;pointer-events:none;padding:5px 9px;border-radius:7px;font:500 12px var(--ui);color:var(--fg);background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);box-shadow:0 0 0 .5px var(--line),0 6px 20px -6px rgba(0,0,0,.3);opacity:0;transform:translateY(-2px) scale(.98);transition:opacity .14s ease,transform .3s var(--spring);white-space:nowrap}
+.tip.on{opacity:1;transform:none}
+.tip kbd{font:500 11px var(--ui);color:var(--fg-2);margin-left:6px}
+@media (prefers-reduced-motion:reduce){.main.enter > *{animation:none} body.shell .content,.pane .pane-tl{transition:none}}
 </style>
 
 <div class="menubar">
@@ -711,7 +867,7 @@ body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
     <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
     <span class="wtitle" id="wtitle">Planner</span>
     <div class="tabs" role="tablist" id="tabs"></div>
-    <label class="hidetog eyetog" id="hidelabel" title="Hide completed"><input type="checkbox" id="hidedone" aria-label="Hide completed"><svg class="eye-open" viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.8 10S4.8 4.5 10 4.5 18.2 10 18.2 10 15.2 15.5 10 15.5 1.8 10 1.8 10Z"/><circle cx="10" cy="10" r="2.6"/></svg><svg class="eye-closed" viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.2c1.7 2.6 4.3 4.3 7.5 4.3s5.8-1.7 7.5-4.3"/><path d="M5.2 11.3 3.8 13.4M10 12.5v2.4M14.8 11.3l1.4 2.1"/></svg></label>
+    <label class="hidetog eyetog" id="hidelabel" title="Hide completed" data-tip="Hide completed"><input type="checkbox" id="hidedone" aria-label="Hide completed"><svg class="eye-open" viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.8 10S4.8 4.5 10 4.5 18.2 10 18.2 10 15.2 15.5 10 15.5 1.8 10 1.8 10Z"/><circle cx="10" cy="10" r="2.6"/></svg><svg class="eye-closed" viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.2c1.7 2.6 4.3 4.3 7.5 4.3s5.8-1.7 7.5-4.3"/><path d="M5.2 11.3 3.8 13.4M10 12.5v2.4M14.8 11.3l1.4 2.1"/></svg></label>
     <button class="mbtn icon" id="sidetog" type="button" title="Hide sidebar" aria-label="Toggle sidebar" aria-pressed="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="2.8" y="3.8" width="14.4" height="12.4" rx="2.4"/><path d="M12.2 3.8v12.4"/></svg></button>
   </div>
   <div class="content">
@@ -746,7 +902,7 @@ body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
         <div class="label">Second time zone</div>
         <select id="tz2sel" class="tzsel" aria-label="Second time zone"></select>
       </div>
-      <div class="section"><div class="label">Studio time</div><div id="studiobox"></div></div>
+      <div class="section"><div class="label">Free time</div><div id="studiobox"></div></div>
       <div class="section"><div class="label">Travel</div><div id="travelbox"></div></div>
       <div class="section" id="samplebox" hidden>
         <div class="label">Sample data</div>
@@ -824,7 +980,7 @@ function calKind(c){
 }
 const KIND_NAME = {personal:"Personal", work:"Work", hol:"Holidays"};
 /* ---------- settings (stored with the page, editable by the Claude bar) ---------- */
-const CFG_DEFAULTS = {tlStart:0, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day", tz2:"", showMark:false, studioGoal:10, studioWords:"studio, sketch, sew, pattern, drape, design, sample, fitting, POV", studioCal:"", homeAddr:"", travelMode:"transit", travelBuffer:5};
+const CFG_DEFAULTS = {tlStart:0, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day", tz2:"", showMark:false, dayStart:8, dayEnd:22, homeAddr:"", travelMode:"transit", travelBuffer:5};
 let cfgRaw = {};
 const cfg = () => ({...CFG_DEFAULTS, ...cfgRaw, tabHours:{...CFG_DEFAULTS.tabHours, ...(cfgRaw.tabHours || {})}, calColors:{...(cfgRaw.calColors || {})}});
 function applyCfg(){
@@ -1251,7 +1407,7 @@ function tick(){
 let pending = false;
 function schedule(){ if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; render(); }); }
 function render(){
-  if ((drag && drag.ghost) || (evDrag && evDrag.active) || divDrag) { pending = false; setTimeout(schedule, 300); return; }
+  if ((drag && drag.ghost) || (evDrag && evDrag.active) || divDrag || Date.now() < (S.animUntil || 0)) { pending = false; setTimeout(schedule, Math.max(120, (S.animUntil || 0) - Date.now() + 20)); return; }
   tick(); renderTabs(); updateUndo(); renderDayHeader();
   const a = document.activeElement;
   if (a && $("main").contains(a) && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) { renderSide(); return; }
@@ -1270,6 +1426,7 @@ function render(){
   else if (S.tab === "week") html += viewWeek(evs, today);
   else html += viewBacklog();
   $("main").innerHTML = html;
+  if (render.lastTab !== S.tab){ const m = $("main"); m.classList.remove("enter"); void m.offsetWidth; m.classList.add("enter"); clearTimeout(render.enT); render.enT = setTimeout(() => m.classList.remove("enter"), 700); render.lastTab = S.tab; }
   $("main").dataset.paneKey = paneKey;
   if (paneTab){
     const tl = $("main").querySelector(".pane-tl"), ls = $("main").querySelector(".pane-list");
@@ -1337,11 +1494,12 @@ function dayLoad(d, evs){
   const iv = eventsOn(d0, evs).filter(e => !e.allDay).map(e => [Math.max(+e.start, +d0), Math.min(+e.end, +d1)]).filter(x => x[1] > x[0]).sort((a, b) => a[0] - b[0]);
   const merged = []; for (const x of iv){ const l = merged[merged.length - 1]; if (l && x[0] <= l[1]) l[1] = Math.max(l[1], x[1]); else merged.push([...x]); }
   const booked = merged.reduce((a, x) => a + x[1] - x[0], 0) / 60000;
-  let ws = new Date(d0).setHours(8, 0, 0, 0), we = new Date(d0).setHours(22, 0, 0, 0);
+  const DS = Number(cfg().dayStart ?? 8), DE = Number(cfg().dayEnd ?? 22);
+  let ws = new Date(d0).setHours(DS, 0, 0, 0), we = new Date(d0).setHours(DE, 0, 0, 0);
   if (sameDay(now, d0)) ws = Math.max(ws, +now);
   let open = Math.max(0, we - ws);
   for (const x of merged) open -= Math.max(0, Math.min(x[1], we) - Math.max(x[0], ws));
-  const span = (new Date(d0).setHours(22,0,0,0) - new Date(d0).setHours(8,0,0,0)) / 60000;
+  const span = Math.max(60, (new Date(d0).setHours(DE,0,0,0) - new Date(d0).setHours(DS,0,0,0)) / 60000);
   return {booked:Math.round(booked), open:Math.max(0, Math.round(open / 60000)), frac:Math.min(1, booked / span), today:sameDay(now, d0), past:d1 <= now};
 }
 /* week as a timeline: shared hour gutter, one column per day, same drag rules as Day */
@@ -1351,7 +1509,7 @@ function weekTimeline(evs, start){
   let head = `<div class="wk-cell wk-corner"></div>`;
   for (const d of days){
     const ad = eventsOn(d, evs).filter(e => e.allDay);
-    head += `<div class="wk-cell wk-dh${sameDay(d, today) ? " today" : ""}"><div class="wk-dn"><b>${d.toLocaleDateString([], {weekday:"short"})}</b> <span>${d.getDate()}</span>${(() => { const m = studioMins(startOfDay(d), addDays(startOfDay(d), 1), evs); return m ? `<em class="wk-st">${hrs(m)}</em>` : ""; })()}</div>${(() => { const L = dayLoad(d, evs); return `<span class="wk-load" title="${hrs(L.booked)} booked, ${hrs(L.open)} open${L.today ? " left today" : ""} (8am to 10pm)"><i class="wk-lbar"><b style="width:${(L.frac*100).toFixed(0)}%"></b></i>${hrs(L.booked)} booked</span>${L.past ? "" : `<span class="wk-open">${hrs(L.open)} open${L.today ? " left" : ""}</span>`}`; })()}${dayWx(d)}${ad.map(e => `<span class="ev-pill" style="--evc:${e.cal.color};border-left-color:${e.cal.color}" title="${esc(e.title)}">${esc(e.title)}</span>`).join("")}</div>`;
+    head += `<div class="wk-cell wk-dh${sameDay(d, today) ? " today" : ""}"><div class="wk-dn"><b>${d.toLocaleDateString([], {weekday:"short"})}</b> <span>${d.getDate()}</span>${(() => { const m = studioMins(startOfDay(d), addDays(startOfDay(d), 1), evs); return m ? `<em class="wk-st">${hrs(m)}</em>` : ""; })()}</div>${(() => { const L = dayLoad(d, evs); return `<span class="wk-load" title="${hrs(L.booked)} booked, ${hrs(L.open)} free${L.today ? " left today" : ""}"><i class="wk-lbar"><b style="width:${(L.frac*100).toFixed(0)}%"></b></i>${hrs(L.booked)} booked</span>${L.past ? "" : `<span class="wk-open">${hrs(L.open)} free${L.today ? " left" : ""}</span>`}`; })()}${dayWx(d)}${ad.map(e => `<span class="ev-pill" style="--evc:${e.cal.color};border-left-color:${e.cal.color}" title="${esc(e.title)}">${esc(e.title)}</span>`).join("")}</div>`;
   }
   let gut = "";
   for (let hr = H0; hr <= H1; hr++) gut += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${hourLabel(start, hr, false)}</span></div>`;
@@ -1434,7 +1592,7 @@ const unsched = (t) => (t.status === "open" || (t.status === "done" && !t.eventI
 const allTop = () => S.todos.filter(t => t.top && unsched(t)).sort(byOrder);
 const topTodos = () => allTop().slice(0,3).filter(showT);
 const listTodos = () => { const ids = new Set(allTop().slice(0,3).map(t => t.id)); return S.todos.filter(t => unsched(t) && !ids.has(t.id) && showT(t)).sort(byOrder); };
-const topSection = (empty) => `<div class="section"><div class="label">Top three <span class="zonehint">· drag to-dos in or out</span></div>${todoList(topTodos(), empty || "Drag up to three to-dos here.", "top")}</div>`;
+const topSection = (empty) => `<div class="section"><div class="label">Top three <span class="zonehint">· drag in up to three</span></div>${todoList(topTodos(), empty || "Drag up to three to-dos here.", "top")}</div>`;
 const todayTodos = (day) => S.todos.filter(t => t.start && sameDay(new Date(t.start), day));
 
 function viewMorning(evs, today){
@@ -1641,7 +1799,7 @@ function updateMenubar(){
   const lv = next && leaveFor(next);
   set("mbNext", next ? `Next <b>${esc(next.title.replace(/^✓\s*/, ""))}</b> ${fmtTime(next.start)}${lv ? ` · leave ${fmtTime(lv.leave)}` : ""}` : "");
   const s = studioSummary();
-  set("mbStudio", s.goal || s.planWeek ? `Studio <b>${hrs(s.planWeek)}</b>${s.goal ? ` / ${hrs(s.goal)}` : ""}` : "");
+  set("mbStudio", `Free <b>${hrs(s.today)}</b> today`);
 }
 function shellFit(){
   const ios = IOS_MQ.matches;
@@ -1661,6 +1819,35 @@ IOS_MQ.addEventListener ? IOS_MQ.addEventListener("change", () => { shellFit(); 
 addEventListener("resize", () => { shellFit(); applySide(); });
 if (window.visualViewport) visualViewport.addEventListener("resize", shellFit);
 requestAnimationFrame(() => { shellFit(); applySide(); schedule(); });
+
+/* ---------- hover tooltips for icon-only controls ---------- */
+(() => {
+  if (!matchMedia("(hover:hover)").matches) return;
+  const tip = document.createElement("div"); tip.className = "tip"; tip.setAttribute("role", "tooltip"); document.body.append(tip);
+  let cur = null, t = 0;
+  const SEL = ".mbtn.icon,.modes button,.hidetog,#sidetog,.check,.grip,[data-tip]";
+  const text = (el) => el.dataset.tip || el.getAttribute("aria-label") || el.getAttribute("title") || "";
+  function show(el){
+    const s = text(el); if (!s) return;
+    const m = s.match(/^(.*?)\s*\((⌘.+|Esc)\)$/);
+    tip.innerHTML = m ? `${esc(m[1])}<kbd>${esc(m[2])}</kbd>` : esc(s);
+    const r = el.getBoundingClientRect(); tip.style.left = "0px"; tip.style.top = "0px"; tip.classList.add("on");
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = r.left + r.width / 2 - w / 2, y = r.bottom + 8;
+    if (y + h > innerHeight - 6) y = r.top - h - 8;
+    tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, x)) + "px"; tip.style.top = y + "px";
+  }
+  document.addEventListener("mouseover", (e) => {
+    const el = e.target.closest(SEL); if (el === cur) return;
+    clearTimeout(t); tip.classList.remove("on");
+    if (cur && cur.dataset.ttl){ cur.setAttribute("title", cur.dataset.ttl); delete cur.dataset.ttl; }
+    cur = el; if (!el) return;
+    if (el.hasAttribute("title")){ el.dataset.ttl = el.getAttribute("title"); if (!el.dataset.tip) el.dataset.tip = el.dataset.ttl; el.removeAttribute("title"); }
+    t = setTimeout(() => cur === el && show(el), 450);
+  });
+  document.addEventListener("mousedown", () => { clearTimeout(t); tip.classList.remove("on"); });
+  addEventListener("scroll", () => tip.classList.remove("on"), true);
+})();
 
 /* ---------- weather (Open-Meteo, no key) ---------- */
 const WX = {data:null, at:0, loading:false};
@@ -1806,14 +1993,14 @@ if (window.visualViewport) visualViewport.addEventListener("resize", fitPane);
 let divDrag = null;
 document.addEventListener("click", (e) => {
   const b = e.target.closest("[data-mode]"); if (!b) return;
-  S.paneMode = b.dataset.mode; if (S.db) saveCfg({layout:S.paneMode}).catch(() => {});
+  S.paneMode = b.dataset.mode; S.animUntil = Date.now() + 650; clearTimeout(window.__modeT); window.__modeT = setTimeout(() => { if (S.db) saveCfg({layout:S.paneMode}).catch(() => {}); }, 700);
   const pane = b.closest(".pane");
   if (pane){ pane.className = "pane m-" + S.paneMode + (pane.classList.contains("pane-week") ? " pane-week" : ""); pane.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.mode === S.paneMode))); }
 });
 document.addEventListener("pointerdown", (e) => {
   const el = e.target.closest("[data-divider]"); if (!el || e.button > 0) return;
   e.preventDefault();
-  divDrag = {el, body:el.closest(".pane-body"), pane:el.closest(".pane"), pid:e.pointerId};
+  divDrag = {el, body:el.closest(".pane-body"), pane:el.closest(".pane"), pid:e.pointerId}; divDrag.pane.classList.add("dragging");
   el.classList.add("active"); try { el.setPointerCapture(e.pointerId); } catch {}
 });
 document.addEventListener("pointermove", (e) => {
@@ -1823,7 +2010,7 @@ document.addEventListener("pointermove", (e) => {
   S.split = Math.max(0.15, Math.min(0.85, (e.clientY - r.top) / r.height));
   divDrag.pane.style.setProperty("--split", (S.split*100).toFixed(1) + "%");
 }, {passive:false});
-function endDiv(){ if (!divDrag) return; divDrag.el.classList.remove("active"); divDrag = null; if (S.db) saveCfg({split:Math.round(S.split*100)/100}).catch(() => {}); schedule(); }
+function endDiv(){ if (!divDrag) return; divDrag.el.classList.remove("active"); divDrag.pane.classList.remove("dragging"); divDrag = null; if (S.db) saveCfg({split:Math.round(S.split*100)/100}).catch(() => {}); schedule(); }
 document.addEventListener("pointerup", (e) => { if (divDrag && e.pointerId === divDrag.pid) endDiv(); });
 document.addEventListener("pointercancel", (e) => { if (divDrag && e.pointerId === divDrag.pid) endDiv(); });
 document.addEventListener("submit", (e) => {
@@ -1976,57 +2163,41 @@ function morningBrief(evs, day){
   } else lines.push(`<div class="mb-l"><span class="label">First up</span>Nothing on the calendar${sameDay(day, now) ? " for the rest of today" : ""}.</div>`);
   // shape of the day
   const open = openStretch(timed, day), st = studioMins(startOfDay(day), addDays(startOfDay(day), 1), evs);
-  lines.push(`<div class="mb-l"><span class="label">Day</span>${timed.length} event${timed.length === 1 ? "" : "s"} · ${hrs(booked)} booked${st ? ` · ${hrs(st)} studio` : ""}${open ? ` · longest open stretch ${fmtTime(open.s)}–${fmtTime(open.e)}` : ""}</div>`);
+  lines.push(`<div class="mb-l"><span class="label">Day</span>${timed.length} event${timed.length === 1 ? "" : "s"} · ${hrs(booked)} booked · ${hrs(dayLoad(day, evs).open)} free${open ? ` · longest open stretch ${fmtTime(open.s)}–${fmtTime(open.e)}` : ""}</div>`);
   // top three
   const top = topTodos().filter(t => t.status !== "done");
   if (top.length) lines.push(`<div class="mb-l"><span class="label">Top three</span>${top.map(t => esc(t.title)).join(" · ")}</div>`);
   return `<div class="mbrief">${lines.join("")}</div>`;
 }
 
-/* ---------- studio time ---------- */
-function studioWords(){ return String(cfg().studioWords || "").split(",").map(w => w.trim().toLowerCase()).filter(Boolean); }
-function isStudio(e){
-  if (e.allDay) return false;
-  const t = (e.title || "").toLowerCase(), words = studioWords();
-  return words.some(w => t.includes(w)) || (cfg().studioCal && e.cal && e.cal.name === cfg().studioCal);
-}
-const weekStart = (d) => { const x = startOfDay(d); return addDays(x, -((x.getDay() + 6) % 7)); }; // Monday
-function studioMins(from, to, evs, onlyElapsed){
-  const now = new Date(); let m = 0;
-  for (const e of evs || allEvents()){
-    if (!isStudio(e)) continue;
-    const s = Math.max(+e.start, +from), en = Math.min(+e.end, +to, onlyElapsed ? +now : Infinity);
-    if (en > s) m += (en - s) / 60000;
-  }
-  return Math.round(m);
-}
+/* ---------- free time: open hours between your day start and end that nothing is booked in ---------- */
 const hrs = (m) => { const h = m / 60; return (Math.round(h * 2) / 2).toString().replace(/\.5$/, "½") + "h"; };
+function studioMins(){ return 0; } // retired: free time replaces the old studio tracker
 function studioSummary(){
-  const evs = allEvents(), today = startOfDay(new Date()), ws = weekStart(today), we = addDays(ws, 7);
-  return {today:studioMins(today, addDays(today, 1), evs), doneWeek:studioMins(ws, we, evs, true), planWeek:studioMins(ws, we, evs), goal:Math.max(0, Number(cfg().studioGoal) || 0) * 60};
+  const evs = allEvents(), today = startOfDay(new Date()), ws = addDays(today, -((today.getDay() + 6) % 7));
+  let week = 0; for (let i = 0; i < 7; i++){ const d = addDays(ws, i); if (addDays(d, 1) <= new Date()) continue; week += dayLoad(d, evs).open; }
+  return {today:dayLoad(today, evs).open, week};
 }
 function studioStrip(){
   const s = studioSummary();
-  const pct = s.goal ? Math.min(100, s.planWeek / s.goal * 100) : 0, dpct = s.goal ? Math.min(100, s.doneWeek / s.goal * 100) : 0;
-  return `<span class="studio" title="Studio time this week (Mon to Sun): ${hrs(s.doneWeek)} done, ${hrs(s.planWeek)} planned${s.goal ? ", goal " + hrs(s.goal) : ""}"><span class="label">Studio</span>${hrs(s.today)} today · ${hrs(s.planWeek)}${s.goal ? ` of ${hrs(s.goal)}` : ""} wk${s.goal ? `<i class="sbar"><b style="width:${pct.toFixed(1)}%"></b><u style="width:${dpct.toFixed(1)}%"></u></i>` : ""}</span>`;
+  return `<span class="studio" title="Unbooked time between ${fmtHour(cfg().dayStart)} and ${fmtHour(cfg().dayEnd)}"><span class="label">Free</span>${hrs(s.today)} left today · ${hrs(s.week)} this week</span>`;
 }
+const fmtHour = (h) => `${(h % 12) || 12}${h < 12 || h === 24 ? "am" : "pm"}`;
 function renderStudioSide(){
   const box = $("studiobox"); if (!box) return;
-  const a = document.activeElement; if (a && box.contains(a) && /INPUT/.test(a.tagName)) return;
+  const a = document.activeElement; if (a && box.contains(a) && /INPUT|SELECT/.test(a.tagName)) return;
   const s = studioSummary(), c = cfg();
-  const pct = s.goal ? Math.min(100, s.planWeek / s.goal * 100) : 0, dpct = s.goal ? Math.min(100, s.doneWeek / s.goal * 100) : 0;
-  box.innerHTML = `<div class="studio-big"><b>${hrs(s.planWeek)}</b>${s.goal ? ` <span>of ${hrs(s.goal)} this week</span>` : " <span>this week</span>"}</div>
-    ${s.goal ? `<i class="sbar big"><b style="width:${pct.toFixed(1)}%"></b><u style="width:${dpct.toFixed(1)}%"></u></i>` : ""}
-    <div class="sub">${hrs(s.doneWeek)} done · ${hrs(s.today)} today</div>
+  const opts = (sel) => [...Array(25).keys()].map(h => `<option value="${h}" ${h === sel ? "selected" : ""}>${fmtHour(h)}</option>`).join("");
+  box.innerHTML = `<div class="studio-big"><b>${hrs(s.week)}</b> <span>free this week</span></div>
+    <div class="sub">${hrs(s.today)} left today · counts ${fmtHour(c.dayStart)} to ${fmtHour(c.dayEnd)}</div>
     <details class="studio-edit"><summary>Edit</summary>
-      <label>Weekly goal (hours)<input id="stgoal" type="number" min="0" max="80" step="0.5" value="${esc(c.studioGoal)}"></label>
-      <label>Counts events with these words<input id="stwords" value="${esc(c.studioWords)}"></label>
-      <label>Or everything on calendar<select id="stcal"><option value="">None</option>${S.calendars.map(x => `<option ${x.name === c.studioCal ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>
+      <label>Day starts<select id="fdstart">${opts(c.dayStart)}</select></label>
+      <label>Day ends<select id="fdend">${opts(c.dayEnd)}</select></label>
     </details>`;
 }
 document.addEventListener("change", (e) => {
-  const id = e.target && e.target.id; if (!["stgoal","stwords","stcal"].includes(id)) return;
-  const patch = id === "stgoal" ? {studioGoal: Math.max(0, Number(e.target.value) || 0)} : id === "stwords" ? {studioWords: e.target.value} : {studioCal: e.target.value};
+  const id = e.target && e.target.id; if (id !== "fdstart" && id !== "fdend") return;
+  const v = Number(e.target.value), patch = id === "fdstart" ? {dayStart:v} : {dayEnd:v};
   saveCfg(patch).catch(() => { cfgRaw = {...cfgRaw, ...patch}; applyCfg(); schedule(); });
 });
 
@@ -2999,13 +3170,13 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.19-40";
+const APP_VERSION = "2026.10.20-41";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
     const sb = pr.offsetHeight - (parseFloat(getComputedStyle(pr).paddingTop) || 0), st = parseFloat(getComputedStyle(pr).paddingTop) || 0; pr.remove();
     const h = $("dhdr"), r = h ? h.getBoundingClientRect() : null;
-    $("appver").textContent = `Version ${APP_VERSION} · ${innerWidth}×${innerHeight} · safe ${Math.round(st)}/${Math.round(sb)} · bar ${r ? Math.round(innerHeight - r.bottom) : "?"} · scr ${screen.width}×${screen.height} · gap ${getComputedStyle(document.documentElement).getPropertyValue("--vpGap")}`;
+    $("appver").textContent = `Version ${APP_VERSION}`;
   } catch {}
 }
 showVer(); addEventListener("resize", showVer); setTimeout(showVer, 1500);
