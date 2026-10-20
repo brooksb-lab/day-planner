@@ -575,6 +575,8 @@ body.theme-day.no-mark .tab{font-size:15px;font-weight:600}
 .rn-pop input[name=t]{border:0;border-radius:9px;background:var(--fill-2,var(--win-2));padding:8px 11px;font:inherit;font-size:14px;color:var(--fg)}
 .rn-pop label{display:flex;align-items:center;gap:8px;color:var(--fg)}
 .rn-pop input[type=radio]{accent-color:var(--accent);margin:0}
+.rn-row{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--fg-2)!important}
+.rn-row select{border:0;border-radius:8px;background:var(--fill-2,var(--win-2));padding:5px 8px;font:inherit;color:var(--fg);max-width:65%}
 .rn-note{color:var(--fg-2);font-size:12px}
 .rn-b{display:flex;gap:6px;align-items:center}
 @media (max-width:560px){.rn-pop input[name=t]{font-size:16px}}
@@ -644,6 +646,24 @@ body.ios.ios-more .main{display:none!important}
 body.ios.ios-more .side{display:block!important;position:static;width:auto;height:100%;overflow:auto;border:0!important;box-shadow:none;background:var(--win);padding:6px 16px 24px}
 body.ios .main > .head:first-child h2, body.ios .pane-head h2{display:none}
 body.ios .pane-head{padding-top:2px}
+/* iPhone: timelines run edge to edge; everything else keeps a 16pt inset */
+body.ios .main,body.ios:not(.theme-day) .main{padding:0 0 12px!important}
+body.ios .main > *:not(.pane){margin-left:16px;margin-right:16px}
+body.ios .main > .banner:first-child{margin-top:8px}
+body.ios .pane-head{padding:2px 16px 0!important;margin-bottom:8px}
+body.ios .pane-head .nowstrip{margin-top:0}
+body.ios .pane-list{padding:4px 16px 8px!important}
+body.ios .pane-tl,body.ios:not(.theme-day) .pane-tl{border-radius:0!important;box-shadow:0 -.5px 0 var(--line),0 .5px 0 var(--line)!important;border:0!important}
+body.ios .pane-tl .tl-wrap{border-radius:0!important;box-shadow:none!important;padding-block:10px 12px}
+body.ios .tl-wrap .tl{margin-left:48px}
+body.ios .tl-wrap .hr{left:-48px}
+body.ios .tl-wrap .hr span{left:10px}
+body.ios .wk-gut .hr span{left:8px}
+body.ios .ev{left:calc(var(--l,0%) + 3px)}
+body.ios .pane-week .wk-cell:first-child,body.ios .wk-gut{padding-left:4px}
+body.ios .wk-head{border-top:0}
+body.ios .divider{margin:2px 0}
+body.ios .modes{margin-left:auto}
 body.ios .pane-head > div > .sub{display:none}
 body.ios .pane-week{--colw:118px}
 .ios-add{display:none}
@@ -1052,7 +1072,14 @@ function allEvents(){
     for (const e of rec.list) if (e.status !== "cancelled"){
       const p = parseEvent(e, cal); const o = S.optim.get(p.id);
       if (o){ if (Date.now() - o.at > 30000 || (+p.start === +o.start && +p.end === +o.end)) S.optim.delete(p.id); else { p.start = o.start; p.end = o.end; } }
-      if (!cal.writable && S.aliases && S.aliases.size){ const a = aliasFor(p); if (a){ p.origTitle = p.title; p.title = a; p.aliased = true; } }
+      if (!cal.writable && S.aliases && S.aliases.size){
+        const a = aliasRec(p);
+        if (a){
+          if (a.title){ p.origTitle = p.title; p.title = a.title; p.aliased = true; }
+          const as = a.calAs && S.calMap.get(a.calAs);
+          if (as){ p.origCal = cal; p.cal = {...as, writable:false}; p.aliased = true; } // shows and counts as that calendar here only
+        }
+      }
       out.push(p);
     }
   }
@@ -2760,10 +2787,12 @@ S.aliases = new Map();
 const aliasRef = (k) => S.db.collection("aliases").doc(k.replace(/[^\w|:-]/g, "_").slice(0, 140));
 const evBase = (p) => String(p.id).split("_")[0];
 const evSlot = (p) => `slot|${p.calId}|${p.start.getDay()}|${pad(p.start.getHours())}:${pad(p.start.getMinutes())}|${Math.round((p.end - p.start) / 60000)}`;
-function aliasFor(p){
-  const g = (k) => { const a = S.aliases.get(k); return a && a.title; };
-  return g("ev|" + p.id) || (evBase(p) !== p.id ? g("base|" + p.calId + "|" + evBase(p)) : null) || g(evSlot(p));
+function aliasRec(p){
+  const keys = ["ev|" + p.id, evBase(p) !== p.id ? "base|" + p.calId + "|" + evBase(p) : null, evSlot(p)].filter(Boolean);
+  for (const k of keys){ const a = S.aliases.get(k); if (a && (a.title || a.calAs)) return a; }
+  return null;
 }
+function aliasFor(p){ const a = aliasRec(p); return a && a.title || null; }
 function startAliases(){
   if (!S.db) return;
   S.db.collection("aliases").onSnapshot((snap) => { S.aliases = new Map(snap.docs.map(d => { const x = d.data(); return [x.key, x]; })); schedule(); }, () => {});
@@ -2771,17 +2800,19 @@ function startAliases(){
 function closeRename(){ document.querySelectorAll(".rn-pop").forEach(x => x.remove()); }
 function openRename(p, anchor){
   closeRename();
-  const r = anchor.getBoundingClientRect(), cur = aliasFor(p) || "";
+  const r = anchor.getBoundingClientRect(), rec = aliasRec(p), cur = rec && rec.title || "", curAs = rec && rec.calAs || "";
+  const real = p.origCal || p.cal;
   const wd = p.start.toLocaleDateString([], {weekday:"long"}), tm = fmtTime(p.start);
   const recurring = evBase(p) !== p.id;
   const f = document.createElement("form"); f.className = "rn-pop";
   f.innerHTML = `<div class="rn-h">Name this for you</div>
     <input name="t" value="${esc(cur)}" placeholder="${esc(p.origTitle || p.title)}" autocomplete="off">
+    <label class="rn-row">Show as<select name="a"><option value="">${esc(real.name)} (as is)</option>${S.calendars.filter(c => c.id !== real.id).map(c => `<option value="${esc(c.id)}" ${c.id === curAs ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
     <label><input type="radio" name="s" value="slot" ${recurring ? "" : "checked"}> Every ${esc(wd)} at ${esc(tm)}</label>
     ${recurring ? `<label><input type="radio" name="s" value="base" checked> Every time this repeats</label>` : ""}
     <label><input type="radio" name="s" value="ev"> Just this one</label>
-    <div class="rn-note">Only changes how it shows here. ${esc(p.cal.name)} in Google stays as is.</div>
-    <div class="rn-b">${cur ? `<button type="button" class="btn ghost" data-rn="clear">Remove name</button>` : ""}<span style="flex:1"></span><button type="button" class="btn" data-rn="x">Cancel</button><button type="submit" class="btn primary">Save</button></div>`;
+    <div class="rn-note">Only changes how it shows and counts here. ${esc(real.name)} in Google stays as is.</div>
+    <div class="rn-b">${rec ? `<button type="button" class="btn ghost" data-rn="clear">Reset</button>` : ""}<span style="flex:1"></span><button type="button" class="btn" data-rn="x">Cancel</button><button type="submit" class="btn primary">Save</button></div>`;
   document.body.append(f);
   const w = Math.min(300, innerWidth - 24); f.style.width = w + "px";
   const h = f.offsetHeight; let x = Math.min(innerWidth - w - 12, Math.max(12, r.left)), y = r.bottom + 6; if (y + h > innerHeight - 12) y = Math.max(12, r.top - h - 6);
@@ -2796,21 +2827,61 @@ function openRename(p, anchor){
     closeRename(); for (const k of keys) await aliasRef(k).delete(); toast("Name removed.");
   });
   f.addEventListener("submit", async (e) => {
-    e.preventDefault(); const v = inp.value.trim(); const scope = (f.querySelector("input[name=s]:checked") || {}).value || "slot";
-    closeRename(); if (!v) return;
+    e.preventDefault(); const v = inp.value.trim(); const as = f.querySelector("select[name=a]").value; const scope = (f.querySelector("input[name=s]:checked") || {}).value || "slot";
+    closeRename(); if (!v && !as) return;
     const key = keyFor(scope);
-    await aliasRef(key).set({key, title:v.slice(0, 120), cal:p.calId, at:Date.now()});
-    toast(`Shows as "${v}" ${scope === "ev" ? "for this one" : scope === "base" ? "every time it repeats" : "every " + wd + " at " + tm}.`);
+    await aliasRef(key).set({key, title:v.slice(0, 120), calAs:as || null, cal:p.calId, at:Date.now()});
+    const asName = as && (S.calMap.get(as) || {}).name;
+    toast(`${v ? `Shows as "${v}"` : "Updated"}${asName ? ` on ${asName}` : ""} ${scope === "ev" ? "for this one" : scope === "base" ? "every time it repeats" : "every " + wd + " at " + tm}.`);
   });
   f.addEventListener("keydown", (e) => { if (e.key === "Escape"){ e.preventDefault(); closeRename(); } });
 }
 document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".rn-pop")) closeRename(); }, true);
 document.addEventListener("click", (e) => {
   if (drag || evDrag || Date.now() - lastDragAt < 400) return;
-  const el = e.target.closest(".ev:not(.movable)"); if (!el) return;
-  const p = allEvents().find(x => x.id === el.dataset.ev && x.calId === el.dataset.cal); if (!p || p.cal.writable) return;
-  e.stopPropagation(); openRename(p, el);
+  const el = e.target.closest(".ev"); if (!el || e.target.closest("[data-rs]")) return;
+  const p = allEvents().find(x => x.id === el.dataset.ev && x.calId === el.dataset.cal); if (!p) return;
+  e.stopPropagation(); if (p.cal.writable && !p.origCal) openEvSheet(p, el); else openRename(p, el);
 }, true);
+
+/* ---------- tap an editable event: change which calendar it's on (moves it in Google) ---------- */
+async function changeEventCal(ev, toName){
+  const to = calByName(toName); if (!to || !to.writable) throw new Error(`Can't write to ${toName}.`);
+  if (to.id === ev.calId) return;
+  const from = ev.cal; let newId = ev.id;
+  try {
+    const r = await S.mcp.callTool(GC, "move_event", {calendarId:ev.calId, eventId:ev.id, destination:to.id});
+    newId = (r.payload && (r.payload.id || r.payload.event?.id)) || ev.id;
+  } catch {
+    // no move on this connection: copy to the new calendar, then remove the original
+    const r = await S.mcp.callTool(GC, "create_event", {calendarId:to.id, summary:ev.title, startTime:localISO(ev.start), endTime:localISO(ev.end), location:ev.location || undefined, description:ev.desc || undefined, notificationLevel:"NONE"});
+    newId = r.payload?.id || r.payload?.event?.id || null;
+    await S.mcp.callTool(GC, "delete_event", {calendarId:ev.calId, eventId:ev.id, notificationLevel:"NONE"});
+  }
+  const t = todoForEvent(ev); if (t) await todoRef(t.id).update({calId:to.id, cal:to.name, eventId:newId || t.eventId});
+  await afterWrite();
+  pushUndo(`Moved "${ev.title}" to ${to.name}`, async () => { await changeEventCal({...ev, id:newId || ev.id, calId:to.id, cal:to}, from.name); });
+  toast(`Moved "${ev.title.replace(/^✓\s*/, "")}" to ${to.name}.`, true);
+}
+function openEvSheet(p, anchor){
+  closeRename();
+  const r = anchor.getBoundingClientRect();
+  const f = document.createElement("form"); f.className = "rn-pop";
+  const cals = writableCals();
+  f.innerHTML = `<div class="rn-h">${esc(p.title.replace(/^✓\s*/, ""))}</div>
+    <div class="rn-note" style="margin-top:-4px">${esc(p.start.toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"}))} · ${fmtTime(p.start)}–${fmtTime(p.end)}${p.location ? " · " + esc(p.location) : ""}</div>
+    <label class="rn-row">Calendar<select name="c">${cals.map(c => `<option ${c.id === p.calId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
+    ${p.attendees > 1 ? `<div class="rn-note">Has guests, so moving it is best done in Google Calendar.</div>` : ""}
+    <div class="rn-b">${p.link ? `<a class="btn ghost" href="${esc(p.link)}" target="_blank" rel="noopener">Open in Google</a>` : ""}<span style="flex:1"></span><button type="button" class="btn" data-rn="x">Done</button></div>`;
+  document.body.append(f);
+  const w = Math.min(300, innerWidth - 24); f.style.width = w + "px";
+  const h = f.offsetHeight; const x = Math.min(innerWidth - w - 12, Math.max(12, r.left)); let y = r.bottom + 6; if (y + h > innerHeight - 12) y = Math.max(12, r.top - h - 6);
+  f.style.left = x + "px"; f.style.top = y + "px";
+  const sel = f.querySelector("select"); if (p.attendees > 1) sel.disabled = true;
+  sel.addEventListener("change", () => { const v = sel.value; closeRename(); act("ev" + p.id, () => changeEventCal(p, v)); });
+  f.addEventListener("click", (e) => { if (e.target.closest("[data-rn=x]")) closeRename(); });
+  f.addEventListener("submit", (e) => { e.preventDefault(); closeRename(); });
+}
 
 async function resizeEvent(ev, endDate){
   if (!ev.cal.writable) throw new Error(`${ev.cal.name} is read-only here.`);
@@ -3086,6 +3157,9 @@ async function gcall(tool, i = {}){
     if (i.endTime) b.end = {dateTime:toRFC(i.endTime), timeZone:TZ};
     return gfetch(`${CAL}/calendars/${enc(i.calendarId || "primary")}/events/${enc(i.eventId)}?sendUpdates=none`, {method:"PATCH", body:JSON.stringify(b)});
   }
+  if (tool === "move_event"){
+    return gfetch(`${CAL}/calendars/${enc(i.calendarId)}/events/${enc(i.eventId)}/move?destination=${enc(i.destination)}&sendUpdates=none`, {method:"POST"});
+  }
   if (tool === "delete_event"){
     await gfetch(`${CAL}/calendars/${enc(i.calendarId || "primary")}/events/${enc(i.eventId)}?sendUpdates=none`, {method:"DELETE"});
     return {deleted:true};
@@ -3256,7 +3330,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-44";
+const APP_VERSION = "2026.10.20-46";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
