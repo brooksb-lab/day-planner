@@ -703,6 +703,12 @@ body.ios.ios-more:not(.theme-day) #tabs .tab[aria-selected="true"]{font-weight:5
 #iosNav .r .ios-more-btn[aria-current="page"]{background:var(--fill)}
 body.ios .spot-in{width:100%}
 body.ios .toast{top:calc(10px + env(safe-area-inset-top,0px));left:12px;right:12px}
+/* iPhone: the app fills the whole screen, under the status bar and down to the home indicator */
+html:has(body.ios){padding:0!important;background:var(--win)}
+body.ios .window,body.ios:not(.theme-day) .window{position:fixed;top:0;left:0;right:0;margin:0;border-radius:0!important;box-shadow:none!important;height:var(--winH,100vh)}
+body.ios #iosNav{padding-top:calc(env(safe-area-inset-top,0px) + 2px)}
+body.ios #iosTabs{padding-bottom:var(--tabPadB,max(8px,env(safe-area-inset-bottom,0px)))}
+body.ios .main > .head:first-child{display:none}
 @media (prefers-color-scheme:dark){#iosSeg{background:rgba(118,118,128,.24)} #iosSeg button[aria-pressed="true"]{background:#636366}}
 
 /* icon controls */
@@ -1864,10 +1870,12 @@ function shellFit(){
   // iOS Home Screen apps can stop the page short of the screen bottom; then the tab bar needs no extra safe-area padding
   let gap = 0;
   try { const sa = navigator.standalone || matchMedia("(display-mode: standalone)").matches; if (sa && innerHeight < innerWidth === false) gap = Math.max(0, Math.max(screen.width, screen.height) - innerHeight); } catch {}
-  document.documentElement.style.setProperty("--tabPadB", gap > 20 ? "4px" : "max(6px, env(safe-area-inset-bottom,0px))");
+  document.documentElement.style.setProperty("--tabPadB", "max(8px, calc(env(safe-area-inset-bottom,0px) - 10px))");
   const top = w.getBoundingClientRect().top + (window.scrollY || 0);
   w.style.height = "";
-  document.documentElement.style.setProperty("--winH", Math.max(320, Math.floor(innerHeight - top - (ios ? 0 : 14))) + "px");
+  // On iPhone the window is fixed to the screen; Home Screen apps can under-report innerHeight, so use the full screen height there
+  const fullH = gap > 0 ? Math.max(innerHeight, Math.max(screen.width, screen.height)) : innerHeight;
+  document.documentElement.style.setProperty("--winH", Math.max(320, Math.floor(ios ? fullH : innerHeight - top - 14)) + "px");
   window.scrollTo(0, 0);
 }
 IOS_MQ.addEventListener ? IOS_MQ.addEventListener("change", () => { shellFit(); applySide(); schedule(); }) : null;
@@ -3346,7 +3354,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-48";
+const APP_VERSION = "2026.10.20-49";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
