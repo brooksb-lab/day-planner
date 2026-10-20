@@ -1070,7 +1070,7 @@ function applyCfg(){
   document.body.classList.toggle("no-mark", !c.showMark);
   const mt = document.getElementById("markTog"); if (mt) mt.checked = !!c.showMark;
   const tzs = document.getElementById("tz2sel"); if (tzs && document.activeElement !== tzs) tzs.value = c.tz2 || "";
-  for (const cal of S.calendars) cal.color = c.calColors[cal.name] || `var(--c-${cal.kind})`;
+  for (const cal of S.calendars) cal.color = c.calColors[cal.name] || cal.gColor || `var(--c-${cal.kind})`;
 }
 const cfgRef = () => S.db.collection("settings").doc("main");
 async function saveCfg(patch){
@@ -1085,8 +1085,10 @@ async function saveCfg(patch){
 function decorate(c){
   const kind = calKind(c);
   const nm = kind === "personal" ? "Personal" : kind === "hol" ? "Holidays" : (kind === "work" && /@/.test(c.summary || "")) ? "Work" : (c.summary || c.id);
-  return {id:c.id, name:nm, kind, description:c.description||"",
-    color:`var(--c-${kind})`, writable: c.accessRole ? (c.accessRole === "owner" || c.accessRole === "writer") : (kind !== "hol" && kind !== "work")};
+  // use the color set for the calendar in Google when it comes through
+  const g = /^#[0-9a-f]{6}$/i.test(c.backgroundColor || "") ? c.backgroundColor : "";
+  return {id:c.id, name:nm, kind, description:c.description||"", gColor:g,
+    color:g || `var(--c-${kind})`, writable: c.accessRole ? (c.accessRole === "owner" || c.accessRole === "writer") : (kind !== "hol" && kind !== "work")};
 }
 const writableCals = () => S.calendars.filter(c => c.writable);
 const calByName = (name) => {
@@ -3304,7 +3306,7 @@ const toRFC = (local) => new Date(local).toISOString();
 async function gcall(tool, i = {}){
   if (tool === "list_calendars"){
     const j = await gfetch(`${CAL}/users/me/calendarList?maxResults=250`);
-    return {calendars:(j.items || []).filter(c => !c.deleted && !c.hidden).map(c => ({id:c.id, summary:c.summaryOverride || c.summary, description:c.description || "", accessRole:c.accessRole, primary:!!c.primary}))};
+    return {calendars:(j.items || []).filter(c => !c.deleted && !c.hidden).map(c => ({id:c.id, summary:c.summaryOverride || c.summary, description:c.description || "", accessRole:c.accessRole, primary:!!c.primary, backgroundColor:c.backgroundColor || ""}))};
   }
   if (tool === "list_events"){
     const now = new Date();
@@ -3504,7 +3506,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-51";
+const APP_VERSION = "2026.10.20-52";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
