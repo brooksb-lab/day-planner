@@ -568,6 +568,16 @@ body.theme-day.no-mark .tab{font-size:15px;font-weight:600}
 .tl-new select{align-self:flex-start;border:0;background:rgba(232,234,237,.08);color:var(--fg-2);font-size:11px;border-radius:6px;padding:1px 4px}
 @media (max-width:560px){.tl-new input{font-size:16px}}
 .wk .tl-new input{font-size:12px}
+.ev.ro{cursor:pointer}
+.ev.aliased b::after{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.35;margin-left:6px;vertical-align:middle}
+.rn-pop{position:fixed;z-index:50;display:flex;flex-direction:column;gap:9px;padding:14px;border-radius:14px;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);box-shadow:var(--shadow);font-size:13px;animation:spotPop .32s var(--spring,ease)}
+.rn-h{font-weight:600}
+.rn-pop input[name=t]{border:0;border-radius:9px;background:var(--fill-2,var(--win-2));padding:8px 11px;font:inherit;font-size:14px;color:var(--fg)}
+.rn-pop label{display:flex;align-items:center;gap:8px;color:var(--fg)}
+.rn-pop input[type=radio]{accent-color:var(--accent);margin:0}
+.rn-note{color:var(--fg-2);font-size:12px}
+.rn-b{display:flex;gap:6px;align-items:center}
+@media (max-width:560px){.rn-pop input[name=t]{font-size:16px}}
 .qhint{font:11.5px var(--mono);color:var(--accent);margin:6px 2px 0;min-height:0}
 .qhint:empty{display:none}
 .tog{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg-2);margin-top:10px;cursor:pointer}
@@ -1042,6 +1052,7 @@ function allEvents(){
     for (const e of rec.list) if (e.status !== "cancelled"){
       const p = parseEvent(e, cal); const o = S.optim.get(p.id);
       if (o){ if (Date.now() - o.at > 30000 || (+p.start === +o.start && +p.end === +o.end)) S.optim.delete(p.id); else { p.start = o.start; p.end = o.end; } }
+      if (!cal.writable && S.aliases && S.aliases.size){ const a = aliasFor(p); if (a){ p.origTitle = p.title; p.title = a; p.aliased = true; } }
       out.push(p);
     }
   }
@@ -1126,6 +1137,7 @@ function startDb(){
     S.todos = snap.docs.map(d => ({id:d.id, ...d.data()}));
     S.todosReady = true; reconcile(); schedule(); setTimeout(() => rollRecurring().catch(() => {}), 400);
   }, (e) => { S.dbError = e && e.code || "error"; schedule(); });
+  startAliases();
 }
 const todoRef = (id) => S.db.collection("todos").doc(id);
 async function addTodo({title, notes="", pri=2, cal, est=30, extra={}}){
@@ -1545,7 +1557,7 @@ function timeline(evs, day, opt = {}){
     const mv = it.e.cal.writable && it.e.attendees <= 1;
     const hpx = Math.max(18,(it.en-it.s)/60*PX-2);
     const short = hpx < 36, lines = Math.max(1, Math.floor((hpx - 22) / 15));
-    return `<div class="ev${t?" ev-todo":""}${done?" done":""}${mv?" movable":""}${short?" short":""}" data-ev="${esc(it.e.id)}" data-cal="${esc(it.e.calId)}" title="${esc(it.e.title)}" style="--evc:${it.e.cal.color};--lines:${lines};top:${(it.s-H0*60)/60*PX+1}px;height:${hpx}px;left:calc(${it.lane*w}% + 4px);width:calc(${w}% - 8px);border-left-color:${it.e.cal.color};background:color-mix(in srgb, ${it.e.cal.color} 16%, var(--win))">
+    return `<div class="ev${t?" ev-todo":""}${done?" done":""}${mv?" movable":""}${it.e.aliased?" aliased":""}${!it.e.cal.writable?" ro":""}${short?" short":""}" data-ev="${esc(it.e.id)}" data-cal="${esc(it.e.calId)}" title="${esc(it.e.title)}" style="--evc:${it.e.cal.color};--lines:${lines};top:${(it.s-H0*60)/60*PX+1}px;height:${hpx}px;left:calc(${it.lane*w}% + 4px);width:calc(${w}% - 8px);border-left-color:${it.e.cal.color};background:color-mix(in srgb, ${it.e.cal.color} 16%, var(--win))">
       <b>${esc(it.e.title.replace(/^✓\s*/,""))}</b><span>${fmtTime(it.e.start)}–${fmtTime(it.e.end)}</span>${leaveFor(it.e) ? `<em class="ev-leave">${leaveTxt(it.e)}</em>` : ""}${mv?'<i class="rs" data-rs></i>':""}</div>`;
   }).join("");
   let now = "";
@@ -2743,6 +2755,63 @@ document.addEventListener("click", (e) => {
 });
 document.addEventListener("pointerdown", (e) => { const f = document.querySelector(".tl-new"); if (f && !f.contains(e.target) && !e.target.closest(".tl")) closeComposer(); }, true);
 
+/* ---------- your own names for read-only events (Work "Busy" blocks etc). Never written to Google. ---------- */
+S.aliases = new Map();
+const aliasRef = (k) => S.db.collection("aliases").doc(k.replace(/[^\w|:-]/g, "_").slice(0, 140));
+const evBase = (p) => String(p.id).split("_")[0];
+const evSlot = (p) => `slot|${p.calId}|${p.start.getDay()}|${pad(p.start.getHours())}:${pad(p.start.getMinutes())}|${Math.round((p.end - p.start) / 60000)}`;
+function aliasFor(p){
+  const g = (k) => { const a = S.aliases.get(k); return a && a.title; };
+  return g("ev|" + p.id) || (evBase(p) !== p.id ? g("base|" + p.calId + "|" + evBase(p)) : null) || g(evSlot(p));
+}
+function startAliases(){
+  if (!S.db) return;
+  S.db.collection("aliases").onSnapshot((snap) => { S.aliases = new Map(snap.docs.map(d => { const x = d.data(); return [x.key, x]; })); schedule(); }, () => {});
+}
+function closeRename(){ document.querySelectorAll(".rn-pop").forEach(x => x.remove()); }
+function openRename(p, anchor){
+  closeRename();
+  const r = anchor.getBoundingClientRect(), cur = aliasFor(p) || "";
+  const wd = p.start.toLocaleDateString([], {weekday:"long"}), tm = fmtTime(p.start);
+  const recurring = evBase(p) !== p.id;
+  const f = document.createElement("form"); f.className = "rn-pop";
+  f.innerHTML = `<div class="rn-h">Name this for you</div>
+    <input name="t" value="${esc(cur)}" placeholder="${esc(p.origTitle || p.title)}" autocomplete="off">
+    <label><input type="radio" name="s" value="slot" ${recurring ? "" : "checked"}> Every ${esc(wd)} at ${esc(tm)}</label>
+    ${recurring ? `<label><input type="radio" name="s" value="base" checked> Every time this repeats</label>` : ""}
+    <label><input type="radio" name="s" value="ev"> Just this one</label>
+    <div class="rn-note">Only changes how it shows here. ${esc(p.cal.name)} in Google stays as is.</div>
+    <div class="rn-b">${cur ? `<button type="button" class="btn ghost" data-rn="clear">Remove name</button>` : ""}<span style="flex:1"></span><button type="button" class="btn" data-rn="x">Cancel</button><button type="submit" class="btn primary">Save</button></div>`;
+  document.body.append(f);
+  const w = Math.min(300, innerWidth - 24); f.style.width = w + "px";
+  const h = f.offsetHeight; let x = Math.min(innerWidth - w - 12, Math.max(12, r.left)), y = r.bottom + 6; if (y + h > innerHeight - 12) y = Math.max(12, r.top - h - 6);
+  f.style.left = x + "px"; f.style.top = y + "px";
+  const inp = f.querySelector("input[name=t]"); setTimeout(() => { inp.focus(); inp.select(); }, 0);
+  const keyFor = (scope) => scope === "ev" ? "ev|" + p.id : scope === "base" ? "base|" + p.calId + "|" + evBase(p) : evSlot(p);
+  f.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-rn]"); if (!b) return;
+    if (b.dataset.rn === "x"){ closeRename(); return; }
+    // remove whichever names apply to this event
+    const keys = ["ev|" + p.id, "base|" + p.calId + "|" + evBase(p), evSlot(p)].filter(k => S.aliases.has(k));
+    closeRename(); for (const k of keys) await aliasRef(k).delete(); toast("Name removed.");
+  });
+  f.addEventListener("submit", async (e) => {
+    e.preventDefault(); const v = inp.value.trim(); const scope = (f.querySelector("input[name=s]:checked") || {}).value || "slot";
+    closeRename(); if (!v) return;
+    const key = keyFor(scope);
+    await aliasRef(key).set({key, title:v.slice(0, 120), cal:p.calId, at:Date.now()});
+    toast(`Shows as "${v}" ${scope === "ev" ? "for this one" : scope === "base" ? "every time it repeats" : "every " + wd + " at " + tm}.`);
+  });
+  f.addEventListener("keydown", (e) => { if (e.key === "Escape"){ e.preventDefault(); closeRename(); } });
+}
+document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".rn-pop")) closeRename(); }, true);
+document.addEventListener("click", (e) => {
+  if (drag || evDrag || Date.now() - lastDragAt < 400) return;
+  const el = e.target.closest(".ev:not(.movable)"); if (!el) return;
+  const p = allEvents().find(x => x.id === el.dataset.ev && x.calId === el.dataset.cal); if (!p || p.cal.writable) return;
+  e.stopPropagation(); openRename(p, el);
+}, true);
+
 async function resizeEvent(ev, endDate){
   if (!ev.cal.writable) throw new Error(`${ev.cal.name} is read-only here.`);
   if (ev.attendees > 1) throw new Error("This event has guests. Change it in Google Calendar so they're notified properly.");
@@ -3187,7 +3256,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-43";
+const APP_VERSION = "2026.10.20-44";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
