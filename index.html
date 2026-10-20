@@ -690,16 +690,16 @@ body.ios #iosTabs{display:flex}
 #iosTabs button svg{width:25px;height:25px}
 #iosTabs button[aria-current="page"]{color:var(--accent)}
 /* iPhone bottom row: desktop segmented tabs with the sliding pill */
-body.ios #iosTabs{align-items:center;padding:8px 12px var(--tabPadB,env(safe-area-inset-bottom,0px))}
+body.ios #iosTabs{align-items:center;padding:6px 12px var(--tabPadB,env(safe-area-inset-bottom,0px));background:var(--win);border-top:0;-webkit-backdrop-filter:none;backdrop-filter:none}
 #iosTabSlot{flex:1;min-width:0;display:flex}
 body.ios:not(.theme-day) #tabs{flex:1;width:auto;margin:0;order:0;overflow-x:auto;scrollbar-width:none;border-radius:10px;padding:2px}
 body.ios #tabs::-webkit-scrollbar{display:none}
-body.ios:not(.theme-day) #tabs .tab{flex:1 1 auto;font-size:13px;letter-spacing:-.01em;padding:7px 6px;border-radius:8px;min-height:0;white-space:nowrap;color:var(--fg-2)}
-body.ios:not(.theme-day) #tabs .tab[aria-selected="true"]{color:var(--fg)}
+body.ios:not(.theme-day) #tabs .tab{flex:1 1 auto;font-size:13px;letter-spacing:-.01em;padding:7px 6px;border-radius:8px;min-height:0;white-space:nowrap;color:var(--fg);display:inline-flex;flex-direction:row;gap:0;align-items:center;justify-content:center}
 body.ios:not(.theme-day) #tabs .tab .now{margin-left:3px}
+body.ios:not(.theme-day) #tabs .tab[aria-selected="true"]{font-weight:600}
 body.ios:not(.theme-day) #tabs .tab-pill{border-radius:8px}
 body.ios.ios-more #tabs .tab-pill{opacity:0}
-body.ios.ios-more:not(.theme-day) #tabs .tab[aria-selected="true"]{font-weight:500;color:var(--fg-2)}
+body.ios.ios-more:not(.theme-day) #tabs .tab[aria-selected="true"]{font-weight:500}
 #iosNav .r .ios-more-btn[aria-current="page"]{background:var(--fill)}
 body.ios .spot-in{width:100%}
 body.ios .toast{top:calc(10px + env(safe-area-inset-top,0px));left:12px;right:12px}
@@ -3346,7 +3346,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-47";
+const APP_VERSION = "2026.10.20-48";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);

@@ -1,5 +1,5 @@
 // App shell cache. Network first so updates land; cache is the offline fallback.
-const CACHE = "day-v47";
+const CACHE = "day-v48";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-180.png", "./icons/sun.svg", "./icons/moon.svg"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", (e) => {
