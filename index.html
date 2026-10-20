@@ -596,6 +596,73 @@ body.theme-day.no-mark .tab{font-size:15px;font-weight:600}
   body.theme-day.pane-mode .main{padding-bottom:6px}
 }
 @media (max-width:380px){body.theme-day #dmark{width:46px!important;height:46px!important} body.theme-day .dh-right .mbtn.icon{width:30px}}
+/* ===== app shell: the window fills the screen; main and sidebar scroll on their own ===== */
+html,body{height:100%}
+body.shell{overflow:hidden;padding-bottom:0!important}
+body.shell .window{display:flex;flex-direction:column;height:var(--winH,80vh);margin-bottom:0}
+body.shell .content{flex:1;min-height:0!important}
+body.shell .main{overflow:auto;min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+body.shell.pane-mode .main{overflow:hidden}
+body.shell .side{overflow:auto;min-height:0;overscroll-behavior:contain}
+/* sidebar toggle */
+#sidetog svg{width:17px;height:17px}
+body.side-off .content{grid-template-columns:minmax(0,1fr)!important}
+body.side-off .side{display:none!important}
+@media (max-width:860px){
+  body.shell .content{grid-template-columns:minmax(0,1fr)!important;position:relative}
+  body.shell .side{display:none;position:absolute;top:0;right:0;bottom:0;width:min(320px,86%);z-index:12;border-left:1px solid var(--line)!important;border-top:0!important;box-shadow:-18px 0 40px -20px rgba(0,0,0,.45)}
+  body.shell.side-open .side{display:block!important}
+}
+/* menubar: real status instead of placeholder menus */
+.menubar .item.live{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;max-width:34vw;overflow:hidden;text-overflow:ellipsis}
+.menubar .item.live:empty{display:none}
+.menubar .item.live b{font-weight:600;color:var(--fg)}
+.menubar .item.live .sbar{width:44px}
+.lookhide,.side .section:has(> .lookseg){display:none!important}
+
+/* ===== iPhone: iOS-style navigation bar, segmented control and tab bar ===== */
+#iosNav,#iosSeg,#iosTabs{display:none}
+body.ios{padding:0!important;background:var(--win)}
+body.ios::before{display:none}
+body.ios .menubar,body.ios .titlebar{display:none!important}
+body.ios .window{margin:0;max-width:none;border:0;border-radius:0;box-shadow:none;background:var(--win);height:var(--winH,100vh)}
+body.ios .content{display:block!important;position:relative}
+body.ios .main{height:100%;padding:8px 16px 18px}
+body.ios.pane-mode .main{display:flex;flex-direction:column}
+body.ios .side{display:none!important}
+body.ios.ios-more .main{display:none!important}
+body.ios.ios-more .side{display:block!important;position:static;width:auto;height:100%;overflow:auto;border:0!important;box-shadow:none;background:var(--win);padding:6px 16px 24px}
+body.ios .main > .head:first-child h2, body.ios .pane-head h2{display:none}
+body.ios .pane-head{padding-top:2px}
+body.ios .pane-head > div > .sub{display:none}
+body.ios .pane-week{--colw:118px}
+.ios-add{display:none}
+body.ios .ios-add{display:flex;margin-top:16px}
+#iosNav{flex:none;align-items:flex-end;justify-content:space-between;gap:10px;padding:6px 16px 6px;background:var(--win)}
+body.ios #iosNav{display:flex}
+#iosNav .t{min-width:0}
+#iosNav h1{margin:0;font:700 30px/1.08 -apple-system,"SF Pro Display",system-ui,sans-serif;letter-spacing:-.02em;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#iosNav .s{font-size:13px;color:var(--fg-2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#iosNav .r{display:flex;align-items:center;gap:2px;margin-bottom:4px;flex:none}
+#iosNav .r .mbtn.icon{width:36px;height:36px;min-height:36px;color:var(--accent);border-radius:18px}
+#iosNav .r .mbtn.icon:disabled{color:var(--fg-3)}
+#iosNav .r .mbtn.icon svg{width:21px;height:21px}
+#iosNav .r .undogrp{display:flex}
+#iosNav .r .hidetog{color:var(--accent);width:36px;height:36px;justify-content:center}
+#iosNav .r .sync{display:none}
+#iosSeg{flex:none;margin:2px 16px 8px;padding:2px;border-radius:9px;background:rgba(118,118,128,.12);gap:0}
+body.ios.ios-today #iosSeg{display:flex}
+#iosSeg button{flex:1;border:0;background:transparent;color:var(--fg);font:500 13px -apple-system,system-ui,sans-serif;padding:6px 0;border-radius:7px}
+#iosSeg button[aria-pressed="true"]{background:var(--win);font-weight:600;box-shadow:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04)}
+#iosTabs{flex:none;justify-content:space-around;padding:6px 4px var(--tabPadB,env(safe-area-inset-bottom,0px));background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--line)}
+body.ios #iosTabs{display:flex}
+#iosTabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:transparent;color:var(--fg-3);font:500 10px -apple-system,system-ui,sans-serif;padding:2px 0 3px}
+#iosTabs button svg{width:25px;height:25px}
+#iosTabs button[aria-current="page"]{color:var(--accent)}
+body.ios .spot-in{width:100%}
+body.ios .toast{top:calc(10px + env(safe-area-inset-top,0px));left:12px;right:12px}
+@media (prefers-color-scheme:dark){#iosSeg{background:rgba(118,118,128,.24)} #iosSeg button[aria-pressed="true"]{background:#636366}}
+
 /* icon controls */
 .mbtn.icon,body.theme-day .mbtn.icon{display:inline-grid;place-items:center;width:34px;height:34px;min-height:34px;padding:0;border:0;background:transparent;box-shadow:none;color:var(--fg-2);border-radius:8px}
 .mbtn.icon:hover,body.theme-day .mbtn.icon:hover{color:var(--fg);background:var(--line-2)}
@@ -619,7 +686,7 @@ body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
 <div class="menubar">
   <span class="brand">BrooksOS</span>
   <span class="app">Planner</span>
-  <span class="item">File</span><span class="item">View</span><span class="item">Window</span>
+  <span class="item live" id="mbWx"></span><span class="item live" id="mbNext"></span><span class="item live" id="mbStudio"></span>
   <div class="right">
     <span class="sync" id="sync"><span class="dot" id="syncdot"></span><span id="synctxt">Connecting</span></span>
     <span class="undogrp" id="undogrp"><button class="mbtn icon" id="undobtn" type="button" data-act="undo" disabled title="Undo (⌘Z)" aria-label="Undo"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 5 4 8.5 7.5 12"/><path d="M4.5 8.5h7.25a4.25 4.25 0 0 1 0 8.5H9"/></svg></button><button class="mbtn icon" id="redobtn" type="button" data-act="redo" disabled title="Redo (⇧⌘Z)" aria-label="Redo"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 5 16 8.5 12.5 12"/><path d="M15.5 8.5H8.25a4.25 4.25 0 0 0 0 8.5H11"/></svg></button></span>
@@ -645,6 +712,7 @@ body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
     <span class="wtitle" id="wtitle">Planner</span>
     <div class="tabs" role="tablist" id="tabs"></div>
     <label class="hidetog eyetog" id="hidelabel" title="Hide completed"><input type="checkbox" id="hidedone" aria-label="Hide completed"><svg class="eye-open" viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.8 10S4.8 4.5 10 4.5 18.2 10 18.2 10 15.2 15.5 10 15.5 1.8 10 1.8 10Z"/><circle cx="10" cy="10" r="2.6"/></svg><svg class="eye-closed" viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.2c1.7 2.6 4.3 4.3 7.5 4.3s5.8-1.7 7.5-4.3"/><path d="M5.2 11.3 3.8 13.4M10 12.5v2.4M14.8 11.3l1.4 2.1"/></svg></label>
+    <button class="mbtn icon" id="sidetog" type="button" title="Hide sidebar" aria-label="Toggle sidebar" aria-pressed="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="2.8" y="3.8" width="14.4" height="12.4" rx="2.4"/><path d="M12.2 3.8v12.4"/></svg></button>
   </div>
   <div class="content">
     <div class="main" id="main"></div>
@@ -670,9 +738,9 @@ body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
         <div id="appver" style="margin-top:10px;font:11px var(--mono);color:var(--fg-3)"></div>
       </div>
       <div class="section">
-        <div class="label">Look</div>
-        <div class="lookseg" role="group" aria-label="Look"><button type="button" data-theme-set="day">Day</button><button type="button" data-theme-set="brooksos">BrooksOS</button></div>
-        <label class="tog"><input type="checkbox" id="markTog"> Sun and moon icon</label>
+        <div class="label lookhide">Look</div>
+        <div class="lookseg lookhide" role="group" aria-label="Look"><button type="button" data-theme-set="day">Day</button><button type="button" data-theme-set="brooksos">BrooksOS</button></div>
+        <label class="tog lookhide"><input type="checkbox" id="markTog"> Sun and moon icon</label>
       </div>
       <div class="section">
         <div class="label">Second time zone</div>
@@ -1420,7 +1488,7 @@ function viewBacklog(){
   const sched = S.todos.filter(t => (t.status === "scheduled" || (t.status === "done" && t.eventId)) && showT(t)).sort((a,b) => String(a.start).localeCompare(String(b.start)));
   const nDone = S.todos.filter(t => t.status === "done").length;
   return head("Backlog", `${openTodos().length} open · ${S.todos.filter(t => t.status === "scheduled").length} scheduled · ${nDone} done${S.hideDone && nDone ? " (hidden)" : ""}`) +
-    topSection() + `<div class="section"><div class="label">Backlog</div>${todoList(listTodos(), "Nothing waiting. Add a to-do on the right.", "backlog")}</div>
+    topSection() + `<div class="section"><div class="label">Backlog</div>${todoList(listTodos(), "Nothing waiting.", "backlog")}</div><form class="quick drawer-add ios-add" data-quick><input id="drawerin" placeholder="Add a to-do · trims thu 2pm 1h" autocomplete="off"><button class="btn" type="submit">Add</button></form>
      <div class="section"><div class="label">Scheduled</div>${todoList(sched, "Nothing scheduled from the backlog.")}</div>`;
 }
 function renderSide(){
@@ -1446,11 +1514,12 @@ function placeChrome(){
   const day = document.body.classList.contains("theme-day");
   const tabs = $("tabs"), hide = document.querySelector(".hidetog"), sync = $("sync"), undo = $("undogrp"), now = $("syncnow"), stog = $("spottog");
   if (!chromeHome.saved){ chromeHome.saved = true; chromeHome.titlebar = document.querySelector(".titlebar"); chromeHome.right = document.querySelector(".menubar .right"); chromeHome.clock = $("clock"); }
+  if (document.body.classList.contains("ios")){ buildIos(); $("iosRight").append(sync, undo, now, stog, hide); return; }
   if (day){ $("dTabsSlot").append(tabs); $("dRightSlot").append(sync, hide, undo, now, stog); }
-  else { chromeHome.titlebar.append(tabs, hide); chromeHome.right.insertBefore(sync, chromeHome.clock); chromeHome.right.insertBefore(undo, chromeHome.clock); chromeHome.right.insertBefore(now, chromeHome.clock); chromeHome.right.insertBefore(stog, chromeHome.clock); }
+  else { chromeHome.titlebar.insertBefore(tabs, $("sidetog")); chromeHome.titlebar.insertBefore(hide, $("sidetog")); chromeHome.right.insertBefore(sync, chromeHome.clock); chromeHome.right.insertBefore(undo, chromeHome.clock); chromeHome.right.insertBefore(now, chromeHome.clock); chromeHome.right.insertBefore(stog, chromeHome.clock); }
 }
 function applyTheme(name){
-  const day = name !== "brooksos";
+  const day = false; // BrooksOS is the only look now
   if (document.body.classList.contains("theme-day") !== day){ document.body.classList.toggle("theme-day", day); placeChrome(); }
   document.querySelectorAll("[data-theme-set]").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.themeSet === "day") === day)));
 }
@@ -1489,6 +1558,7 @@ function sizeMark(){
 if (window.ResizeObserver) new ResizeObserver(sizeMark).observe($("dmain"));
 addEventListener("resize", sizeMark);
 function renderDayHeader(){
+  renderIos(); updateMenubar();
   if (!document.body.classList.contains("theme-day")) return;
   const today = startOfDay(new Date());
   const tab = TABS.find(t => t.id === S.tab);
@@ -1501,6 +1571,96 @@ function renderDayHeader(){
   $("dmark").setAttribute("aria-label", isNight() ? "Day, night" : "Day");
   $("dWx").textContent = wxLine();
 }
+
+/* ---------- app shell, sidebar toggle, iOS layout ---------- */
+const IOS_MQ = matchMedia("(max-width:560px)");
+let sideOff = false; try { sideOff = localStorage.getItem("sideOff") === "1"; } catch {}
+function isNarrow(){ return innerWidth <= 860; }
+function applySide(){
+  document.body.classList.toggle("side-off", !isNarrow() && sideOff);
+  const b = $("sidetog"); if (b){ const shown = isNarrow() ? document.body.classList.contains("side-open") : !sideOff; b.setAttribute("aria-pressed", String(shown)); b.title = shown ? "Hide sidebar" : "Show sidebar"; }
+}
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#sidetog")){
+    if (isNarrow()) document.body.classList.toggle("side-open");
+    else { sideOff = !sideOff; try { localStorage.setItem("sideOff", sideOff ? "1" : "0"); } catch {} }
+    applySide(); shellFit(); return;
+  }
+  if (document.body.classList.contains("side-open") && !e.target.closest(".side")) { document.body.classList.remove("side-open"); applySide(); }
+});
+const TODAY_TABS = ["morning","day","evening"];
+function iosTab(){ return TODAY_TABS.includes(S.tab) ? "today" : S.tab; }
+const IOS_ICONS = {
+  today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>',
+  tomorrow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4M10 14.5h5M13 12l2.5 2.5L13 17"/></svg>',
+  week:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4M8.5 9.5V20M12 9.5V20M15.5 9.5V20"/></svg>',
+  backlog:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13.5l2.2-7.2A2 2 0 0 1 8.1 5h7.8a2 2 0 0 1 1.9 1.3l2.2 7.2V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 13.5h4.5l1.2 2h4.6l1.2-2H20"/></svg>',
+  more:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="18.5" cy="12" r="1.9"/></svg>'};
+function buildIos(){
+  if ($("iosNav")) return;
+  const w = document.querySelector(".window");
+  const nav = document.createElement("div"); nav.id = "iosNav"; nav.innerHTML = `<div class="t"><h1 id="iosTitle">Today</h1><div class="s" id="iosSub"></div></div><div class="r" id="iosRight"></div>`;
+  const seg = document.createElement("div"); seg.id = "iosSeg"; seg.setAttribute("role", "group");
+  seg.innerHTML = TODAY_TABS.map(t => `<button type="button" data-ios-seg="${t}">${TABS.find(x => x.id === t).label}</button>`).join("");
+  const bar = document.createElement("nav"); bar.id = "iosTabs";
+  bar.innerHTML = [["today","Today"],["tomorrow","Tomorrow"],["week","Week"],["backlog","Backlog"],["more","More"]].map(([k, l]) => `<button type="button" data-ios-tab="${k}">${IOS_ICONS[k]}<span>${l}</span></button>`).join("");
+  w.prepend(seg); w.prepend(nav); w.append(bar);
+}
+document.addEventListener("click", (e) => {
+  const sb = e.target.closest("[data-ios-seg]");
+  if (sb){ S.tab = sb.dataset.iosSeg; S.tabManual = Date.now(); schedule(); return; }
+  const tb = e.target.closest("[data-ios-tab]"); if (!tb) return;
+  const k = tb.dataset.iosTab;
+  document.body.classList.toggle("ios-more", k === "more");
+  if (k === "today"){ const a = timeTab(); S.tab = TODAY_TABS.includes(a) ? a : (TODAY_TABS.includes(S.tab) ? S.tab : "evening"); }
+  else if (k !== "more") S.tab = k;
+  S.tabManual = Date.now(); schedule();
+  const m = $("main"); if (m) m.scrollTop = 0;
+});
+function renderIos(){
+  if (!document.body.classList.contains("ios")) return;
+  const more = document.body.classList.contains("ios-more"), it = iosTab();
+  document.body.classList.toggle("ios-today", !more && it === "today");
+  document.querySelectorAll("[data-ios-tab]").forEach(b => b.setAttribute("aria-current", (more ? b.dataset.iosTab === "more" : b.dataset.iosTab === it) ? "page" : "false"));
+  document.querySelectorAll("[data-ios-seg]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.iosSeg === S.tab)));
+  const today = startOfDay(new Date());
+  let title = more ? "More" : it === "today" ? "Today" : TABS.find(t => t.id === S.tab).label, sub = "";
+  if (!more){
+    if (S.tab === "tomorrow") sub = fmtDay(addDays(today, 1));
+    else if (S.tab === "week"){ const st = addDays(today, S.weekOff*7); sub = `${st.toLocaleDateString([], {month:"short", day:"numeric"})} to ${addDays(st,6).toLocaleDateString([], {month:"short", day:"numeric"})}`; }
+    else if (S.tab === "backlog") sub = "";
+    else sub = fmtDay(today);
+    const wx = wxLine(); if (wx && S.tab !== "backlog") sub += (sub ? " · " : "") + wx;
+  }
+  $("iosTitle").textContent = title; $("iosSub").textContent = sub;
+}
+function updateMenubar(){
+  const set = (id, h) => { const el = $(id); if (el && el.innerHTML !== h) el.innerHTML = h; };
+  set("mbWx", wxLine() ? esc(wxLine()) : "");
+  const now = new Date(), next = allEvents().find(e => !e.allDay && e.start > now && sameDay(e.start, now));
+  const lv = next && leaveFor(next);
+  set("mbNext", next ? `Next <b>${esc(next.title.replace(/^✓\s*/, ""))}</b> ${fmtTime(next.start)}${lv ? ` · leave ${fmtTime(lv.leave)}` : ""}` : "");
+  const s = studioSummary();
+  set("mbStudio", s.goal || s.planWeek ? `Studio <b>${hrs(s.planWeek)}</b>${s.goal ? ` / ${hrs(s.goal)}` : ""}` : "");
+}
+function shellFit(){
+  const ios = IOS_MQ.matches;
+  if (document.body.classList.contains("ios") !== ios){ document.body.classList.toggle("ios", ios); if (!ios) document.body.classList.remove("ios-more"); placeChrome(); }
+  document.body.classList.add("shell");
+  const w = document.querySelector(".window"); if (!w) return;
+  // iOS Home Screen apps can stop the page short of the screen bottom; then the tab bar needs no extra safe-area padding
+  let gap = 0;
+  try { const sa = navigator.standalone || matchMedia("(display-mode: standalone)").matches; if (sa && innerHeight < innerWidth === false) gap = Math.max(0, Math.max(screen.width, screen.height) - innerHeight); } catch {}
+  document.documentElement.style.setProperty("--tabPadB", gap > 20 ? "4px" : "max(6px, env(safe-area-inset-bottom,0px))");
+  const top = w.getBoundingClientRect().top + (window.scrollY || 0);
+  w.style.height = "";
+  document.documentElement.style.setProperty("--winH", Math.max(320, Math.floor(innerHeight - top - (ios ? 0 : 14))) + "px");
+  window.scrollTo(0, 0);
+}
+IOS_MQ.addEventListener ? IOS_MQ.addEventListener("change", () => { shellFit(); applySide(); schedule(); }) : null;
+addEventListener("resize", () => { shellFit(); applySide(); });
+if (window.visualViewport) visualViewport.addEventListener("resize", shellFit);
+requestAnimationFrame(() => { shellFit(); applySide(); schedule(); });
 
 /* ---------- weather (Open-Meteo, no key) ---------- */
 const WX = {data:null, at:0, loading:false};
@@ -1628,7 +1788,8 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && document.body.classList.contains("spot-open")){ e.preventDefault(); closeSpot(); }
   else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k"){ e.preventDefault(); document.body.classList.contains("spot-open") ? closeSpot() : openSpot(); }
 });
-function fitPane(){
+function fitPane(){ return shellFit(); }
+function fitPaneOld(){
   const w = document.querySelector(".window");
   if (!document.body.classList.contains("pane-mode")){ w.style.height = ""; return; }
   window.scrollTo(0, 0);
@@ -2082,7 +2243,7 @@ function makeGhost(d, x, y){
   if (!scrollRAF) scrollRAF = requestAnimationFrame(autoScroll);
 }
 function scrollFrames(x, y){
-  const hosts = [...document.querySelectorAll(".pane-tl,.pane-list")].filter(h => h.offsetParent);
+  const hosts = [...document.querySelectorAll(".pane-tl,.pane-list"), ...document.querySelectorAll(".main,.side")].filter(h => h.offsetParent && h.scrollHeight > h.clientHeight + 2);
   for (const h of hosts){
     const r = h.getBoundingClientRect();
     if (x < r.left || x > r.right || y < r.top - 30 || y > r.bottom + 30) continue;
@@ -2838,7 +2999,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.19-39";
+const APP_VERSION = "2026.10.19-40";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
