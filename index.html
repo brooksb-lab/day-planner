@@ -990,7 +990,6 @@ body.ios .side .section:has(#sidebacklog){display:none}
       <div class="section">
         <div class="label">Connections</div>
         <div id="conn" style="display:flex;flex-direction:column;gap:10px;font-size:12.5px"></div>
-        <label class="tog ios-only"><input type="checkbox" id="fillTog"> Run to the bottom edge</label>
         <div id="appver" style="margin-top:10px;font:11px var(--mono);color:var(--fg-3)"></div>
       </div>
       <div class="section">
@@ -1965,12 +1964,9 @@ function shellFit(){
   // iOS Home Screen apps can stop the page short of the screen bottom; then the tab bar needs no extra safe-area padding
   let gap = 0;
   try { const sa = navigator.standalone || matchMedia("(display-mode: standalone)").matches; if (sa && innerHeight < innerWidth === false) gap = Math.max(0, Math.max(screen.width, screen.height) - innerHeight); } catch {}
-  // Home Screen apps often report a viewport one status-bar short of the screen; stretch down by that much so the tab bar sits at the bottom edge
-  let fill = true; try { fill = localStorage.getItem("iosFill") !== "0"; } catch {}
-  const safeTop = (() => { const pr = document.createElement("div"); pr.style.cssText = "position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr); const h = pr.offsetHeight; pr.remove(); return h; })();
-  const stretch = ios && gap > 20 && fill ? Math.min(gap, safeTop || gap) : 0;
-  document.body.classList.toggle("ios-stretch", stretch > 0);
-  document.documentElement.style.setProperty("--tabPadB", stretch || gap <= 20 ? "max(8px, calc(env(safe-area-inset-bottom,0px) - 12px))" : "6px");
+  // Home Screen apps can stop the page short of the screen bottom (that band can't be drawn in); keep the tab bar tight to the page bottom then
+  const stretch = 0;
+  document.documentElement.style.setProperty("--tabPadB", gap > 20 ? "4px" : "max(8px, calc(env(safe-area-inset-bottom,0px) - 12px))");
   const top = w.getBoundingClientRect().top + (window.scrollY || 0);
   w.style.height = "";
   // On iPhone the window is fixed to the screen; Home Screen apps can under-report innerHeight, so use the full screen height there
@@ -2054,7 +2050,6 @@ function fillTzSelect(){
   sel.addEventListener("change", () => { saveCfg({tz2: sel.value}).catch(() => { cfgRaw = {...cfgRaw, tz2: sel.value}; applyCfg(); schedule(); }); });
 }
 fillTzSelect();
-(() => { const f = $("fillTog"); if (!f) return; try { f.checked = localStorage.getItem("iosFill") !== "0"; } catch {} f.addEventListener("change", () => { try { localStorage.setItem("iosFill", f.checked ? "1" : "0"); } catch {} shellFit(); }); })();
 $("markTog").addEventListener("change", (e) => { const v = e.target.checked; saveCfg({showMark: v}).catch(() => { cfgRaw = {...cfgRaw, showMark: v}; applyCfg(); schedule(); }); });
 document.body.classList.toggle("no-mark", !cfg().showMark);
 /* temperature tint per hour, faint hourly temps, sunrise and sunset */
@@ -3546,7 +3541,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-54";
+const APP_VERSION = "2026.10.20-55";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
