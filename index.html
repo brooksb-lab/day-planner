@@ -689,6 +689,18 @@ body.ios #iosTabs{display:flex}
 #iosTabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:transparent;color:var(--fg-3);font:500 10px -apple-system,system-ui,sans-serif;padding:2px 0 3px}
 #iosTabs button svg{width:25px;height:25px}
 #iosTabs button[aria-current="page"]{color:var(--accent)}
+/* iPhone bottom row: desktop segmented tabs with the sliding pill */
+body.ios #iosTabs{align-items:center;padding:8px 12px var(--tabPadB,env(safe-area-inset-bottom,0px))}
+#iosTabSlot{flex:1;min-width:0;display:flex}
+body.ios:not(.theme-day) #tabs{flex:1;width:auto;margin:0;order:0;overflow-x:auto;scrollbar-width:none;border-radius:10px;padding:2px}
+body.ios #tabs::-webkit-scrollbar{display:none}
+body.ios:not(.theme-day) #tabs .tab{flex:1 1 auto;font-size:13px;letter-spacing:-.01em;padding:7px 6px;border-radius:8px;min-height:0;white-space:nowrap;color:var(--fg-2)}
+body.ios:not(.theme-day) #tabs .tab[aria-selected="true"]{color:var(--fg)}
+body.ios:not(.theme-day) #tabs .tab .now{margin-left:3px}
+body.ios:not(.theme-day) #tabs .tab-pill{border-radius:8px}
+body.ios.ios-more #tabs .tab-pill{opacity:0}
+body.ios.ios-more:not(.theme-day) #tabs .tab[aria-selected="true"]{font-weight:500;color:var(--fg-2)}
+#iosNav .r .ios-more-btn[aria-current="page"]{background:var(--fill)}
 body.ios .spot-in{width:100%}
 body.ios .toast{top:calc(10px + env(safe-area-inset-top,0px));left:12px;right:12px}
 @media (prefers-color-scheme:dark){#iosSeg{background:rgba(118,118,128,.24)} #iosSeg button[aria-pressed="true"]{background:#636366}}
@@ -1711,7 +1723,7 @@ function placeChrome(){
   const day = document.body.classList.contains("theme-day");
   const tabs = $("tabs"), hide = document.querySelector(".hidetog"), sync = $("sync"), undo = $("undogrp"), now = $("syncnow"), stog = $("spottog");
   if (!chromeHome.saved){ chromeHome.saved = true; chromeHome.titlebar = document.querySelector(".titlebar"); chromeHome.right = document.querySelector(".menubar .right"); chromeHome.clock = $("clock"); }
-  if (document.body.classList.contains("ios")){ buildIos(); $("iosRight").append(sync, undo, now, stog, hide); return; }
+  if (document.body.classList.contains("ios")){ buildIos(); $("iosTabSlot").append(tabs); $("iosRight").prepend(sync, undo, now, stog, hide); tabsCentered = false; requestAnimationFrame(() => { centerNowTab(); placePill(true); }); return; }
   if (day){ $("dTabsSlot").append(tabs); $("dRightSlot").append(sync, hide, undo, now, stog); }
   else { chromeHome.titlebar.insertBefore(tabs, $("sidetog")); chromeHome.titlebar.insertBefore(hide, $("sidetog")); chromeHome.right.insertBefore(sync, chromeHome.clock); chromeHome.right.insertBefore(undo, chromeHome.clock); chromeHome.right.insertBefore(now, chromeHome.clock); chromeHome.right.insertBefore(stog, chromeHome.clock); }
 }
@@ -1797,16 +1809,20 @@ function buildIos(){
   if ($("iosNav")) return;
   const w = document.querySelector(".window");
   const nav = document.createElement("div"); nav.id = "iosNav"; nav.innerHTML = `<div class="t"><h1 id="iosTitle">Today</h1><div class="s" id="iosSub"></div></div><div class="r" id="iosRight"></div>`;
-  const seg = document.createElement("div"); seg.id = "iosSeg"; seg.setAttribute("role", "group");
-  seg.innerHTML = TODAY_TABS.map(t => `<button type="button" data-ios-seg="${t}">${TABS.find(x => x.id === t).label}</button>`).join("");
+  // Bottom row: the same sliding segmented tabs as the desktop title bar, plus More
   const bar = document.createElement("nav"); bar.id = "iosTabs";
-  bar.innerHTML = [["today","Today"],["tomorrow","Tomorrow"],["week","Week"],["backlog","Backlog"],["more","More"]].map(([k, l]) => `<button type="button" data-ios-tab="${k}">${IOS_ICONS[k]}<span>${l}</span></button>`).join("");
-  w.prepend(seg); w.prepend(nav); w.append(bar);
+  bar.innerHTML = `<div id="iosTabSlot"></div>`;
+  w.prepend(nav); w.append(bar);
+  const mb = document.createElement("button"); mb.type = "button"; mb.className = "mbtn icon ios-more-btn"; mb.dataset.iosTab = "more"; mb.setAttribute("aria-label", "More"); mb.dataset.tip = "More";
+  mb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9.2"/><circle cx="7.8" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="16.2" cy="12" r="1.15" fill="currentColor" stroke="none"/></svg>';
+  $("iosRight").append(mb);
 }
 document.addEventListener("click", (e) => {
   const sb = e.target.closest("[data-ios-seg]");
   if (sb){ S.tab = sb.dataset.iosSeg; S.tabManual = Date.now(); schedule(); return; }
+  if (e.target.closest("#iosTabSlot [data-tab]")){ if (document.body.classList.contains("ios-more")){ document.body.classList.remove("ios-more"); const m = $("main"); if (m) m.scrollTop = 0; } return; }
   const tb = e.target.closest("[data-ios-tab]"); if (!tb) return;
+  if (tb.dataset.iosTab === "more" && document.body.classList.contains("ios-more")){ document.body.classList.remove("ios-more"); schedule(); return; }
   const k = tb.dataset.iosTab;
   document.body.classList.toggle("ios-more", k === "more");
   if (k === "today"){ const a = timeTab(); S.tab = TODAY_TABS.includes(a) ? a : (TODAY_TABS.includes(S.tab) ? S.tab : "evening"); }
@@ -3330,7 +3346,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-46";
+const APP_VERSION = "2026.10.20-47";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
