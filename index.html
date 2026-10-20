@@ -214,7 +214,10 @@ body.is-dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
 .todo .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px;align-items:center}
 .todo.is-done .tt>div:first-child{text-decoration:line-through;color:var(--fg-3)}
 /* lists */
-.lists{display:flex;flex-direction:column}
+.lists{display:flex;flex-direction:column;margin-top:24px}
+.lists:first-child{margin-top:0}
+body.ios .lists{margin-top:22px}
+body.ios .lists:first-child{margin-top:0}
 .lst-h{display:flex;align-items:center;gap:6px;min-height:28px}
 .lgrip{width:14px;color:var(--fg-3);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;text-align:center;font-size:13px;line-height:18px;opacity:0;transition:opacity .15s}
 .lst-h:hover .lgrip,.lst.lst-lift .lgrip{opacity:1}
@@ -736,7 +739,24 @@ html:has(body.ios),html:has(body.ios) body{background:var(--win)!important}
 body.ios #iosNav{padding-top:calc(env(safe-area-inset-top,0px) + 2px)}
 
 body.ios .main > .head:first-child{display:none}
-@media (prefers-color-scheme:dark){#iosSeg{background:rgba(118,118,128,.24)} #iosSeg button[aria-pressed="true"]{background:#636366}}
+/* iPhone sizing: tighter, iOS-proportioned type and spacing */
+body.ios #iosSeg{padding:4px 16px 10px}
+body.ios .main{padding-top:2px!important}
+body.ios .main > .section:first-child,body.ios .main > .grid2:first-child > .section:first-child,body.ios .main > .mbrief:first-child{margin-top:6px}
+body.ios .grid2{display:block}
+body.ios:not(.theme-day) .section{margin-top:22px;gap:8px}
+body.ios .section > .label,body.ios .section > .head .label{font:600 15px/1.2 var(--ui);letter-spacing:-.01em;color:var(--fg);text-transform:none}
+body.ios .empty{padding:11px 14px;font-size:14px;border-radius:12px}
+body.ios .row{grid-template-columns:62px 3px minmax(0,1fr) auto;gap:10px;padding:9px 12px;min-height:0}
+body.ios .row .t{font-size:11.5px;line-height:1.3;color:var(--fg-2);font-variant-numeric:tabular-nums}
+body.ios .row .sw{width:3px;min-height:30px}
+body.ios .row .ttl{font-size:15px;line-height:1.25}
+body.ios .row .ttl small{font-size:12px;margin-top:1px}
+body.ios .row .acts .btn{min-height:28px;padding:3px 10px;font-size:13px}
+body.ios .todo{padding-top:9px;padding-bottom:9px}
+body.ios .todo .tt>div:first-child{font-size:15px}
+body.ios .mbrief{font-size:14px}
+body.ios .lst-t{font-size:16px}
 
 /* icon controls */
 .mbtn.icon,body.theme-day .mbtn.icon{display:inline-grid;place-items:center;width:34px;height:34px;min-height:34px;padding:0;border:0;background:transparent;box-shadow:none;color:var(--fg-2);border-radius:8px}
@@ -1348,7 +1368,9 @@ async function unscheduleTodoRaw(t){
   await afterWrite();
 }
 async function completeTodo(t, done=true){
-  await todoRef(t.id).update({status: done ? "done" : (t.eventId ? "scheduled" : "open"), doneAt: done ? Date.now() : null});
+  setOptDone("t:" + t.id, done);
+  try { await todoRef(t.id).update({status: done ? "done" : (t.eventId ? "scheduled" : "open"), doneAt: done ? Date.now() : null}); }
+  catch (err) { S.doneOpt.delete("t:" + t.id); schedule(); throw err; }
   if (done && t.repeat) setTimeout(() => rollRecurring().catch(() => {}), 300);
   pushUndo(done ? `Checked off "${t.title}"` : `Unchecked "${t.title}"`, async () => { const f = findTodoLive(t.id); if (f) await completeTodo(f, !done); });
   if (t.eventId && t.calId){
@@ -1555,7 +1577,7 @@ function agenda(list, {empty="Nothing on the calendar.", actions=true}={}){
   const rowsList = [...allday, ...timed].filter(e => { const t = todoForEvent(e); return !(S.hideDone && ((t && t.status === "done") || /^✓/.test(e.title))); });
   if (!rowsList.length) return `<div class="empty">All done here.</div>`;
   return `<div class="rows">` + rowsList.map(e => {
-    const t = todoForEvent(e); const done = t && t.status === "done" || /^✓/.test(e.title);
+    const t = todoForEvent(e); const done = optDone(t ? "t:" + t.id : "e:" + e.id, !!(t && t.status === "done" || /^✓/.test(e.title)));
     const tt = e.allDay ? "All day" : `${fmtTime(e.start)}–${fmtTime(e.end)}`;
     let acts = "";
     if (actions && t) acts = `<button class="btn" data-act="toggle" data-id="${t.id}">${done ? "Undo" : "Done"}</button>${done ? "" : `<button class="btn ghost" data-act="tomorrow" data-ev="${esc(e.id)}">Tomorrow</button><button class="btn ghost" data-act="unsched" data-id="${t.id}" ${S.busy.has(t.id)?"disabled":""}>Unschedule</button>`}`;
@@ -1632,7 +1654,7 @@ function timeline(evs, day, opt = {}){
   grid += wxLayer(day, H0, H1, PX) + rainBlocks(day, H0, H1, PX);
   for (let hr = H0; hr <= H1; hr++) grid += opt.week ? `<div class="hr" style="top:${(hr-H0)*PX}px"></div>` : `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${hourLabel(day, hr, true)}</span></div>`;
   const evh = items.map(it => {
-    const t = todoForEvent(it.e); const done = t && t.status === "done" || /^✓/.test(it.e.title);
+    const t = todoForEvent(it.e); const done = optDone(t ? "t:" + t.id : "e:" + it.e.id, !!(t && t.status === "done" || /^✓/.test(it.e.title)));
     const w = 100/it.lanes;
     const mv = it.e.cal.writable && it.e.attendees <= 1;
     const hpx = Math.max(18,(it.en-it.s)/60*PX-2);
@@ -1649,8 +1671,16 @@ function timeline(evs, day, opt = {}){
   h += `<div class="tl-wrap">${tlEl}</div>`;
   return h;
 }
+/* checking things off shows instantly; the saved state catches up behind it */
+S.doneOpt = new Map();
+function optDone(key, real){
+  const o = S.doneOpt.get(key); if (!o) return real;
+  if (o.done === real || Date.now() - o.at > 30000){ S.doneOpt.delete(key); return real; }
+  return o.done;
+}
+function setOptDone(key, done){ S.doneOpt.set(key, {done, at:Date.now()}); render(); }
 function todoRow(t){
-  const done = t.status === "done";
+  const done = optDone("t:" + t.id, t.status === "done");
   const when = t.status === "scheduled" && t.start ? new Date(t.start) : null;
   const open = S.schedOpen === t.id;
   const busy = S.busy.has(t.id);
@@ -2940,9 +2970,10 @@ async function toggleEventDone(ev){
   const t = todoForEvent(ev);
   if (t){ await completeTodo(t, t.status !== "done"); schedule(); return; }
   if (!ev.cal.writable) throw new Error(`${ev.cal.name} is read-only here.`);
-  const done = /^✓/.test(ev.title), base = ev.title.replace(/^✓\s*/, "");
+  const done = optDone("e:" + ev.id, /^✓/.test(ev.title)), base = ev.title.replace(/^✓\s*/, "");
+  setOptDone("e:" + ev.id, !done);
   const setDone = async (d) => { await S.mcp.callTool(GC, "update_event", {calendarId:ev.calId, eventId:ev.id, summary: d ? "✓ " + base : base, notificationLevel:"NONE"}); await afterWrite(); };
-  await setDone(!done);
+  try { await setDone(!done); } catch (err) { S.doneOpt.delete("e:" + ev.id); schedule(); throw err; }
   pushUndo(done ? `Unchecked "${base}"` : `Checked off "${base}"`, () => setDone(done));
 }
 /* ---------- tap an editable event: change which calendar it's on (moves it in Google) ---------- */
@@ -3506,7 +3537,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-52";
+const APP_VERSION = "2026.10.20-53";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
