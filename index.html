@@ -182,7 +182,12 @@ body.ios .pane.m-list .divider,body.ios .pane.m-timeline .divider{height:22px!im
 .ev .rs{position:absolute;left:0;right:0;bottom:0;height:9px;cursor:ns-resize;touch-action:none}
 .ev .rs::after{content:"";position:absolute;left:50%;bottom:3px;width:18px;height:2px;margin-left:-9px;border-radius:1px;background:currentColor;opacity:0;transition:opacity .12s}
 .ev.movable:hover .rs::after,.ev.lifting .rs::after{opacity:.45}
-.ev.lifting{z-index:4;box-shadow:var(--shadow);cursor:grabbing}
+.ev.lifting{z-index:60!important;box-shadow:var(--shadow);cursor:grabbing}
+/* resize grip sits at the left of the bottom edge so a fanned-out event on top doesn't cover it */
+.ev .rs::after{left:12px!important;margin-left:0!important}
+body.ios .ev.movable .rs{height:18px}
+body.ios .ev.movable .rs::after{opacity:.4;width:22px;height:3px;bottom:4px}
+.ev.lifting.resizing .rs::after{opacity:.9;background:var(--evc)}
 .ev.leaving{opacity:.35}
 .tl-preview{position:absolute;left:4px;right:4px;border-radius:6px;border:2px dashed var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);z-index:3;pointer-events:none;font-size:11.5px;padding:2px 7px;color:var(--fg);overflow:hidden}
 .tl-preview span{font-family:var(--mono);font-size:10.5px;opacity:.8;display:block}
@@ -2887,11 +2892,13 @@ document.addEventListener("pointerdown", (e) => {
   const el = e.target.closest(".ev.movable"); if (!el || e.target.closest("[data-evchk]")) return;
   const tl = el.closest(".tl"); const day = tl.dataset.day;
   const ev = allEvents().find(x => x.id === el.dataset.ev && x.calId === el.dataset.cal); if (!ev) return;
-  const rs = !!e.target.closest("[data-rs]");
+  // on touch: press and hold to pick it up; holding the bottom edge resizes instead of moving
+  const br = el.getBoundingClientRect();
+  const rs = !!e.target.closest("[data-rs]") || (e.pointerType === "touch" && e.clientY > br.bottom - 18 && br.height > 36);
   const s0 = Math.max(TL.H0*60, minsOf(ev.start, day)), e0 = Math.min(TL.H1*60, minsOf(ev.end, day));
   evDrag = {mode: rs ? "resize" : "move", ev, el, tl, day, y0:e.clientY, x0:e.clientX, pid:e.pointerId, s0, e0, ns:s0, ne:e0, grab:ptMin(tl, e.clientY) - s0, active:false, touch:e.pointerType === "touch"};
-  if (rs || !evDrag.touch){ e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch {} }
-  else evDrag.timer = setTimeout(() => { if (evDrag && !evDrag.active){ evDrag.active = true; el.classList.add("lifting"); lastPt = {x:evDrag.x0, y:evDrag.y0}; if (!scrollRAF) scrollRAF = requestAnimationFrame(autoScroll); try { navigator.vibrate && navigator.vibrate(10); } catch {} } }, 320);
+  if (!evDrag.touch){ e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch {} }
+  else evDrag.timer = setTimeout(() => { if (evDrag && !evDrag.active){ evDrag.active = true; el.classList.add("lifting"); el.classList.toggle("resizing", evDrag.mode === "resize"); try { el.setPointerCapture(evDrag.pid); } catch {} lastPt = {x:evDrag.x0, y:evDrag.y0}; if (!scrollRAF) scrollRAF = requestAnimationFrame(autoScroll); try { navigator.vibrate && navigator.vibrate(10); } catch {} } }, 450);
 });
 function evUpdate(y, x){
   const d = evDrag; if (!d) return;
@@ -2921,7 +2928,7 @@ document.addEventListener("pointermove", (e) => {
   const d = evDrag; if (!d || e.pointerId !== d.pid) return;
   const dy = e.clientY - d.y0;
   if (!d.active){
-    if (d.touch && d.mode === "move"){ if (Math.abs(dy) > 8 || Math.abs(e.clientX - d.x0) > 8){ clearTimeout(d.timer); evDrag = null; } return; }
+    if (d.touch){ if (Math.abs(dy) > 8 || Math.abs(e.clientX - d.x0) > 8){ clearTimeout(d.timer); evDrag = null; } return; }
     if (Math.abs(dy) < 4) return;
     d.active = true; d.el.classList.add("lifting");
     if (!scrollRAF) scrollRAF = requestAnimationFrame(autoScroll);
@@ -3904,7 +3911,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-60";
+const APP_VERSION = "2026.10.20-61";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
