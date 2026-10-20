@@ -538,6 +538,10 @@ body.theme-day.no-mark .tab{font-size:15px;font-weight:600}
 .studio-edit label{display:flex;flex-direction:column;gap:4px;margin-top:8px}
 .studio-edit input,.studio-edit select{font:inherit;font-size:13px;color:var(--fg);background:var(--win-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
 @media (max-width:560px){.studio-edit input,.studio-edit select{font-size:16px}}
+.wk-load{font:10px var(--mono);color:var(--fg-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px}
+.wk-lbar{flex:none;position:relative;display:inline-block;width:22px;height:4px;border-radius:2px;background:rgba(232,234,237,.12);overflow:hidden}
+.wk-lbar b{position:absolute;inset:0 auto 0 0;background:var(--accent);opacity:.8}
+.wk-open{font:10px var(--mono);color:var(--fg-3);white-space:nowrap;padding-left:27px}
 .wk-st{font-style:normal;font:10px var(--mono);color:#5cb87e;margin-left:6px}
 .wkbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--fg-2)}
 .mbrief{display:flex;flex-direction:column;gap:7px;padding:14px 16px;margin:4px 0 18px;border-radius:14px;corner-shape:squircle;background:var(--win);box-shadow:var(--hair);font-size:14px;line-height:1.4;color:var(--fg)}
@@ -1259,6 +1263,19 @@ function dayWx(day){
   const sun = d.sunrise && d.sunset ? `<span class="wk-sun">↑${hm(d.sunrise[i])} ↓${hm(d.sunset[i])}</span>` : "";
   return `<span class="wk-wx" title="${esc(WX_WORD(d.weather_code[i]))}">${hi}°<em>${lo}°</em>${pp >= 20 ? `<u>${pp}%</u>` : ""}</span>${sun}`;
 }
+/* booked vs open hours for a day; open time counts 8am to 10pm, and from now on for today */
+function dayLoad(d, evs){
+  const d0 = startOfDay(d), d1 = addDays(d0, 1), now = new Date();
+  const iv = eventsOn(d0, evs).filter(e => !e.allDay).map(e => [Math.max(+e.start, +d0), Math.min(+e.end, +d1)]).filter(x => x[1] > x[0]).sort((a, b) => a[0] - b[0]);
+  const merged = []; for (const x of iv){ const l = merged[merged.length - 1]; if (l && x[0] <= l[1]) l[1] = Math.max(l[1], x[1]); else merged.push([...x]); }
+  const booked = merged.reduce((a, x) => a + x[1] - x[0], 0) / 60000;
+  let ws = new Date(d0).setHours(8, 0, 0, 0), we = new Date(d0).setHours(22, 0, 0, 0);
+  if (sameDay(now, d0)) ws = Math.max(ws, +now);
+  let open = Math.max(0, we - ws);
+  for (const x of merged) open -= Math.max(0, Math.min(x[1], we) - Math.max(x[0], ws));
+  const span = (new Date(d0).setHours(22,0,0,0) - new Date(d0).setHours(8,0,0,0)) / 60000;
+  return {booked:Math.round(booked), open:Math.max(0, Math.round(open / 60000)), frac:Math.min(1, booked / span), today:sameDay(now, d0), past:d1 <= now};
+}
 /* week as a timeline: shared hour gutter, one column per day, same drag rules as Day */
 function weekTimeline(evs, start){
   const PX = TL.PX, H0 = TL.H0, H1 = TL.H1, today = startOfDay(new Date());
@@ -1266,7 +1283,7 @@ function weekTimeline(evs, start){
   let head = `<div class="wk-cell wk-corner"></div>`;
   for (const d of days){
     const ad = eventsOn(d, evs).filter(e => e.allDay);
-    head += `<div class="wk-cell wk-dh${sameDay(d, today) ? " today" : ""}"><div class="wk-dn"><b>${d.toLocaleDateString([], {weekday:"short"})}</b> <span>${d.getDate()}</span>${(() => { const m = studioMins(startOfDay(d), addDays(startOfDay(d), 1), evs); return m ? `<em class="wk-st">${hrs(m)}</em>` : ""; })()}</div>${dayWx(d)}${ad.map(e => `<span class="ev-pill" style="--evc:${e.cal.color};border-left-color:${e.cal.color}" title="${esc(e.title)}">${esc(e.title)}</span>`).join("")}</div>`;
+    head += `<div class="wk-cell wk-dh${sameDay(d, today) ? " today" : ""}"><div class="wk-dn"><b>${d.toLocaleDateString([], {weekday:"short"})}</b> <span>${d.getDate()}</span>${(() => { const m = studioMins(startOfDay(d), addDays(startOfDay(d), 1), evs); return m ? `<em class="wk-st">${hrs(m)}</em>` : ""; })()}</div>${(() => { const L = dayLoad(d, evs); return `<span class="wk-load" title="${hrs(L.booked)} booked, ${hrs(L.open)} open${L.today ? " left today" : ""} (8am to 10pm)"><i class="wk-lbar"><b style="width:${(L.frac*100).toFixed(0)}%"></b></i>${hrs(L.booked)} booked</span>${L.past ? "" : `<span class="wk-open">${hrs(L.open)} open${L.today ? " left" : ""}</span>`}`; })()}${dayWx(d)}${ad.map(e => `<span class="ev-pill" style="--evc:${e.cal.color};border-left-color:${e.cal.color}" title="${esc(e.title)}">${esc(e.title)}</span>`).join("")}</div>`;
   }
   let gut = "";
   for (let hr = H0; hr <= H1; hr++) gut += `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${hourLabel(start, hr, false)}</span></div>`;
@@ -2821,7 +2838,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.19-38";
+const APP_VERSION = "2026.10.19-39";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
