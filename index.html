@@ -216,6 +216,7 @@ body.is-dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
 /* lists */
 .lists{display:flex;flex-direction:column;margin-top:24px}
 .lists:first-child{margin-top:0}
+.ios-only{display:none!important} body.ios .ios-only{display:flex!important}
 body.ios .lists{margin-top:22px}
 body.ios .lists:first-child{margin-top:0}
 .lst-h{display:flex;align-items:center;gap:6px;min-height:28px}
@@ -736,6 +737,7 @@ body.ios .toast{top:calc(10px + env(safe-area-inset-top,0px));left:12px;right:12
 html:has(body.ios){padding:0!important;background:var(--win)}
 body.ios .window,body.ios:not(.theme-day) .window{position:fixed;top:0;left:0;right:0;bottom:0;margin:0;border-radius:0!important;box-shadow:none!important;height:auto!important}
 html:has(body.ios),html:has(body.ios) body{background:var(--win)!important}
+body.ios.ios-stretch .window,body.ios.ios-stretch:not(.theme-day) .window{bottom:auto;height:var(--winH)!important}
 body.ios #iosNav{padding-top:calc(env(safe-area-inset-top,0px) + 2px)}
 
 body.ios .main > .head:first-child{display:none}
@@ -988,6 +990,7 @@ body.ios .side .section:has(#sidebacklog){display:none}
       <div class="section">
         <div class="label">Connections</div>
         <div id="conn" style="display:flex;flex-direction:column;gap:10px;font-size:12.5px"></div>
+        <label class="tog ios-only"><input type="checkbox" id="fillTog"> Run to the bottom edge</label>
         <div id="appver" style="margin-top:10px;font:11px var(--mono);color:var(--fg-3)"></div>
       </div>
       <div class="section">
@@ -1962,11 +1965,16 @@ function shellFit(){
   // iOS Home Screen apps can stop the page short of the screen bottom; then the tab bar needs no extra safe-area padding
   let gap = 0;
   try { const sa = navigator.standalone || matchMedia("(display-mode: standalone)").matches; if (sa && innerHeight < innerWidth === false) gap = Math.max(0, Math.max(screen.width, screen.height) - innerHeight); } catch {}
-  document.documentElement.style.setProperty("--tabPadB", gap > 20 ? "6px" : "max(8px, calc(env(safe-area-inset-bottom,0px) - 10px))");
+  // Home Screen apps often report a viewport one status-bar short of the screen; stretch down by that much so the tab bar sits at the bottom edge
+  let fill = true; try { fill = localStorage.getItem("iosFill") !== "0"; } catch {}
+  const safeTop = (() => { const pr = document.createElement("div"); pr.style.cssText = "position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr); const h = pr.offsetHeight; pr.remove(); return h; })();
+  const stretch = ios && gap > 20 && fill ? Math.min(gap, safeTop || gap) : 0;
+  document.body.classList.toggle("ios-stretch", stretch > 0);
+  document.documentElement.style.setProperty("--tabPadB", stretch || gap <= 20 ? "max(8px, calc(env(safe-area-inset-bottom,0px) - 12px))" : "6px");
   const top = w.getBoundingClientRect().top + (window.scrollY || 0);
   w.style.height = "";
   // On iPhone the window is fixed to the screen; Home Screen apps can under-report innerHeight, so use the full screen height there
-  const fullH = innerHeight;
+  const fullH = innerHeight + stretch;
   document.documentElement.style.setProperty("--winH", Math.max(320, Math.floor(ios ? fullH : innerHeight - top - 14)) + "px");
   window.scrollTo(0, 0);
 }
@@ -2046,6 +2054,7 @@ function fillTzSelect(){
   sel.addEventListener("change", () => { saveCfg({tz2: sel.value}).catch(() => { cfgRaw = {...cfgRaw, tz2: sel.value}; applyCfg(); schedule(); }); });
 }
 fillTzSelect();
+(() => { const f = $("fillTog"); if (!f) return; try { f.checked = localStorage.getItem("iosFill") !== "0"; } catch {} f.addEventListener("change", () => { try { localStorage.setItem("iosFill", f.checked ? "1" : "0"); } catch {} shellFit(); }); })();
 $("markTog").addEventListener("change", (e) => { const v = e.target.checked; saveCfg({showMark: v}).catch(() => { cfgRaw = {...cfgRaw, showMark: v}; applyCfg(); schedule(); }); });
 document.body.classList.toggle("no-mark", !cfg().showMark);
 /* temperature tint per hour, faint hourly temps, sunrise and sunset */
@@ -3537,7 +3546,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-53";
+const APP_VERSION = "2026.10.20-54";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
