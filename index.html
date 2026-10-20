@@ -680,7 +680,6 @@ body.ios .content{display:block!important;position:relative}
 body.ios .main{height:100%;padding:8px 16px 18px}
 body.ios.pane-mode .main{display:flex;flex-direction:column}
 body.ios .side{display:none!important}
-body.ios.ios-more .main{display:none!important}
 body.ios.ios-more .side{display:block!important;position:static;width:auto;height:100%;overflow:auto;border:0!important;box-shadow:none;background:var(--win);padding:6px 16px 24px}
 body.ios .main > .head:first-child h2, body.ios .pane-head h2{display:none}
 body.ios .pane-head{padding-top:2px}
@@ -723,7 +722,8 @@ body.ios #iosNav{display:flex}
 body.ios.ios-today #iosSeg{display:flex}
 #iosTabs{flex:none}
 body.ios #iosTabs{display:flex;align-items:center;padding:6px 16px var(--tabPadB,env(safe-area-inset-bottom,0px));background:var(--win)}
-.iosseg{position:relative;display:flex;flex:1;min-width:0;padding:2px;gap:0;border-radius:10px;background:var(--fill)}
+.iosseg{position:relative;display:flex;flex:1;min-width:0;padding:2px;gap:0;border-radius:10px;background:var(--fill);touch-action:pan-y;-webkit-user-select:none;user-select:none}
+body.ios .main{will-change:transform}
 .iosseg .tab{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--fg);font:500 13px var(--ui);letter-spacing:-.01em;padding:7px 4px;border-radius:8px;white-space:nowrap;position:relative;z-index:1}
 .iosseg .tab[aria-selected="true"]{font-weight:600}
 .iosseg .tab .now{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--accent);margin-left:4px}
@@ -741,9 +741,30 @@ body.ios.ios-stretch .window,body.ios.ios-stretch:not(.theme-day) .window{bottom
 body.ios #iosNav{padding-top:calc(env(safe-area-inset-top,0px) + 2px)}
 
 body.ios .main > .head:first-child{display:none}
+/* iPhone: liquid-glass header; content scrolls underneath it */
+#iosHead{display:none}
+body.ios #iosHead{display:block;position:absolute;top:0;left:0;right:0;z-index:20;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--win) 80%,transparent),color-mix(in srgb,var(--win) 64%,transparent));
+  -webkit-backdrop-filter:blur(28px) saturate(190%) brightness(1.04);backdrop-filter:blur(28px) saturate(190%) brightness(1.04);
+  transition:box-shadow .25s ease,background .25s ease}
+body.ios #iosHead::after{content:"";position:absolute;inset:auto 0 0 0;height:.5px;background:var(--line);opacity:0;transition:opacity .25s}
+body.ios #iosHead.scrolled{box-shadow:inset 0 .5px 0 rgba(255,255,255,.35),0 8px 24px -14px rgba(0,0,0,.35)}
+body.ios #iosHead.scrolled::after{opacity:1}
+@media (prefers-color-scheme:dark){body.ios #iosHead.scrolled{box-shadow:inset 0 .5px 0 rgba(255,255,255,.10),0 8px 24px -14px rgba(0,0,0,.8)}}
+body.ios #iosNav,body.ios #iosSeg{background:transparent!important}
+body.ios .content{height:100%}
+body.ios .main{padding-top:calc(var(--iosHeadH,0px) + 2px)!important;scroll-padding-top:var(--iosHeadH,0px)}
+body.ios.ios-more .side{padding-top:calc(var(--iosHeadH,0px) + 6px)!important}
+/* iPhone: More slides in as a full-height panel under the glass header */
+html body.ios.ios aside.side.side{display:block!important;position:fixed!important;top:var(--iosHeadH,0px)!important;left:0!important;right:0!important;bottom:0!important;width:auto!important;height:auto!important;max-height:none!important;z-index:30!important;
+  margin:0!important;padding:10px 16px calc(24px + env(safe-area-inset-bottom,0px))!important;overflow:auto!important;background:var(--win)!important;border:0!important;border-radius:0!important;
+  transform:translateX(104%)!important;visibility:hidden!important;box-shadow:-12px 0 32px -10px rgba(0,0,0,.25)!important;
+  transition:transform .5s var(--spring),visibility 0s linear .5s!important}
+html body.ios.ios.ios-more aside.side.side{transform:none!important;visibility:visible!important;transition:transform .5s var(--spring),visibility 0s!important}
+html body.ios.ios-more .main{transform:translateX(-18%);opacity:.6;transition:transform .5s var(--spring),opacity .3s}
+html body.ios:not(.ios-more) .main{transition-property:transform,opacity}
 /* iPhone sizing: tighter, iOS-proportioned type and spacing */
 body.ios #iosSeg{padding:4px 16px 10px}
-body.ios .main{padding-top:2px!important}
 body.ios .main > .section:first-child,body.ios .main > .grid2:first-child > .section:first-child,body.ios .main > .mbrief:first-child{margin-top:6px}
 body.ios .grid2{display:block}
 body.ios:not(.theme-day) .section{margin-top:22px;gap:8px}
@@ -1523,7 +1544,7 @@ function tick(){
 let pending = false;
 function schedule(){ if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; render(); }); }
 function render(){
-  if ((drag && drag.ghost) || (evDrag && evDrag.active) || divDrag || S.lstDrag || Date.now() < (S.animUntil || 0)) { pending = false; setTimeout(schedule, Math.max(120, (S.animUntil || 0) - Date.now() + 20)); return; }
+  if ((drag && drag.ghost) || (evDrag && evDrag.active) || divDrag || S.lstDrag || S.swiping || Date.now() < (S.animUntil || 0)) { pending = false; setTimeout(schedule, Math.max(120, (S.animUntil || 0) - Date.now() + 20)); return; }
   tick(); renderTabs(); updateUndo(); renderDayHeader();
   const a = document.activeElement;
   if (a && $("main").contains(a) && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) { renderSide(); return; }
@@ -1901,23 +1922,127 @@ function buildIos(){
   seg.innerHTML = `<div class="iosseg" role="tablist">${pill}${TODAY_TABS.map(t => `<button type="button" class="tab" role="tab" data-ios-seg="${t}">${TABS.find(x => x.id === t).label}</button>`).join("")}</div>`;
   const bar = document.createElement("nav"); bar.id = "iosTabs";
   bar.innerHTML = `<div class="iosseg" role="tablist">${pill}${[["today","Today"],["tomorrow","Tomorrow"],["week","Week"],["backlog","To-do"]].map(([k, l]) => `<button type="button" class="tab" role="tab" data-ios-tab="${k}">${l}</button>`).join("")}</div>`;
-  w.prepend(seg); w.prepend(nav); w.append(bar);
+  // nav + Morning/Day/Evening float over the content as one glass header
+  const head = document.createElement("div"); head.id = "iosHead"; head.append(nav, seg);
+  w.prepend(head); w.append(bar);
+  const fit = () => document.documentElement.style.setProperty("--iosHeadH", head.offsetHeight + "px");
+  try { new ResizeObserver(fit).observe(head); } catch {} fit();
+  const onScroll = (e) => { const t = e.target; if (!t || !t.closest || !(t.id === "main" || t.classList?.contains("side") || t.classList?.contains("pane-list") || t.classList?.contains("pane-tl"))) return; head.classList.toggle("scrolled", t.scrollTop > 2); };
+  document.addEventListener("scroll", onScroll, true);
   const mb = document.createElement("button"); mb.type = "button"; mb.className = "mbtn icon ios-more-btn"; mb.dataset.iosTab = "more"; mb.setAttribute("aria-label", "More"); mb.dataset.tip = "More";
   mb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9.2"/><circle cx="7.8" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="16.2" cy="12" r="1.15" fill="currentColor" stroke="none"/></svg>';
   $("iosRight").append(mb);
 }
 document.addEventListener("click", (e) => {
-  const sb = e.target.closest("[data-ios-seg]");
-  if (sb){ document.body.classList.remove("ios-more"); S.tab = sb.dataset.iosSeg; S.tabManual = Date.now(); schedule(); return; }
-  const tb = e.target.closest("[data-ios-tab]"); if (!tb) return;
-  if (tb.dataset.iosTab === "more" && document.body.classList.contains("ios-more")){ document.body.classList.remove("ios-more"); schedule(); return; }
-  const k = tb.dataset.iosTab;
-  document.body.classList.toggle("ios-more", k === "more");
-  if (k === "today"){ const a = timeTab(); S.tab = TODAY_TABS.includes(a) ? a : (TODAY_TABS.includes(S.tab) ? S.tab : "evening"); }
-  else if (k !== "more") S.tab = k;
-  S.tabManual = Date.now(); schedule();
-  const m = $("main"); if (m) m.scrollTop = 0;
+  if (Date.now() < (S.segNoClick || 0)) return;
+  const b = e.target.closest("[data-ios-seg],[data-ios-tab]"); if (b) selectIos(b);
 });
+/* pick a page from either segmented control; pages slide in from the side they sit on */
+function iosTarget(b){
+  if (b.dataset.iosSeg) return b.dataset.iosSeg;
+  const k = b.dataset.iosTab;
+  if (k === "today"){ if (TODAY_TABS.includes(S.tab)) return S.tab; const a = timeTab(); return TODAY_TABS.includes(a) ? a : "evening"; }
+  return k;
+}
+function selectIos(b){
+  const k = b.dataset.iosTab;
+  if (k === "more"){ const on = !document.body.classList.contains("ios-more"); document.body.classList.toggle("ios-more", on); schedule(); return; }
+  const wasMore = document.body.classList.contains("ios-more");
+  document.body.classList.remove("ios-more");
+  const next = iosTarget(b);
+  if (wasMore){ S.tab = next; S.tabManual = Date.now(); schedule(); return; }
+  slideTo(next);
+}
+const pageIdx = (t) => TABS.findIndex(x => x.id === t);
+function slideTo(next){
+  const m = $("main"), cur = S.tab;
+  if (!m || next === cur){ if (m){ m.style.transition = "transform .35s var(--spring), opacity .25s"; m.style.transform = ""; m.style.opacity = ""; } S.swiping = false; renderIos(); return; }
+  const dir = pageIdx(next) > pageIdx(cur) ? 1 : -1, W = m.clientWidth || innerWidth;
+  const resetScroll = iosTab() !== (TODAY_TABS.includes(next) ? "today" : next);
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches){ S.swiping = false; S.tab = next; S.tabManual = Date.now(); schedule(); return; }
+  S.swiping = true;
+  m.style.transition = "transform .16s cubic-bezier(.4,0,1,1), opacity .16s";
+  m.style.transform = `translateX(${-dir * W * 0.4}px)`; m.style.opacity = "0";
+  setTimeout(() => {
+    S.tab = next; S.tabManual = Date.now(); render.lastTab = next; S.swiping = false;
+    if (resetScroll) m.scrollTop = 0;
+    m.style.transition = "none"; m.style.transform = `translateX(${dir * W * 0.4}px)`; m.style.opacity = "0";
+    render(); void m.offsetWidth;
+    m.style.transition = "transform .45s var(--spring), opacity .22s ease-out"; m.style.transform = ""; m.style.opacity = "";
+    setTimeout(() => { m.style.transition = ""; }, 480);
+  }, 150);
+}
+/* while swiping, the pills glide toward the tab you're heading to */
+function iosBtnFor(host, page){
+  if (!host) return null;
+  return host.id === "iosSeg" ? host.querySelector(`[data-ios-seg="${page}"]`) : host.querySelector(`[data-ios-tab="${TODAY_TABS.includes(page) ? "today" : page}"]`);
+}
+function lerpPill(host, a, b, t){
+  const pill = host && host.querySelector(".tab-pill"); if (!pill || !a || !b) return;
+  const x = a.offsetLeft + (b.offsetLeft - a.offsetLeft) * t, w = a.offsetWidth + (b.offsetWidth - a.offsetWidth) * t;
+  pill.style.transition = "none"; pill.style.width = w + "px"; pill.style.transform = `translate(${x}px,${a.offsetTop}px)`;
+}
+(() => {
+  let sw = null;
+  const SKIP = ".todo,.ev,input,textarea,select,button,a,.lgrip,.divider,.pane-week .pane-tl,.sched,.rn-pop,.tl";
+  document.addEventListener("touchstart", (e) => {
+    const B = document.body.classList;
+    if (!B.contains("ios") || B.contains("ios-more") || e.touches.length !== 1 || S.swiping) return;
+    const t = e.target; if (!t.closest || !t.closest("#main") || t.closest(SKIP)) return;
+    if (drag || evDrag || S.lstDrag || divDrag) return;
+    sw = {x:e.touches[0].clientX, y:e.touches[0].clientY, dx:0, mode:null, t0:Date.now()};
+  }, {passive:true});
+  document.addEventListener("touchmove", (e) => {
+    if (!sw) return;
+    const p = e.touches[0], dx = p.clientX - sw.x, dy = p.clientY - sw.y;
+    if (!sw.mode){
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      sw.mode = Math.abs(dx) > Math.abs(dy) * 1.2 ? "h" : "v";
+      if (sw.mode === "v"){ sw = null; return; }
+    }
+    e.preventDefault();
+    const i = pageIdx(S.tab), nextI = dx < 0 ? i + 1 : i - 1, has = nextI >= 0 && nextI < TABS.length;
+    sw.dx = has ? dx : dx / 4; sw.next = has ? TABS[nextI].id : null;
+    const m = $("main"); m.style.transition = "none"; m.style.transform = `translateX(${sw.dx}px)`;
+    m.style.opacity = String(1 - Math.min(0.5, Math.abs(sw.dx) / m.clientWidth * 0.8));
+    if (sw.next){ const f = Math.min(1, Math.abs(dx) / m.clientWidth); for (const h of [$("iosTabs"), $("iosSeg")]) lerpPill(h, iosBtnFor(h, S.tab), iosBtnFor(h, sw.next), f); }
+  }, {passive:false});
+  const end = () => {
+    if (!sw) return; const d = sw; sw = null; if (d.mode !== "h") return;
+    const m = $("main"), W = m.clientWidth, fast = Math.abs(d.dx) / Math.max(1, Date.now() - d.t0) > 0.5;
+    if (d.next && (Math.abs(d.dx) > W * 0.25 || (fast && Math.abs(d.dx) > 40))) slideTo(d.next);
+    else { m.style.transition = "transform .4s var(--spring), opacity .25s"; m.style.transform = ""; m.style.opacity = ""; placeSegPill($("iosTabs")); placeSegPill($("iosSeg")); }
+  };
+  document.addEventListener("touchend", end); document.addEventListener("touchcancel", end);
+})();
+/* drag the pill along either segmented control; let go on a tab to open it */
+(() => {
+  let d = null;
+  document.addEventListener("pointerdown", (e) => {
+    const seg = e.target.closest("#iosTabs .iosseg, #iosSeg .iosseg"); if (!seg) return;
+    const sel = seg.querySelector('.tab[aria-selected="true"]');
+    d = {seg, x0:e.clientX, moved:false, onSel: !!sel && e.target.closest(".tab") === sel};
+  });
+  document.addEventListener("pointermove", (e) => {
+    if (!d) return;
+    if (!d.moved && Math.abs(e.clientX - d.x0) < 8) return;
+    d.moved = true;
+    const r = d.seg.getBoundingClientRect(), x = e.clientX - r.left;
+    const btns = [...d.seg.querySelectorAll(".tab")], over = btns.find(b => x >= b.offsetLeft && x < b.offsetLeft + b.offsetWidth) || (x < 0 ? btns[0] : btns[btns.length - 1]);
+    const pill = d.seg.querySelector(".tab-pill"), w = over.offsetWidth;
+    const px = Math.max(0, Math.min(d.seg.clientWidth - w, x - w / 2));
+    pill.style.transition = "width .2s"; pill.style.width = w + "px"; pill.style.transform = `translate(${px}px,${over.offsetTop}px)`; pill.style.opacity = "1";
+    d.over = over;
+  });
+  const up = () => {
+    if (!d) return; const x = d; d = null; if (!x.moved || !x.over) return;
+    S.segNoClick = Date.now() + 400;
+    const pill = x.seg.querySelector(".tab-pill"); pill.style.transition = "";
+    if (x.over.getAttribute("aria-selected") === "true" && !document.body.classList.contains("ios-more")) placeSegPill(x.seg.parentElement);
+    else selectIos(x.over);
+  };
+  document.addEventListener("pointerup", up); document.addEventListener("pointercancel", () => { if (d){ const h = d.seg.parentElement; d = null; placeSegPill(h); } });
+})();
 function placeSegPill(host){
   const el = host && host.querySelector(".iosseg"), pill = el && el.querySelector(".tab-pill"), b = el && el.querySelector('.tab[aria-selected="true"]');
   if (!pill || !b || !b.offsetWidth) return;
@@ -3541,7 +3666,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-55";
+const APP_VERSION = "2026.10.20-58";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
