@@ -697,7 +697,7 @@ body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
   --accent:#007aff; --accent-soft:rgba(0,122,255,.12);
   --ok:#34c759; --warn:#ff9f0a; --bad:#ff3b30;
   --shadow:0 0 0 .5px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.05),0 22px 60px -12px rgba(20,24,40,.28);
-  --c-personal:#007aff; --c-work:#8e8e93; --c-fun:#34c759; --c-meal:#ff6b5e; --c-between:#8e8e93; --c-hol:#af52de; --c-other:#a2845e;
+  --c-personal:#007aff; --c-work:#ffb800; --c-fun:#34c759; --c-meal:#ff6b5e; --c-between:#8e8e93; --c-hol:#af52de; --c-other:#a2845e;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --desk:#08090b; --desk-2:#14161b;
@@ -708,7 +708,7 @@ body.theme-day .dh-right .mbtn.icon svg{width:19px;height:19px}
   --accent:#0a84ff; --accent-soft:rgba(10,132,255,.18);
   --ok:#30d158; --warn:#ff9f0a; --bad:#ff453a;
   --shadow:0 0 0 .5px rgba(255,255,255,.10),0 2px 8px rgba(0,0,0,.35),0 30px 80px -20px rgba(0,0,0,.7);
-  --c-personal:#0a84ff; --c-work:#98989d; --c-fun:#30d158; --c-meal:#ff6961; --c-between:#98989d; --c-hol:#bf5af2; --c-other:#ac8e68;
+  --c-personal:#0a84ff; --c-work:#ffd60a; --c-fun:#30d158; --c-meal:#ff6961; --c-between:#98989d; --c-hol:#bf5af2; --c-other:#ac8e68;
 }}
 body:not(.theme-day){font:14px/1.45 var(--ui);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-variant-numeric:tabular-nums;letter-spacing:-.006em;
   background:radial-gradient(1400px 800px at 15% -10%,var(--desk-2),transparent 70%),var(--desk)}
@@ -3170,7 +3170,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-41";
+const APP_VERSION = "2026.10.20-42";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
