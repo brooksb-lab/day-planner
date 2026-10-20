@@ -1033,7 +1033,7 @@ function parseEvent(e, cal){
   const start = allDay ? new Date(e.start.date + "T00:00:00") : new Date(e.start?.dateTime);
   const end = allDay ? new Date((e.end?.date || e.start.date) + "T00:00:00") : new Date(e.end?.dateTime || e.start?.dateTime);
   return {id:e.id, calId:cal.id, cal, title:e.summary || (cal.kind==="work" ? "Busy" : "(no title)"),
-    start, end, allDay, attendees:(e.attendees||[]).length, location:e.location || "", link:e.htmlLink, status:e.status};
+    start, end, allDay, attendees:(e.attendees||[]).length, location:e.location || "", desc:e.description || "", link:e.htmlLink, status:e.status};
 }
 function allEvents(){
   const out = [];
@@ -1051,7 +1051,7 @@ function eventsOn(day, evs){
   const s = startOfDay(day), e = addDays(s, 1);
   return evs.filter(x => x.start < e && x.end > s && !(x.allDay && x.end <= s));
 }
-const todoForEvent = (ev) => S.todos.find(t => t.eventId && t.eventId === ev.id);
+const todoForEvent = (ev) => S.todos.find(t => t.eventId && t.eventId === ev.id) || (() => { const m = /planner:todo\/([\w-]+)/.exec(ev.desc || ""); return m ? S.todos.find(t => t.id === m[1] && t.status !== "open") : null; })();
 
 function windowRange(){
   const t = startOfDay(new Date()), mon = addDays(t, -((t.getDay() + 6) % 7)), s = mon < addDays(t, -1) ? mon : addDays(t, -1);
@@ -2586,7 +2586,8 @@ function evZone(x, y){
   const d = evDrag; if (!d) return false;
   clearMarks(); d.zoneDrop = null;
   const t = todoForEvent(d.ev);
-  if (!t) { d.el.classList.remove("leaving"); return false; }
+  const plainOk = !t && d.ev.cal && d.ev.cal.writable && d.ev.attendees <= 1 && !d.ev.allDay;
+  if (!t && !plainOk) { d.el.classList.remove("leaving"); return false; }
   d.el.style.pointerEvents = "none";
   const el = document.elementFromPoint(x, y);
   if (!el || el.closest(".tl")) { d.el.classList.remove("leaving"); return false; }
@@ -2595,7 +2596,7 @@ function evZone(x, y){
   const rows = [...zone.querySelectorAll(":scope > .todo")];
   let idx = rows.length;
   for (let i = 0; i < rows.length; i++){ const b = rows[i].getBoundingClientRect(); if (y < b.top + b.height/2){ idx = i; break; } }
-  d.zoneDrop = {zone:zone.dataset.zone, ids:rows.map(r => r.dataset.id), idx, todo:t.id};
+  d.zoneDrop = {zone:zone.dataset.zone, ids:rows.map(r => r.dataset.id), idx, todo:t ? t.id : null};
   if (!rows.length) zone.classList.add("drop-into");
   else if (idx < rows.length) rows[idx].classList.add("drop-before"); else rows[rows.length-1].classList.add("drop-after");
   d.el.classList.add("leaving");
@@ -2607,9 +2608,25 @@ function endEvDrag(apply){
   d.el.classList.remove("lifting");
   d.el.style.pointerEvents = ""; d.el.classList.remove("leaving"); clearMarks();
   if (apply && d.active && d.zoneDrop){
-    const z = d.zoneDrop; const t = findTodoLive(z.todo);
-    if (t) act(t.id, async () => {
-      await unscheduleTodo(t);
+    const z = d.zoneDrop; const t = z.todo && findTodoLive(z.todo);
+    if (!t){
+      // a plain event dropped on a list becomes a to-do and leaves the calendar
+      const ev = d.ev, mins = Math.max(15, Math.round((ev.end - ev.start) / 60000));
+      act("ev" + ev.id, async () => {
+        const before = undoStack.length;
+        const id = await addTodo({title:ev.title.replace(/^✓\s*/, ""), est:mins, cal:ev.cal.name, extra:{notes:ev.location || ""}});
+        await moveTodo(id, z.zone, z.ids, z.idx);
+        await S.mcp.callTool(GC, "delete_event", {calendarId:ev.calId, eventId:ev.id, notificationLevel:"NONE"});
+        await afterWrite();
+        undoStack.length = before;
+        pushUndo(`Moved "${ev.title}" off the calendar`, async () => {
+          await S.mcp.callTool(GC, "create_event", {calendarId:ev.calId, summary:ev.title, startTime:localISO(ev.start), endTime:localISO(ev.end), location:ev.location || undefined, notificationLevel:"NONE"});
+          await todoRef(id).delete(); await afterWrite();
+        });
+        toast(`Moved "${ev.title}" off the calendar into ${z.zone === "top" ? "Top three" : "Backlog"}.`, true);
+      });
+    } else act(t.id, async () => {
+      await unscheduleTodo(t.eventId ? t : {...t, eventId:d.ev.id, calId:d.ev.calId});
       await moveTodo(t.id, z.zone, z.ids, z.idx);
       toast(`Unscheduled "${t.title}" and moved it to ${z.zone === "top" ? "Top three" : "Backlog"}.`, true);
     });
@@ -3170,7 +3187,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-42";
+const APP_VERSION = "2026.10.20-43";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
