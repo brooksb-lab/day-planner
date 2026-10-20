@@ -165,12 +165,19 @@ h2{font-size:20px;line-height:1.2;margin:0;text-wrap:balance;letter-spacing:-.01
 .ev.short{flex-direction:row;align-items:baseline;gap:6px;padding-top:1px;padding-bottom:1px}
 .ev.short b{display:block;white-space:nowrap;text-overflow:ellipsis;flex:1 1 auto}
 .ev.short span{flex:0 1 auto;min-width:0}
-.ev.can-chk{padding-right:26px}
+.ev .ev-chk{opacity:0;transition:opacity .15s}
+.ev:hover .ev-chk,.ev .ev-chk.on{opacity:1}
+body.ios .ev .ev-chk{display:none}
 .ev .ev-chk{position:absolute;top:3px;right:4px;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--evc);background:color-mix(in srgb, var(--win) 70%, transparent);display:grid;place-items:center;padding:0;color:#fff;font:700 11px/1 var(--ui);cursor:pointer;z-index:2}
 .ev .ev-chk::after{content:"";position:absolute;inset:-8px}
 .ev .ev-chk.on{background:var(--evc)}
 .ev.short .ev-chk{top:50%;margin-top:-9px}
 .ev.done b{text-decoration:line-through;opacity:.6}
+.ev.done{opacity:.7}
+.tl{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.tl-ghost{position:absolute;left:4px;right:4px;z-index:20;border-radius:8px;border:1.5px dashed var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);font:600 12px var(--ui);color:var(--accent);padding:4px 8px;pointer-events:none;box-shadow:0 8px 20px -8px rgba(0,0,0,.3)}
+/* iPhone: list/timeline handle stays visible so the list can be flicked open or shut */
+body.ios .pane.m-list .divider,body.ios .pane.m-timeline .divider{height:22px!important;opacity:1!important;pointer-events:auto!important}
 .ev.movable{cursor:grab;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .ev .rs{position:absolute;left:0;right:0;bottom:0;height:9px;cursor:ns-resize;touch-action:none}
 .ev .rs::after{content:"";position:absolute;left:50%;bottom:3px;width:18px;height:2px;margin-left:-9px;border-radius:1px;background:currentColor;opacity:0;transition:opacity .12s}
@@ -600,6 +607,7 @@ body.theme-day.no-mark .tab{font-size:15px;font-weight:600}
 .todo.is-done.sw-r::before{content:"↺  Not done"}
 .todo.sw-go.sw-r::before{background:rgba(92,184,126,.24)}
 .todo.sw-go.sw-l::before{background:rgba(231,187,64,.24)}
+.todo.sw-del::before{content:"Delete";color:#fff;background:#ff3b30!important}
 .tl-new{position:absolute;left:4px;right:4px;z-index:9;display:flex;flex-direction:column;gap:4px;padding:5px 7px;border-radius:10px;background:color-mix(in srgb, var(--accent) 18%, var(--win));box-shadow:inset 0 0 0 1px var(--accent),0 8px 24px -8px rgba(0,0,0,.6);transition:height .18s ease}
 .tl-new input:focus,.tl-new input:focus-visible{outline:none;box-shadow:none}
 .tl-new input{border:0;background:transparent;color:var(--fg);font:600 13px var(--ui);outline:none;padding:0;min-width:0}
@@ -608,6 +616,34 @@ body.theme-day.no-mark .tab{font-size:15px;font-weight:600}
 .wk .tl-new input{font-size:12px}
 .ev.ro{cursor:pointer}
 .ev.aliased b::after{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.35;margin-left:6px;vertical-align:middle}
+/* bottom sheet */
+.isheet-wrap{position:fixed;inset:0;z-index:60;pointer-events:none}
+.isheet-bg{position:absolute;inset:0;background:rgba(0,0,0,.28);opacity:0;transition:opacity .3s ease;pointer-events:auto}
+.isheet{position:absolute;left:0;right:0;bottom:0;margin:0 auto;max-width:520px;max-height:88%;display:flex;flex-direction:column;pointer-events:auto;
+  background:var(--win);border-radius:16px 16px 0 0;box-shadow:0 -10px 40px -10px rgba(0,0,0,.35);transform:translateY(105%);transition:transform .45s var(--spring,ease);
+  padding-bottom:max(14px, env(safe-area-inset-bottom,0px));font:15px var(--ui);color:var(--fg)}
+@media (min-width:561px){.isheet{bottom:24px;border-radius:16px}}
+.isheet-wrap.on .isheet{transform:none}
+.isheet-wrap.on .isheet-bg{opacity:1}
+.is-grab{width:100%;height:20px;flex:none;display:grid;place-items:center;cursor:grab;touch-action:none}
+.is-grab::after{content:"";width:38px;height:5px;border-radius:3px;background:var(--fg-3);opacity:.5}
+.is-top{display:flex;align-items:center;justify-content:space-between;padding:0 14px 8px;flex:none}
+.is-top b{font-weight:600;font-size:15px}
+.is-link{border:0;background:none;color:var(--accent);font:inherit;font-size:16px;padding:6px 4px;cursor:pointer}
+.is-save{font-weight:600}
+.is-body{overflow:auto;padding:4px 16px 8px;display:flex;flex-direction:column;gap:12px}
+.is-title{border:0;background:var(--fill-2,var(--win-2));border-radius:10px;padding:11px 12px;font:600 17px var(--ui);color:var(--fg)}
+.is-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.is-grid label:first-child:nth-last-child(3){grid-column:1/-1}
+.is-grid.two{grid-template-columns:1fr 1fr}
+.is-grid label,.is-f{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--fg-2)}
+.is-grid input,.is-grid select,.is-f select,.is-f input,.is-f textarea{border:0;background:var(--fill-2,var(--win-2));border-radius:10px;padding:9px 10px;font:16px var(--ui);color:var(--fg);min-width:0;width:100%;box-sizing:border-box}
+.is-f textarea{resize:vertical;min-height:64px}
+.is-sw{display:flex;flex-wrap:wrap;gap:10px;padding:4px 2px 0}
+.is-sw .sw{width:30px;height:30px;flex:none}
+.is-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:2px}
+.isheet .btn.danger{color:var(--bad)!important}
+#toast{touch-action:none}
 .rn-pop{position:fixed;z-index:50;display:flex;flex-direction:column;gap:9px;padding:14px;border-radius:14px;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);box-shadow:var(--shadow);font-size:13px;animation:spotPop .32s var(--spring,ease)}
 .rn-h{font-weight:600}
 .rn-pop input[name=t]{border:0;border-radius:9px;background:var(--fill-2,var(--win-2));padding:8px 11px;font:inherit;font-size:14px;color:var(--fg)}
@@ -702,7 +738,10 @@ body.ios .wk-head{border-top:0}
 body.ios .divider{margin:2px 0}
 body.ios .modes{margin-left:auto}
 body.ios .pane-head > div > .sub{display:none}
-body.ios .pane-week{--colw:118px}
+body.ios .pane-week{--colw:calc((100vw - var(--gut)) / 2)}
+body.ios .pane-week .pane-tl{scroll-snap-type:x mandatory;scroll-padding-left:var(--gut);overscroll-behavior-x:contain}
+body.ios .pane-week .wk-col{scroll-snap-align:start;scroll-snap-stop:always}
+body.ios.is-dragging .pane-week .pane-tl{scroll-snap-type:none}
 .ios-add{display:none}
 body.ios .ios-add{display:flex;margin-top:16px}
 #iosNav{flex:none;align-items:flex-end;justify-content:space-between;gap:10px;padding:6px 16px 6px;background:var(--win)}
@@ -1159,8 +1198,12 @@ function parseEvent(e, cal){
   const start = allDay ? new Date(e.start.date + "T00:00:00") : new Date(e.start?.dateTime);
   const end = allDay ? new Date((e.end?.date || e.start.date) + "T00:00:00") : new Date(e.end?.dateTime || e.start?.dateTime);
   return {id:e.id, calId:cal.id, cal, title:e.summary || (cal.kind==="work" ? "Busy" : "(no title)"),
-    start, end, allDay, attendees:(e.attendees||[]).length, location:e.location || "", desc:e.description || "", link:e.htmlLink, status:e.status};
+    start, end, allDay, attendees:(e.attendees||[]).length, location:e.location || "", desc:e.description || "", link:e.htmlLink, status:e.status, colorId:e.colorId || ""};
 }
+/* item colors: Google's event colors, so a color set here also shows in Google Calendar and survives a drag between calendar and lists */
+const EV_COLORS = {"7":["Peacock","#039be5"],"9":["Blueberry","#3f51b5"],"1":["Lavender","#7986cb"],"3":["Grape","#8e24aa"],"4":["Flamingo","#e67c73"],"11":["Tomato","#d50000"],"6":["Tangerine","#f4511e"],"5":["Banana","#f6bf26"],"2":["Sage","#33b679"],"10":["Basil","#0b8043"],"8":["Graphite","#616161"]};
+const evColor = (id) => EV_COLORS[id] ? EV_COLORS[id][1] : "";
+S.gone = new Map(); // events deleted here, hidden until Google catches up
 function allEvents(){
   const out = [];
   for (const [calId, rec] of S.events){
@@ -1176,7 +1219,7 @@ function allEvents(){
           if (as){ p.origCal = cal; p.cal = {...as, writable:false}; p.aliased = true; } // shows and counts as that calendar here only
         }
       }
-      out.push(p);
+      p.color = evColor(p.colorId) || p.cal.color; if (S.gone.has(p.id) && Date.now() - S.gone.get(p.id) < 60000) continue; out.push(p);
     }
   }
   return out.sort((a,b) => a.start - b.start);
@@ -1358,7 +1401,7 @@ async function scheduleTodo(t, {start, minutes, calName}){
   const st = new Date(start); if (isNaN(st)) throw new Error("Couldn't read that start time.");
   const en = new Date(st.getTime() + (Number(minutes)||t.est||30)*60000);
   const res = await S.mcp.callTool(GC, "create_event", {calendarId:cal.id, summary:t.title, startTime:localISO(st), endTime:localISO(en),
-    description:`${t.notes ? t.notes + "\n\n" : ""}planner:todo/${t.id}`, notificationLevel:"NONE"});
+    description:`${t.notes ? t.notes + "\n\n" : ""}planner:todo/${t.id}`, colorId:t.color || undefined, notificationLevel:"NONE"});
   const p = res.payload || {};
   let eventId = p.id || p.event?.id || p.eventId;
   if (!eventId){
@@ -1605,7 +1648,7 @@ function agenda(list, {empty="Nothing on the calendar.", actions=true}={}){
     let acts = "";
     if (actions && t) acts = `<button class="btn" data-act="toggle" data-id="${t.id}">${done ? "Undo" : "Done"}</button>${done ? "" : `<button class="btn ghost" data-act="tomorrow" data-ev="${esc(e.id)}">Tomorrow</button><button class="btn ghost" data-act="unsched" data-id="${t.id}" ${S.busy.has(t.id)?"disabled":""}>Unschedule</button>`}`;
     else if (actions && e.cal.writable && e.attendees <= 1 && !e.allDay) acts = `<button class="btn" data-act="evdone" data-ev="${esc(e.id)}" data-cal="${esc(e.calId)}">${done ? "Undo" : "Done"}</button>${done ? "" : `<button class="btn ghost" data-act="tomorrow" data-ev="${esc(e.id)}">Tomorrow</button>`}`;
-    return `<div class="row${done?" done":""}"><span class="t mono">${tt}</span><span class="sw" style="background:${e.cal.color}"></span>
+    return `<div class="row${done?" done":""}"><span class="t mono">${tt}</span><span class="sw" style="background:${e.color || e.cal.color}"></span>
       <span class="ttl">${esc(e.title.replace(/^✓\s*/,""))}<small>${esc(e.cal.name)}${t?" · to-do":""}${e.attendees>1?` · ${e.attendees} guests`:""}</small></span>
       <span class="acts">${acts}</span></div>`;
   }).join("") + `</div>`;
@@ -1660,7 +1703,7 @@ function timeline(evs, day, opt = {}){
   const timed = list.filter(e => !e.allDay);
   const H0 = TL.H0, H1 = TL.H1, PX = TL.PX;
   let h = "";
-  if (allday.length && !opt.week) h += `<div class="allday">${allday.map(e => `<span class="ev-pill" style="--evc:${e.cal.color};border-left-color:${e.cal.color}">${esc(e.title)}</span>`).join("")}</div>`;
+  if (allday.length && !opt.week) h += `<div class="allday">${allday.map(e => `<span class="ev-pill" style="--evc:${e.color || e.cal.color};border-left-color:${e.color || e.cal.color}">${esc(e.title)}</span>`).join("")}</div>`;
   // lane layout
   const items = timed.map(e => {
     const s = Math.max(H0*60, (e.start < startOfDay(day) ? 0 : e.start.getHours()*60 + e.start.getMinutes()));
@@ -1678,12 +1721,13 @@ function timeline(evs, day, opt = {}){
   for (let hr = H0; hr <= H1; hr++) grid += opt.week ? `<div class="hr" style="top:${(hr-H0)*PX}px"></div>` : `<div class="hr" style="top:${(hr-H0)*PX}px"><span>${hourLabel(day, hr, true)}</span></div>`;
   const evh = items.map(it => {
     const t = todoForEvent(it.e); const done = optDone(t ? "t:" + t.id : "e:" + it.e.id, !!(t && t.status === "done" || /^✓/.test(it.e.title)));
-    const w = 100/it.lanes;
+    // overlapping events fan out like Google Calendar: each starts further right, runs wider than its share, later ones sit on top
+    const w = 100/it.lanes, lft = it.lane * w, wid = it.lanes > 1 ? Math.min(100 - lft, w * 1.7) : 100, col = it.e.color || it.e.cal.color;
     const mv = it.e.cal.writable && it.e.attendees <= 1;
     const hpx = Math.max(18,(it.en-it.s)/60*PX-2);
     const short = hpx < 36, lines = Math.max(1, Math.floor((hpx - 22) / 15));
     const chk = !it.e.allDay && (t || (it.e.cal.writable && !it.e.origCal && it.e.attendees <= 1));
-    return `<div class="ev${t?" ev-todo":""}${chk?" can-chk":""}${done?" done":""}${mv?" movable":""}${it.e.aliased?" aliased":""}${!it.e.cal.writable?" ro":""}${short?" short":""}" data-ev="${esc(it.e.id)}" data-cal="${esc(it.e.calId)}" title="${esc(it.e.title)}" style="--evc:${it.e.cal.color};--lines:${lines};top:${(it.s-H0*60)/60*PX+1}px;height:${hpx}px;left:calc(${it.lane*w}% + 4px);width:calc(${w}% - 8px);border-left-color:${it.e.cal.color};background:color-mix(in srgb, ${it.e.cal.color} 16%, var(--win))">
+    return `<div class="ev${t?" ev-todo":""}${chk?" can-chk":""}${done?" done":""}${mv?" movable":""}${it.e.aliased?" aliased":""}${!it.e.cal.writable?" ro":""}${short?" short":""}" data-ev="${esc(it.e.id)}" data-cal="${esc(it.e.calId)}" title="${esc(it.e.title)}" style="--evc:${col};--lines:${lines};top:${(it.s-H0*60)/60*PX+1}px;height:${hpx}px;left:calc(${lft}% + ${it.lane ? 2 : 4}px);width:calc(${wid}% - ${it.lane ? 6 : 8}px);z-index:${1 + it.lane};border-left-color:${col};background:color-mix(in srgb, ${col} 16%, var(--win))${it.lane ? ";box-shadow:0 0 0 1.5px var(--win),0 2px 8px -2px rgba(0,0,0,.18)" : ""}">
       ${chk ? `<button type="button" class="ev-chk${done?" on":""}" data-evchk aria-label="${done?"Mark not done":"Mark done"}">${done?"✓":""}</button>` : ""}<b>${esc(it.e.title.replace(/^✓\s*/,""))}</b><span>${fmtTime(it.e.start)}–${fmtTime(it.e.end)}</span>${leaveFor(it.e) ? `<em class="ev-leave">${leaveTxt(it.e)}</em>` : ""}${mv?'<i class="rs" data-rs></i>':""}</div>`;
   }).join("");
   let now = "";
@@ -1719,7 +1763,7 @@ function todoRow(t){
   }
   const draggable = t.status !== "scheduled" && !t.eventId;
   const L = listOf(t), star = isStar(t);
-  return `<div class="todo${done?" is-done":""}${star?" starred":""}" data-id="${t.id}"${draggable?" data-drag":""} style="--lc:${L.color || "var(--fg-3)"};--lt:${L.color || "#ffcc00"}"><div class="lead">${draggable ? `<span class="grip" data-grip="${t.id}" aria-label="Drag to move" title="Drag to move">⠿</span>` : `<span class="nogrip"></span>`}<button class="check${done?" on":""}" data-act="toggle" data-id="${t.id}" aria-label="${done?"Mark not done":"Mark done"}">${done?"✓":""}</button></div>
+  return `<div class="todo${done?" is-done":""}${star?" starred":""}" data-id="${t.id}"${draggable?" data-drag":""} style="--lc:${evColor(t.color) || L.color || "var(--fg-3)"};--lt:${evColor(t.color) || L.color || "#ffcc00"}"><div class="lead">${draggable ? `<span class="grip" data-grip="${t.id}" aria-label="Drag to move" title="Drag to move">⠿</span>` : `<span class="nogrip"></span>`}<button class="check${done?" on":""}" data-act="toggle" data-id="${t.id}" aria-label="${done?"Mark not done":"Mark done"}">${done?"✓":""}</button></div>
     <div class="tt"><div>${esc(t.title)}</div><div class="meta"><span class="pri p${t.pri}">P${t.pri||2}</span>${chip(t.cal)}${when?`<span class="chip mono">${esc(fmtDay(when).split(",")[0].slice(0,3))} ${fmtTime(when)}</span>`:""}${t.repeat?`<button class="chip rep" data-act="repeatoff" data-id="${t.id}" title="Repeats ${esc(repeatLabel(t.repeat))}. Tap to stop repeating.">↻ ${esc(repeatLabel(t.repeat))}</button>`:""}${t.notes?`<span class="sub" style="margin:0">${esc(t.notes.slice(0,80))}</span>`:""}</div></div>
     ${actions ? `<div class="acts">${actions}</div>` : ""}<button type="button" class="star${star?" on":""}" data-act="star" data-id="${t.id}" aria-label="${star?"Unstar":"Star"}" aria-pressed="${star}"><svg viewBox="0 0 20 20" width="17" height="17"><path d="M10 2.6l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 7.9l5-.7z" fill="${star?"currentColor":"none"}" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>${form}</div>`;
 }
@@ -2277,24 +2321,36 @@ if (window.visualViewport) visualViewport.addEventListener("resize", fitPane);
 let divDrag = null;
 document.addEventListener("click", (e) => {
   const b = e.target.closest("[data-mode]"); if (!b) return;
-  S.paneMode = b.dataset.mode; S.animUntil = Date.now() + 650; clearTimeout(window.__modeT); window.__modeT = setTimeout(() => { if (S.db) saveCfg({layout:S.paneMode}).catch(() => {}); }, 700);
-  const pane = b.closest(".pane");
-  if (pane){ pane.className = "pane m-" + S.paneMode + (pane.classList.contains("pane-week") ? " pane-week" : ""); pane.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.mode === S.paneMode))); }
+  setPaneMode(b.closest(".pane"), b.dataset.mode);
 });
+function setPaneMode(pane, mode){
+  S.paneMode = mode; S.animUntil = Date.now() + 650; clearTimeout(window.__modeT); window.__modeT = setTimeout(() => { if (S.db) saveCfg({layout:S.paneMode, split:Math.round(S.split*100)/100}).catch(() => {}); }, 700);
+  if (pane){ pane.className = "pane m-" + mode + (pane.classList.contains("pane-week") ? " pane-week" : ""); pane.style.setProperty("--split", (S.split*100).toFixed(1) + "%"); pane.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.mode === mode))); }
+}
 document.addEventListener("pointerdown", (e) => {
   const el = e.target.closest("[data-divider]"); if (!el || e.button > 0) return;
   e.preventDefault();
-  divDrag = {el, body:el.closest(".pane-body"), pane:el.closest(".pane"), pid:e.pointerId}; divDrag.pane.classList.add("dragging");
+  const pn = el.closest(".pane");
+  if (!pn.classList.contains("m-split")){ S.split = pn.classList.contains("m-list") ? 0.04 : 0.96; S.paneMode = "split"; pn.className = "pane m-split" + (pn.classList.contains("pane-week") ? " pane-week" : ""); pn.style.setProperty("--split", (S.split*100).toFixed(1) + "%"); }
+  divDrag = {el, body:el.closest(".pane-body"), pane:pn, pid:e.pointerId, ys:[[e.clientY, performance.now()]]}; divDrag.pane.classList.add("dragging");
   el.classList.add("active"); try { el.setPointerCapture(e.pointerId); } catch {}
 });
 document.addEventListener("pointermove", (e) => {
   if (!divDrag || e.pointerId !== divDrag.pid) return;
   e.preventDefault();
   const r = divDrag.body.getBoundingClientRect();
-  S.split = Math.max(0.15, Math.min(0.85, (e.clientY - r.top) / r.height));
+  S.split = Math.max(0.04, Math.min(0.96, (e.clientY - r.top) / r.height));
   divDrag.pane.style.setProperty("--split", (S.split*100).toFixed(1) + "%");
+  const now = performance.now(); divDrag.ys.push([e.clientY, now]); while (divDrag.ys.length > 2 && now - divDrag.ys[0][1] > 90) divDrag.ys.shift();
 }, {passive:false});
-function endDiv(){ if (!divDrag) return; divDrag.el.classList.remove("active"); divDrag.pane.classList.remove("dragging"); divDrag = null; if (S.db) saveCfg({split:Math.round(S.split*100)/100}).catch(() => {}); schedule(); }
+function endDiv(){
+  const d = divDrag; if (!d) return; d.el.classList.remove("active"); d.pane.classList.remove("dragging"); divDrag = null;
+  const a = d.ys[0], b = d.ys[d.ys.length - 1], v = b[1] > a[1] ? (b[0] - a[0]) / (b[1] - a[1]) : 0;
+  // a flick, or a drag nearly to the edge, opens the list or the timeline fully
+  const mode = v < -0.45 || S.split < 0.14 ? "list" : v > 0.45 || S.split > 0.9 ? "timeline" : null;
+  if (mode){ if (S.split < 0.15 || S.split > 0.85) S.split = 0.55; setPaneMode(d.pane, mode); schedule(); return; }
+  if (S.db) saveCfg({split:Math.round(S.split*100)/100}).catch(() => {}); schedule();
+}
 document.addEventListener("pointerup", (e) => { if (divDrag && e.pointerId === divDrag.pid) endDiv(); });
 document.addEventListener("pointercancel", (e) => { if (divDrag && e.pointerId === divDrag.pid) endDiv(); });
 document.addEventListener("submit", (e) => {
@@ -2706,7 +2762,12 @@ function scrollFrames(x, y){
   for (const h of hosts){
     const r = h.getBoundingClientRect();
     if (x < r.left || x > r.right || y < r.top - 30 || y > r.bottom + 30) continue;
-    if (h.scrollWidth > h.clientWidth + 2){
+    if (h.scrollWidth > h.clientWidth + 2 && h.closest(".pane-week") && document.body.classList.contains("ios")){
+      const zx = 34, col = h.querySelector(".wk-col"), w = col ? col.offsetWidth : 160, now = Date.now();
+      const dir = x > r.right - zx ? 1 : x < r.left + zx + 40 ? -1 : 0;
+      if (dir && now - (h._stepAt || 0) > 650){ h._stepAt = now; h.scrollBy({left:dir * w, behavior:"smooth"}); }
+      if (dir && !(y < r.top + 40 || y > r.bottom - 40)) return true;
+    } else if (h.scrollWidth > h.clientWidth + 2){
       const zx = 36; let vx = 0;
       if (x < r.left + zx + 40) vx = -Math.ceil((r.left + zx + 40 - x) / 4); else if (x > r.right - zx) vx = Math.ceil((x - (r.right - zx)) / 4);
       if (vx){ h.scrollLeft += Math.max(-18, Math.min(18, vx)); }
@@ -2902,13 +2963,13 @@ function endEvDrag(apply){
       const ev = d.ev, mins = Math.max(15, Math.round((ev.end - ev.start) / 60000));
       act("ev" + ev.id, async () => {
         const before = undoStack.length;
-        const id = await addTodo({title:ev.title.replace(/^✓\s*/, ""), est:mins, cal:ev.cal.name, extra:{notes:ev.location || ""}});
+        const id = await addTodo({title:ev.title.replace(/^✓\s*/, ""), est:mins, cal:ev.cal.name, extra:{notes:ev.location || "", color:ev.colorId || null}});
         await moveTodo(id, z.zone, z.ids, z.idx);
         await S.mcp.callTool(GC, "delete_event", {calendarId:ev.calId, eventId:ev.id, notificationLevel:"NONE"});
         await afterWrite();
         undoStack.length = before;
         pushUndo(`Moved "${ev.title}" off the calendar`, async () => {
-          await S.mcp.callTool(GC, "create_event", {calendarId:ev.calId, summary:ev.title, startTime:localISO(ev.start), endTime:localISO(ev.end), location:ev.location || undefined, notificationLevel:"NONE"});
+          await S.mcp.callTool(GC, "create_event", {calendarId:ev.calId, summary:ev.title, startTime:localISO(ev.start), endTime:localISO(ev.end), colorId:ev.colorId || undefined, location:ev.location || undefined, notificationLevel:"NONE"});
           await todoRef(id).delete(); await afterWrite();
         });
         toast(`Moved "${ev.title}" off the calendar into ${zoneName(z.zone)}.`, true);
@@ -2964,20 +3025,22 @@ document.addEventListener("pointermove", (e) => {
     s.row.classList.add("swiping");
   }
   e.preventDefault();
-  s.dx = Math.max(-140, Math.min(140, dx));
+  s.dx = Math.max(-s.row.offsetWidth, Math.min(140, dx));
   s.row.style.setProperty("--sx", s.dx + "px");
   s.row.classList.toggle("sw-r", s.dx > 0); s.row.classList.toggle("sw-l", s.dx < 0);
   s.row.classList.toggle("sw-go", Math.abs(s.dx) >= 80);
+  s.row.classList.toggle("sw-del", s.dx <= -Math.max(170, s.row.offsetWidth * 0.5));
 }, {passive:false});
 function endSwipe(apply){
   const s = swipe; swipe = null; if (!s || !s.on) return;
-  const row = s.row, go = apply && Math.abs(s.dx) >= 80, dir = s.dx > 0 ? "r" : "l";
-  row.classList.add("sw-back"); row.style.setProperty("--sx", go ? (dir === "r" ? "140px" : "-140px") : "0px");
-  setTimeout(() => { row.classList.remove("swiping","sw-r","sw-l","sw-go","sw-back"); row.style.removeProperty("--sx"); }, 220);
+  const row = s.row, go = apply && Math.abs(s.dx) >= 80, del = apply && row.classList.contains("sw-del"), dir = del ? "d" : s.dx > 0 ? "r" : "l";
+  row.classList.add("sw-back"); row.style.setProperty("--sx", del ? -row.offsetWidth + "px" : go ? (dir === "r" ? "140px" : "-140px") : "0px");
+  setTimeout(() => { row.classList.remove("swiping","sw-r","sw-l","sw-go","sw-back","sw-del"); row.style.removeProperty("--sx"); }, 220);
   if (!go) return;
   try { navigator.vibrate && navigator.vibrate(12); } catch {}
   const t = findTodoLive(s.id); if (!t) return;
   if (dir === "r") act(t.id, () => completeTodo(t, t.status !== "done"));
+  else if (dir === "d") act(t.id, async () => { await deleteTodo(t); toast(`Deleted "${t.title}".`, true); });
   else act(t.id, () => snoozeTodo(t));
 }
 document.addEventListener("pointerup", (e) => { if (swipe && e.pointerId === swipe.pid) endSwipe(true); });
@@ -2996,14 +3059,7 @@ async function createEventAt(title, start, minutes, calName){
   toast(`Added "${title}" ${fmtTime(start)} on ${cal.name}.`, true);
 }
 function closeComposer(){ document.querySelectorAll(".tl-new").forEach(x => x.remove()); }
-document.addEventListener("click", (e) => {
-  if (drag || evDrag || divDrag || Date.now() - lastDragAt < 400) return;
-  const tl = e.target.closest(".tl"); if (!tl || !tl.dataset.day) return;
-  if (e.target.closest(".ev,.tl-new,.tl-preview,a,button,input,select")) return;
-  if (document.querySelector(".tl-new")){ closeComposer(); return; }
-  if (!S.mcp){ toast("Sign in with Google to add events."); return; }
-  const r = tl.getBoundingClientRect();
-  let min = TL.H0 * 60 + Math.floor(((e.clientY - r.top) / TL.PX * 60) / 15) * 15;
+function openComposer(tl, min){
   min = Math.max(TL.H0 * 60, Math.min(min, TL.H1 * 60 - 30));
   const st = new Date(tl.dataset.day + "T00:00:00"); st.setMinutes(min);
   const cals = writableCals(); if (!cals.length){ toast("No calendar you can write to."); return; }
@@ -3028,7 +3084,49 @@ document.addEventListener("click", (e) => {
     act("new-ev", () => createEventAt(title, start, mins, cal));
   });
   setTimeout(() => inp.focus(), 0);
+}
+// press and hold empty timeline space, drag to the time you want, let go to name it
+let hold = null;
+const holdMin = (tl, y) => { const r = tl.getBoundingClientRect(); return Math.max(TL.H0 * 60, Math.min(TL.H1 * 60 - 60, TL.H0 * 60 + Math.round(((y - r.top) / TL.PX * 60 - 15) / 15) * 15)); };
+function placeHold(x, y){
+  const h = hold; if (!h || !h.g) return;
+  h.g.style.pointerEvents = "none";
+  const under = document.elementFromPoint(x, y), tl = under && under.closest(".tl[data-day]");
+  if (tl && tl !== h.tl){ h.tl = tl; tl.appendChild(h.g); }
+  h.min = holdMin(h.tl, y);
+  h.g.style.top = ((h.min - TL.H0 * 60) / 60 * TL.PX + 1) + "px"; h.g.style.height = (TL.PX - 2) + "px";
+  h.g.textContent = fmtTime((() => { const d = new Date(h.tl.dataset.day + "T00:00:00"); d.setMinutes(h.min); return d; })());
+}
+document.addEventListener("pointerdown", (e) => {
+  if (e.button > 0 || drag || evDrag || divDrag) return;
+  const tl = e.target.closest(".tl"); if (!tl || !tl.dataset.day) return;
+  if (e.target.closest(".ev,.tl-new,.tl-preview,.tl-ghost,a,button,input,select")) return;
+  if (document.querySelector(".tl-new")){ closeComposer(); return; }
+  hold = {tl, x0:e.clientX, y0:e.clientY, pid:e.pointerId, on:false};
+  hold.timer = setTimeout(() => {
+    const h = hold; if (!h) return;
+    if (!S.mcp){ hold = null; toast("Sign in with Google to add events."); return; }
+    h.on = true; try { navigator.vibrate && navigator.vibrate(10); } catch {}
+    h.g = document.createElement("div"); h.g.className = "tl-ghost"; h.tl.appendChild(h.g);
+    document.body.classList.add("is-dragging"); placeHold(h.x0, h.y0);
+  }, 450);
 });
+document.addEventListener("pointermove", (e) => {
+  const h = hold; if (!h || e.pointerId !== h.pid) return;
+  if (!h.on){ if (Math.abs(e.clientX - h.x0) > 8 || Math.abs(e.clientY - h.y0) > 8){ clearTimeout(h.timer); hold = null; } return; }
+  e.preventDefault(); placeHold(e.clientX, e.clientY);
+}, {passive:false});
+document.addEventListener("touchmove", (e) => { if (hold && hold.on) e.preventDefault(); }, {passive:false});
+function endHold(apply){
+  const h = hold; hold = null; if (!h) return; clearTimeout(h.timer);
+  if (!h.on) return;
+  document.body.classList.remove("is-dragging"); lastDragAt = Date.now();
+  if (h.g) h.g.remove();
+  if (apply) openComposer(h.tl, h.min);
+}
+document.addEventListener("pointerup", (e) => { if (hold && e.pointerId === hold.pid) endHold(true); });
+document.addEventListener("pointercancel", (e) => { if (hold && e.pointerId === hold.pid) endHold(false); });
+document.addEventListener("contextmenu", (e) => { if (e.target.closest && e.target.closest(".tl")) e.preventDefault(); });
 document.addEventListener("pointerdown", (e) => { const f = document.querySelector(".tl-new"); if (f && !f.contains(e.target) && !e.target.closest(".tl")) closeComposer(); }, true);
 
 /* ---------- your own names for read-only events (Work "Busy" blocks etc). Never written to Google. ---------- */
@@ -3091,7 +3189,7 @@ document.addEventListener("click", (e) => {
   const el = e.target.closest(".ev"); if (!el || e.target.closest("[data-rs]")) return;
   const p = allEvents().find(x => x.id === el.dataset.ev && x.calId === el.dataset.cal); if (!p) return;
   e.stopPropagation();
-  if (e.target.closest("[data-evchk]")){ toggleEventDone(p).catch(err => toast(friendly(err))); return; } if (p.cal.writable && !p.origCal) openEvSheet(p, el); else openRename(p, el);
+  if (e.target.closest("[data-evchk]")){ toggleEventDone(p).catch(err => toast(friendly(err))); return; } if (p.cal.writable && !p.origCal) openSheet({ev:p}); else openRename(p, el);
 }, true);
 
 /* ---------- check off anything on the calendar: linked to-dos complete the to-do; plain events get a ✓ in Google ---------- */
@@ -3105,6 +3203,143 @@ async function toggleEventDone(ev){
   try { await setDone(!done); } catch (err) { S.doneOpt.delete("e:" + ev.id); schedule(); throw err; }
   pushUndo(done ? `Unchecked "${base}"` : `Checked off "${base}"`, () => setDone(done));
 }
+/* ---------- bottom sheet: see and edit an event or a to-do ---------- */
+const MARK_RE = /planner:(?:todo\/[\w-]+|sample)/g;
+const stripMarks = (d) => String(d || "").replace(MARK_RE, "").trim();
+const marksOf = (d) => (String(d || "").match(MARK_RE) || []).join("\n");
+const pad2 = (n) => String(n).padStart(2, "0");
+const hhmm = (d) => pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+function closeSheet(){
+  const w = document.querySelector(".isheet-wrap"); if (!w) return;
+  w.classList.remove("on"); setTimeout(() => w.remove(), 360);
+}
+async function deleteEvent(p){
+  if (!p.cal.writable) throw new Error(`${p.cal.name} is read-only here.`);
+  const base = p.title.replace(/^✓\s*/, "");
+  S.gone.set(p.id, Date.now()); render();
+  try { await S.mcp.callTool(GC, "delete_event", {calendarId:p.calId, eventId:p.id, notificationLevel:"NONE"}); }
+  catch (err) { S.gone.delete(p.id); schedule(); throw err; }
+  await afterWrite();
+  pushUndo(`Deleted "${base}"`, async () => {
+    await S.mcp.callTool(GC, "create_event", {calendarId:p.calId, summary:p.title, startTime:localISO(p.start), endTime:localISO(p.end), allDay:p.allDay || undefined,
+      location:p.location || undefined, description:p.desc || undefined, colorId:p.colorId || undefined, notificationLevel:"NONE"});
+    await afterWrite();
+  });
+  toast(`Deleted "${base}".`, true);
+}
+function openSheet({ev, todo}){
+  closeSheet(); closeRename();
+  const p = ev, t = todo || (ev ? todoForEvent(ev) : null);
+  const isEv = !!p, guests = isEv && p.attendees > 1;
+  const title = isEv ? p.title.replace(/^✓\s*/, "") : t.title;
+  const done = isEv ? optDone(t ? "t:" + t.id : "e:" + p.id, !!(t && t.status === "done" || /^✓/.test(p.title))) : optDone("t:" + t.id, t.status === "done");
+  const color = isEv ? (p.colorId || (t && t.color) || "") : (t.color || "");
+  const notes = isEv ? stripMarks(p.desc) : (t.notes || "");
+  const cals = writableCals(), curCal = isEv ? p.cal.name : (t.cal || (defaultCal() || {}).name);
+  const L = lists(), curList = t ? listOf(t).id : null;
+  const w = document.createElement("div"); w.className = "isheet-wrap";
+  w.innerHTML = `<div class="isheet-bg" data-is="x"></div><form class="isheet" autocomplete="off">
+    <div class="is-grab"></div>
+    <div class="is-top"><button type="button" class="is-link" data-is="x">Cancel</button><b>${isEv ? (t ? "Scheduled to-do" : "Event") : "To-do"}</b><button type="submit" class="is-link is-save">Save</button></div>
+    <div class="is-body">
+      <input class="is-title" name="title" value="${esc(title)}" placeholder="Title">
+      ${isEv && !p.allDay ? `<div class="is-grid"><label>Date<input type="date" name="d" value="${dayKey(p.start)}" ${guests ? "disabled" : ""}></label><label>Starts<input type="time" name="s" value="${hhmm(p.start)}" ${guests ? "disabled" : ""}></label><label>Ends<input type="time" name="e" value="${hhmm(p.end)}" ${guests ? "disabled" : ""}></label></div>` : ""}
+      ${!isEv ? `<div class="is-grid two"><label>List<select name="l">${L.map(l => `<option value="${esc(l.id)}" ${l.id === curList ? "selected" : ""}>${esc(l.name)}</option>`).join("")}</select></label><label>Takes<select name="m">${[15,30,45,60,90,120,180,240].map(m => `<option value="${m}" ${Number(t.est || 30) === m ? "selected" : ""}>${m < 60 ? m + " min" : (m/60) + " hr"}</option>`).join("")}</select></label></div>` : ""}
+      <label class="is-f">Calendar<select name="c" ${guests ? "disabled" : ""}>${cals.map(c => `<option ${c.name === curCal ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
+      <div class="is-f"><span>Color</span><div class="is-sw"><button type="button" class="sw${!color ? " on" : ""}" data-col="" style="--sw:var(--fg-3)" aria-label="Calendar or list color"></button>${Object.entries(EV_COLORS).map(([k, [n, hex]]) => `<button type="button" class="sw${color === k ? " on" : ""}" data-col="${k}" style="--sw:${hex}" aria-label="${n}" title="${n}"></button>`).join("")}</div></div>
+      ${isEv ? `<label class="is-f">Location<input name="loc" value="${esc(p.location || "")}" placeholder="Add a place"></label>` : ""}
+      <label class="is-f">Notes<textarea name="n" rows="3" placeholder="Notes">${esc(notes)}</textarea></label>
+      ${guests ? `<div class="rn-note">Has guests, so time and calendar changes are best made in Google Calendar.</div>` : ""}
+      <div class="is-acts"><button type="button" class="btn" data-is="done">${done ? "Mark not done" : "Mark done"}</button>${t ? `<button type="button" class="btn ghost" data-is="star">${isStar(t) ? "Unstar" : "Star"}</button>` : ""}<span style="flex:1"></span>${isEv && p.link ? `<a class="btn ghost" href="${esc(p.link)}" target="_blank" rel="noopener">Google</a>` : ""}<button type="button" class="btn ghost danger" data-is="del">Delete</button></div>
+    </div></form>`;
+  document.body.append(w);
+  requestAnimationFrame(() => w.classList.add("on"));
+  const f = w.querySelector("form"); let col = color;
+  w.addEventListener("click", (e) => {
+    const sw = e.target.closest("[data-col]");
+    if (sw){ col = sw.dataset.col; w.querySelectorAll(".is-sw .sw").forEach(b => b.classList.toggle("on", b === sw)); return; }
+    const b = e.target.closest("[data-is]"); if (!b) return;
+    const k = b.dataset.is;
+    if (k === "x"){ closeSheet(); return; }
+    closeSheet();
+    if (k === "done"){ if (t) act(t.id, () => completeTodo(t, !done)); else toggleEventDone(p).catch(err => toast(friendly(err))); }
+    else if (k === "star" && t) act(t.id, () => toggleStar(t));
+    else if (k === "del"){ if (t) act(t.id, async () => { await deleteTodo(t); toast(`Deleted "${t.title}".`, true); }); else act("ev" + p.id, () => deleteEvent(p)); }
+  });
+  // drag the grabber down to dismiss
+  const grab = w.querySelector(".is-grab"), sheet = f; let gy = null;
+  grab.addEventListener("pointerdown", (e) => { gy = e.clientY; try { grab.setPointerCapture(e.pointerId); } catch {} });
+  grab.addEventListener("pointermove", (e) => { if (gy == null) return; sheet.style.transition = "none"; sheet.style.transform = `translateY(${Math.max(0, e.clientY - gy)}px)`; });
+  grab.addEventListener("pointerup", (e) => { if (gy == null) return; const dy = e.clientY - gy; gy = null; sheet.style.transition = ""; sheet.style.transform = ""; if (dy > 80) closeSheet(); });
+  f.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const v = (n) => { const el = f.elements[n]; return el ? el.value : undefined; };
+    const nt = (v("title") || "").trim() || title, nn = (v("n") || "").trim(), nc = v("c");
+    closeSheet();
+    if (!isEv){
+      const before = {title:t.title, notes:t.notes || "", list:t.list || null, est:t.est || 30, cal:t.cal || null, color:t.color || null};
+      const after = {title:nt, notes:nn, list:v("l"), est:Number(v("m")) || 30, cal:nc, color:col || null};
+      act(t.id, async () => { await todoRef(t.id).update(after); pushUndo(`Edited "${nt}"`, () => todoRef(t.id).update(before), () => todoRef(t.id).update(after)); });
+      return;
+    }
+    act("ev" + p.id, async () => {
+      const patch = {}, undo = {};
+      if (nt !== title){ patch.summary = (done ? "✓ " : "") + nt; undo.summary = p.title; }
+      if (!p.allDay && !guests){
+        const st = new Date(`${v("d")}T${v("s")}:00`); let en = new Date(`${v("d")}T${v("e")}:00`);
+        if (!isNaN(st) && !isNaN(en)){
+          if (en <= st) en = new Date(en.getTime() + 86400000);
+          if (+st !== +p.start || +en !== +p.end){ patch.startTime = localISO(st); patch.endTime = localISO(en); undo.startTime = localISO(p.start); undo.endTime = localISO(p.end); S.optim.set(p.id, {start:st, end:en, at:Date.now()}); }
+        }
+      }
+      const loc = (v("loc") || "").trim(); if (loc !== (p.location || "")){ patch.location = loc; undo.location = p.location || ""; }
+      const desc = [nn, marksOf(p.desc)].filter(Boolean).join("\n\n"); if (desc !== (p.desc || "")){ patch.description = desc; undo.description = p.desc || ""; }
+      if (col !== (p.colorId || "")){ patch.colorId = col || "0"; undo.colorId = p.colorId || "0"; }
+      if (Object.keys(patch).length){
+        await S.mcp.callTool(GC, "update_event", {calendarId:p.calId, eventId:p.id, notificationLevel:"NONE", ...patch});
+        if (t) await todoRef(t.id).update({title:nt, notes:nn, color:col || null, ...(patch.startTime ? {start:new Date(patch.startTime).toISOString(), est:Math.round((new Date(patch.endTime) - new Date(patch.startTime)) / 60000)} : {})});
+        await afterWrite();
+        pushUndo(`Edited "${nt}"`, async () => { await S.mcp.callTool(GC, "update_event", {calendarId:p.calId, eventId:p.id, notificationLevel:"NONE", ...undo}); await afterWrite(); });
+      }
+      if (nc && nc !== p.cal.name && !guests){
+        const moved = {...p, title:patch.summary || p.title, colorId:col || p.colorId, ...(patch.startTime ? {start:new Date(patch.startTime), end:new Date(patch.endTime)} : {})};
+        await changeEventCal(moved, nc);
+      }
+    });
+  });
+}
+document.addEventListener("click", (e) => {
+  // tap a to-do's text to open it
+  if (drag || Date.now() - lastDragAt < 400) return;
+  const tt = e.target.closest(".todo .tt"); if (!tt || e.target.closest("button,a,input,select")) return;
+  const row = tt.closest(".todo"), t = row && findTodoLive(row.dataset.id); if (!t) return;
+  const ev = t.eventId && allEvents().find(x => x.id === t.eventId);
+  openSheet(ev ? {ev} : {todo:t});
+});
+// quick swipe right on a calendar block checks it off (iPhone)
+(() => {
+  let s0 = null;
+  document.addEventListener("touchstart", (e) => { const el = e.target.closest && e.target.closest(".ev.can-chk"); s0 = el && e.touches.length === 1 ? {el, x:e.touches[0].clientX, y:e.touches[0].clientY, at:Date.now()} : null; }, {passive:true});
+  document.addEventListener("touchend", (e) => {
+    const s = s0; s0 = null; if (!s || (evDrag && evDrag.active)) return;
+    const p = e.changedTouches[0], dx = p.clientX - s.x, dy = p.clientY - s.y;
+    if (dx > 50 && Math.abs(dy) < 28 && Date.now() - s.at < 450){
+      const ev = allEvents().find(x => x.id === s.el.dataset.ev && x.calId === s.el.dataset.cal); if (!ev) return;
+      lastDragAt = Date.now(); try { navigator.vibrate && navigator.vibrate(10); } catch {}
+      toggleEventDone(ev).catch(err => toast(friendly(err)));
+    }
+  }, {passive:true});
+})();
+// swipe a notice up (or sideways) to dismiss it
+(() => {
+  let g = null;
+  document.addEventListener("pointerdown", (e) => { const el = e.target.closest && e.target.closest("#toast"); if (!el || e.target.closest("button")) return; g = {el, x:e.clientX, y:e.clientY, pid:e.pointerId}; try { el.setPointerCapture(e.pointerId); } catch {} });
+  document.addEventListener("pointermove", (e) => { if (!g || e.pointerId !== g.pid) return; const dy = Math.min(0, e.clientY - g.y), dx = e.clientX - g.x; g.el.style.transition = "none"; g.el.style.transform = Math.abs(dx) > -dy ? `translateX(${dx}px)` : `translateY(${dy}px)`; g.el.style.opacity = String(1 - Math.min(.8, Math.max(-dy, Math.abs(dx)) / 160)); });
+  const up = (e) => { if (!g || e.pointerId !== g.pid) return; const el = g.el, dy = e.clientY - g.y, dx = e.clientX - g.x; g = null; el.style.transition = "transform .25s ease, opacity .25s ease";
+    if (dy < -28 || Math.abs(dx) > 70){ el.style.transform = dy < -28 && Math.abs(dx) <= 70 ? "translateY(-140%)" : `translateX(${dx > 0 ? 120 : -120}%)`; el.style.opacity = "0"; setTimeout(() => { el.hidden = true; el.style.transform = ""; el.style.opacity = ""; el.style.transition = ""; }, 250); }
+    else { el.style.transform = ""; el.style.opacity = ""; } };
+  document.addEventListener("pointerup", up); document.addEventListener("pointercancel", up);
+})();
 /* ---------- tap an editable event: change which calendar it's on (moves it in Google) ---------- */
 async function changeEventCal(ev, toName){
   const to = calByName(toName); if (!to || !to.writable) throw new Error(`Can't write to ${toName}.`);
@@ -3115,7 +3350,7 @@ async function changeEventCal(ev, toName){
     newId = (r.payload && (r.payload.id || r.payload.event?.id)) || ev.id;
   } catch {
     // no move on this connection: copy to the new calendar, then remove the original
-    const r = await S.mcp.callTool(GC, "create_event", {calendarId:to.id, summary:ev.title, startTime:localISO(ev.start), endTime:localISO(ev.end), location:ev.location || undefined, description:ev.desc || undefined, notificationLevel:"NONE"});
+    const r = await S.mcp.callTool(GC, "create_event", {calendarId:to.id, summary:ev.title, startTime:localISO(ev.start), endTime:localISO(ev.end), colorId:ev.colorId || undefined, location:ev.location || undefined, description:ev.desc || undefined, notificationLevel:"NONE"});
     newId = r.payload?.id || r.payload?.event?.id || null;
     await S.mcp.callTool(GC, "delete_event", {calendarId:ev.calId, eventId:ev.id, notificationLevel:"NONE"});
   }
@@ -3480,6 +3715,7 @@ async function gcall(tool, i = {}){
     const b = {summary:i.summary};
     if (i.description) b.description = i.description;
     if (i.location) b.location = i.location;
+    if (i.colorId && i.colorId !== "0") b.colorId = String(i.colorId);
     if (i.allDay){ b.start = {date:String(i.startTime).slice(0,10)}; b.end = {date:String(i.endTime).slice(0,10)}; }
     else { b.start = {dateTime:toRFC(i.startTime), timeZone:TZ}; b.end = {dateTime:toRFC(i.endTime), timeZone:TZ}; }
     if (i.useDefaultReminders === false) b.reminders = {useDefault:false, overrides:[]};
@@ -3489,6 +3725,8 @@ async function gcall(tool, i = {}){
     const b = {};
     if (i.summary !== undefined) b.summary = i.summary;
     if (i.description !== undefined) b.description = i.description;
+    if (i.location !== undefined) b.location = i.location;
+    if (i.colorId !== undefined) b.colorId = i.colorId && i.colorId !== "0" ? String(i.colorId) : null;
     if (i.startTime) b.start = {dateTime:toRFC(i.startTime), timeZone:TZ};
     if (i.endTime) b.end = {dateTime:toRFC(i.endTime), timeZone:TZ};
     return gfetch(`${CAL}/calendars/${enc(i.calendarId || "primary")}/events/${enc(i.eventId)}?sendUpdates=none`, {method:"PATCH", body:JSON.stringify(b)});
@@ -3666,7 +3904,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-59";
+const APP_VERSION = "2026.10.20-60";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);

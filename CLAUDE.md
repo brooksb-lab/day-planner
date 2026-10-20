@@ -27,7 +27,7 @@ No build step, no framework, no server. Plain JS inside one IIFE at the bottom o
 
 ## Versioning (every push)
 
-- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.20-59`).
+- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.20-60`).
 - `CACHE` in `sw.js`, `day-vN` with the same N.
 - He sees the version in More (iPhone) or the sidebar (desktop).
 
@@ -71,9 +71,15 @@ Key state: `S` (tab, calendars, events, todos, paneMode, split, aliases, doneOpt
 
 - Drag to-dos between lists, onto the timeline (schedules), and events off the timeline into a list (unschedules; plain events become to-dos).
 - Drag events to move/resize; in Week, across days.
-- Tap an editable event: sheet to change its calendar (moves it in Google). Tap a read-only block: rename / show as another calendar (local).
-- Circle on calendar blocks checks them off.
-- Swipe to-dos: right = done, left = tomorrow.
+- Tap an editable event or a to-do's text: bottom sheet (`openSheet`) to edit title, time, calendar, list, color, location, notes; mark done, star, delete. Tap a read-only block: rename / show as another calendar (local).
+- Item colors are Google event colors (`EV_COLORS`, `colorId`); to-dos keep `color`, and it carries across scheduling and unscheduling.
+- Check off calendar blocks: quick swipe right on iPhone, hover circle on desktop, or the sheet.
+- Swipe to-dos: right = done, left = tomorrow, far left = delete.
+- Press and hold empty timeline space, drag to place, let go to name a new event.
+- Overlapping events fan out (Google Calendar style), later ones on top.
+- Flick the list/timeline handle up or down to open the list or timeline fully.
+- iPhone Week shows two days, snapping one day at a time; dragging an event to the edge steps a day.
+- Swipe a notice up or sideways to dismiss it.
 - Undo/redo for every write.
 
 ## Testing
