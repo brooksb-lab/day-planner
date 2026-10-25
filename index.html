@@ -1146,7 +1146,7 @@ let cfgRaw = {};
 const cfg = () => ({...CFG_DEFAULTS, ...cfgRaw, tabHours:{...CFG_DEFAULTS.tabHours, ...(cfgRaw.tabHours || {})}, calColors:{...(cfgRaw.calColors || {})}});
 function applyCfg(){
   const c = cfg();
-  TL.H0 = 0; TL.H1 = 24; TL.PX = c.hourHeight;
+  TL.H0 = 0; TL.H1 = 24; S.pxUser = c.hourHeight; TL.PX = Math.max(S.pxUser, S.pxFloor || 0);
   const th = c.tabHours;
   const set = (id, from, to) => { const t = TABS.find(x => x.id === id); t.from = from; t.to = to; };
   set("morning", th.morning, th.day); set("day", th.day, th.evening); set("evening", th.evening, th.tomorrow); set("tomorrow", th.tomorrow, th.morning + 24);
@@ -1498,9 +1498,19 @@ async function appRefresh(){
   if (S.syncing) return;
   S.syncing = true; tick();
   try { sessionStorage.setItem("reloadTab", S.tab); sessionStorage.setItem("reloadScroll", String(scrollY)); } catch {}
-  try { const r = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (r) await Promise.race([r.update(), new Promise(ok => setTimeout(ok, 2500))]); } catch {}
-  try { await Promise.race([fetch("index.html", {cache:"reload"}), new Promise(ok => setTimeout(ok, 2500))]); } catch {}
-  location.reload();
+  // ask GitHub for the newest page, past every cache (browser, service worker, CDN)
+  const timeout = (ms) => new Promise(ok => setTimeout(ok, ms));
+  let latest = "";
+  try { const txt = await Promise.race([fetch("index.html?fresh=" + Date.now(), {cache:"no-store"}).then(r => r.ok ? r.text() : ""), timeout(4000).then(() => "")]); latest = (/APP_VERSION = "([^"]+)"/.exec(txt) || [])[1] || ""; } catch {}
+  try {
+    const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+    if (reg){
+      await Promise.race([reg.update(), timeout(2500)]);
+      // a newer version exists but the installed worker could still hand back the old page: drop it so the reload goes straight to the network
+      if (latest && latest !== APP_VERSION){ await reg.unregister(); try { for (const k of await caches.keys()) await caches.delete(k); } catch {} }
+    }
+  } catch {}
+  location.replace(location.pathname + "?r=" + Date.now() + location.hash);
 }
 $("syncnow").addEventListener("click", appRefresh);
 async function clearSamples(){
@@ -1622,7 +1632,20 @@ function render(){
   $("wtitle").textContent = "Planner · " + TABS.find(t => t.id === S.tab).label;
   const nl = $("main").querySelector(".nowline"); if (nl && !render.scrolled){ render.scrolled = true; }
   renderSide();
+  fitTimeline();
 }
+/* the day always fills the timeline box: hours never get so short that 24h ends above the bottom */
+function fitTimeline(){
+  const h = $("main").querySelector(".pane-tl"), tl = h && h.querySelector(".tl");
+  if (!h || !tl || !h.clientHeight || S.paneMode === "list") return;
+  const overhead = h.scrollHeight - tl.offsetHeight; // padding, week header
+  const floor = Math.max(0, (h.clientHeight - overhead) / (TL.H1 - TL.H0));
+  if (Math.abs(floor - (S.pxFloor || 0)) < 0.5) return;
+  S.pxFloor = floor;
+  const px = Math.max(S.pxUser || TL.PX, floor);
+  if (Math.abs(px - TL.PX) >= 0.5){ TL.PX = px; schedule(); }
+}
+addEventListener("resize", () => setTimeout(fitTimeline, 60));
 function banners(){
   let h = "";
   if (AUTH.state === "expired") h += `<div class="banner bad"><span>Google sign-in expired.</span><button class="btn primary" data-act="gsignin">Continue</button></div>`;
@@ -3283,7 +3306,7 @@ async function toggleEventDone(ev){
   const tlOf = (h) => h && h.querySelector(".tl");
   function zoomTo(px, cy){
     const h = $("main").querySelector(".pane-tl"), tl = tlOf(h); if (!h || !tl) return;
-    px = Math.max(MIN, Math.min(MAX, px)); if (Math.abs(px - TL.PX) < 0.5) return;
+    px = Math.max(MIN, Math.min(MAX, px)); S.pxUser = px; px = Math.max(px, S.pxFloor || 0); if (Math.abs(px - TL.PX) < 0.5) return;
     const r = h.getBoundingClientRect(), off = tl.getBoundingClientRect().top - r.top + h.scrollTop;
     const hr = (cy - r.top + h.scrollTop - off) / TL.PX; // hour under the fingers stays put
     TL.PX = px; render();
@@ -3292,7 +3315,7 @@ async function toggleEventDone(ev){
     const h2 = $("main").querySelector(".pane-tl"), tl2 = tlOf(h2); if (!h2 || !tl2) return;
     const off2 = tl2.getBoundingClientRect().top - h2.getBoundingClientRect().top + h2.scrollTop;
     h2.scrollTop = hr * px + off2 - (cy - r.top);
-    clearTimeout(saveT); saveT = setTimeout(() => { if (S.db) saveCfg({hourHeight:Math.round(TL.PX)}).catch(() => {}); }, 700);
+    clearTimeout(saveT); saveT = setTimeout(() => { if (S.db) saveCfg({hourHeight:Math.round(S.pxUser || TL.PX)}).catch(() => {}); }, 700);
   }
   const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY) || 1;
   document.addEventListener("touchstart", (e) => {
@@ -4018,7 +4041,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.25-68";
+const APP_VERSION = "2026.10.25-70";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);

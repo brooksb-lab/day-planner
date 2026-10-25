@@ -27,7 +27,7 @@ No build step, no framework, no server. Plain JS inside one IIFE at the bottom o
 
 ## Versioning (every push)
 
-- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-68`).
+- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-70`).
 - `CACHE` in `sw.js`, `day-vN` with the same N.
 - He sees the version in More (iPhone) or the sidebar (desktop).
 
@@ -100,3 +100,9 @@ For deeper checks, copy `index.html` to a scratch folder, insert `window.__T={S,
 - A native Xcode shell (WKWebView, `~/Projects/DayWeb` on his Mac) exists but is parked. It has his credentials baked in and must stay private.
 - An older native SwiftUI/EventKit project lives at `~/Projects/Day` on his Mac. Not in use.
 - The CLO work subscription (brooks@clo3d.com) is filtered out. Office time comes from his own "CLO" calendar on his personal account (kind `work`, writable).
+
+## Updates reaching the phone
+
+- `sw.js` always fetches the page with a unique `?fresh=` query and `no-store`, so the GitHub Pages CDN cache (10 min) never serves an old page.
+- The refresh button fetches the newest `index.html` directly, compares `APP_VERSION`, drops the service worker and caches if they are behind, then reloads with `?r=`.
+- The day always fills the timeline box: `fitTimeline()` sets a minimum hour height (`S.pxFloor`); `S.pxUser` is the zoom he chose.
