@@ -47,7 +47,7 @@ Key state: `S` (tab, calendars, events, todos, paneMode, split, aliases, doneOpt
 
 ## Data model
 
-- **Calendars**: `calKind()` maps by name: personal (primary), work (free/busy reader, his CLO calendar), fun, meal, between, studio, body, admin, social, bday (Birthdays), tasks→admin, hol (holidays). Color comes from Google's calendar color (`backgroundColor`), else `--c-<kind>`, else a per-name override in `cfg().calColors`.
+- **Calendars**: `calKind()` maps by name: personal (primary), work (his own "CLO" calendar; free/busy subscriptions and @clo3d.com are filtered out), fun, meal, between, studio, body, admin, social, bday (Birthdays), tasks→admin, hol (holidays). Color comes from Google's calendar color (`backgroundColor`), else `--c-<kind>`, else a per-name override in `cfg().calColors`.
 - **Routing**: `guessCal(text)` picks a calendar for new items by keywords.
 - **To-do**: `{title, notes, pri, cal, est, status: open|scheduled|done, order, list, star, eventId, calId, start, doneAt, repeat, repeatTime, seriesId, showFrom}`. Scheduled to-dos link to their event (`eventId`, plus `planner:todo/<id>` in the event description).
 - **Lists**: `cfg().lists = [{id, name, color}]`. First list id `inbox`. Items without `list` belong to `inbox`. Starred items get a tint in their list color.
