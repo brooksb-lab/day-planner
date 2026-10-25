@@ -579,6 +579,16 @@ body.spot-open .spot-in{width:min(680px,100%);margin:0;box-shadow:0 24px 60px -1
 .wk .ev span{font-size:10px}
 .v-week .sunln span{display:none}
 .wk .tint{border-radius:0}
+/* iPhone: compact day headers, list starts right under the grab bar */
+body.ios .wk-dh{flex-direction:row;flex-wrap:wrap;align-items:baseline;column-gap:8px;row-gap:1px;padding:4px 6px 5px}
+body.ios .wk-dh .wk-dn{flex:1 0 100%}
+body.ios .wk-dh .wk-open,body.ios .wk-dh .wk-sun{display:none}
+body.ios .wk-dh .ev-pill{flex:1 0 100%}
+body.ios .wk-body{padding-top:2px}
+html body.ios .pane-list .lists{margin-top:0}
+html body.ios .pane-list .lists > .lst:first-child{margin-top:0}
+html body.ios .divider{height:16px;margin:0}
+html body.ios .pane-list{padding-top:0!important}
 .wk .sunln span{left:4px}
 .tl .tmp{right:5px;margin-top:2px;opacity:.7}
 .v-week .tl .tmp{right:3px;font-size:9px}
@@ -4448,7 +4458,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.25-78";
+const APP_VERSION = "2026.10.25-79";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
