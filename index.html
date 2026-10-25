@@ -347,10 +347,6 @@ body.pane-mode .side{overflow:auto;min-height:0}
 .pane-tl .allday{position:sticky;top:0;z-index:5;margin:0;padding:6px 8px;background:var(--win);border-bottom:1px solid var(--line-2)}
 .pane-list{flex:1;min-height:60px;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:2px 1px 6px}
 .pane-list>.section:first-child{margin-top:0}
-.pane.m-split .pane-tl{flex:0 0 var(--split,55%)}
-.pane.m-timeline .pane-tl{flex:1 1 auto}
-.pane.m-timeline .divider,.pane.m-timeline .pane-list{display:none}
-.pane.m-list .pane-tl,.pane.m-list .divider{display:none}
 .divider{flex:none;height:18px;display:grid;place-items:center;cursor:row-resize;touch-action:none;-webkit-user-select:none;user-select:none}
 .divider i{width:44px;height:4px;border-radius:2px;background:var(--fg-3);opacity:.55;transition:opacity .12s,background .12s}
 .divider:hover i,.divider.active i{opacity:1;background:var(--accent)}
@@ -984,17 +980,13 @@ body.shell.side-off .side{display:block!important;opacity:0;pointer-events:none;
 body.ios:not(.ios-more) .side{display:none!important}
 body.ios.ios-more .side{transform:none!important;visibility:visible!important;transition:none!important;position:static!important;width:auto!important;box-shadow:none!important}
 body.ios .side .section:has(#sidebacklog){display:none}
-/* split screen: the timeline share springs between timeline, split and list */
-.pane{--tlF:var(--split,55%)}
-.pane.m-timeline{--tlF:100%}
-.pane.m-list{--tlF:0.5%}
-.pane .pane-tl{display:block!important;flex:0 1 var(--tlF)!important;transition:--tlF .6s var(--spring),opacity .3s ease}
-.pane.dragging .pane-tl{transition:none}
-.pane .pane-list{display:block!important;flex:1 1 0!important;min-height:0!important;transition:opacity .3s ease}
-.pane .divider{display:grid!important;transition:height .35s var(--spring),opacity .25s ease}
-.pane.m-timeline .divider,.pane.m-list .divider{height:0;opacity:0;pointer-events:none;overflow:hidden}
+/* split screen: --tlF (the timeline's share) is set inline by JS and animated by JS; no layout transitions here */
+.pane .pane-tl{display:block!important;flex:0 1 var(--tlF,55%)!important;min-height:0!important;transition:opacity .25s ease}
+.pane .pane-list{display:block!important;flex:1 1 0!important;min-height:0!important;transition:opacity .25s ease}
+.pane .divider{display:grid!important;flex:none}
+.pane.m-list .pane-tl{opacity:0;pointer-events:none;box-shadow:none!important}
 .pane.m-timeline .pane-list{opacity:0;pointer-events:none}
-.pane.m-list .pane-tl{opacity:0;pointer-events:none;min-height:0!important;box-shadow:none}
+body:not(.ios) .pane.m-timeline .divider,body:not(.ios) .pane.m-list .divider{height:0;opacity:0;pointer-events:none;overflow:hidden}
 /* view changes rise in */
 .main.enter > *{animation:viewIn .5s var(--spring) both}
 .main.enter > *:nth-child(2){animation-delay:.03s}
@@ -1158,7 +1150,8 @@ function applyCfg(){
   const th = c.tabHours;
   const set = (id, from, to) => { const t = TABS.find(x => x.id === id); t.from = from; t.to = to; };
   set("morning", th.morning, th.day); set("day", th.day, th.evening); set("evening", th.evening, th.tomorrow); set("tomorrow", th.tomorrow, th.morning + 24);
-  S.paneMode = c.layout; S.split = c.split; applyTheme(c.theme);
+  if (!document.querySelector(".pane.dragging") && !(S.animUntil > Date.now())){ S.paneMode = ["list","split","timeline"].includes(c.layout) ? c.layout : "split"; S.split = Math.max(0.15, Math.min(0.85, Number(c.split) || 0.55)); }
+  applyTheme(c.theme);
   document.body.classList.toggle("no-mark", !c.showMark);
   const mt = document.getElementById("markTog"); if (mt) mt.checked = !!c.showMark;
   const tzs = document.getElementById("tz2sel"); if (tzs && document.activeElement !== tzs) tzs.value = c.tz2 || "";
@@ -1826,7 +1819,7 @@ const MODE_ICONS = {
 const MODE_NAMES = {timeline:"Timeline only", split:"Split", list:"List only"};
 function paneView(title, sub, day, evs, extra, tlHtml, cls){
   const m = S.paneMode;
-  return `<div class="pane m-${m}${cls ? " " + cls : ""}" style="--split:${(S.split*100).toFixed(1)}%">
+  return `<div class="pane m-${m}${cls ? " " + cls : ""}" style="--tlF:${(paneF()*100).toFixed(2)}%">
     <div class="pane-head"><div><h2>${esc(title)}</h2><div class="sub">${esc(sub)}</div>${extra || ""}</div>
       <div class="modes" role="group" aria-label="Layout">${["timeline","split","list"].map(k => `<button type="button" data-mode="${k}" aria-pressed="${m===k}" title="${MODE_NAMES[k]}" aria-label="${MODE_NAMES[k]}">${MODE_ICONS[k]}</button>`).join("")}</div></div>
     <div class="pane-body">
@@ -2334,67 +2327,78 @@ function fitPaneOld(){
 addEventListener("resize", fitPane);
 if (window.visualViewport) visualViewport.addEventListener("resize", fitPane);
 
-/* layout switch + divider */
-let divDrag = null;
+/* ---------- split screen, rebuilt: one number f = the timeline's share (0 list only, 1 timeline only).
+   Mode buttons, the drag handle and flings all set f; one spring animator moves it. No CSS transitions on the layout. ---------- */
+let divDrag = null, paneAnim = 0;
+const clampSplit = (x) => Math.max(0.15, Math.min(0.85, x));
+const paneF = () => S.paneMode === "list" ? 0 : S.paneMode === "timeline" ? 1 : S.split;
+const curF = (pane) => { const v = parseFloat(pane.style.getPropertyValue("--tlF")); return isNaN(v) ? paneF() : v / 100; };
+function paintPane(pane, f, mode){
+  pane.style.setProperty("--tlF", (Math.max(0, Math.min(1, f)) * 100).toFixed(2) + "%");
+  if (!mode) return;
+  for (const m of ["list","split","timeline"]) pane.classList.toggle("m-" + m, m === mode);
+  pane.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.mode === mode)));
+}
+function savePane(){ clearTimeout(window.__modeT); window.__modeT = setTimeout(() => { if (S.db) saveCfg({layout:S.paneMode, split:Math.round(S.split*100)/100}).catch(() => {}); }, 400); }
+function settlePane(pane, f, mode){ S.paneMode = mode; if (mode === "split") S.split = clampSplit(f); paintPane(pane, f, mode); S.animUntil = 0; savePane(); schedule(); }
+function animatePane(pane, to, mode, v0){
+  cancelAnimationFrame(paneAnim);
+  const from = curF(pane);
+  if (Math.abs(from - to) < 0.002 || matchMedia("(prefers-reduced-motion: reduce)").matches){ settlePane(pane, to, mode); return; }
+  paintPane(pane, from, "split"); // both halves visible while it moves
+  const w = 0.02; let x = from - to, v = v0 || 0, last = performance.now();
+  S.animUntil = Date.now() + 3000;
+  const step = (now) => {
+    const dt = Math.min(32, now - last); last = now;
+    v += (-w * w * x - 2 * w * v) * dt; x += v * dt; // critically damped spring: no overshoot past the edges
+    pane.style.setProperty("--tlF", (Math.max(0, Math.min(1, to + x)) * 100).toFixed(2) + "%");
+    if (Math.abs(x) > 0.001 || Math.abs(v) > 0.0001) paneAnim = requestAnimationFrame(step);
+    else settlePane(pane, to, mode);
+  };
+  paneAnim = requestAnimationFrame(step);
+}
+function setPaneMode(pane, mode){
+  if (!pane){ S.paneMode = mode; savePane(); schedule(); return; }
+  animatePane(pane, mode === "list" ? 0 : mode === "timeline" ? 1 : S.split, mode, 0);
+}
 document.addEventListener("click", (e) => {
   const b = e.target.closest("[data-mode]"); if (!b) return;
   setPaneMode(b.closest(".pane"), b.dataset.mode);
 });
-function setPaneMode(pane, mode){
-  S.paneMode = mode; S.animUntil = Date.now() + 650; clearTimeout(window.__modeT); window.__modeT = setTimeout(() => { if (S.db) saveCfg({layout:S.paneMode, split:Math.round(S.split*100)/100}).catch(() => {}); }, 700);
-  if (pane){ pane.className = "pane m-" + mode + (pane.classList.contains("pane-week") ? " pane-week" : ""); pane.style.setProperty("--split", (S.split*100).toFixed(1) + "%"); pane.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.mode === mode))); }
-}
 document.addEventListener("pointerdown", (e) => {
   const el = e.target.closest("[data-divider]"); if (!el || e.button > 0) return;
   e.preventDefault();
-  const pn = el.closest(".pane");
-  if (!pn.classList.contains("m-split")){ S.split = pn.classList.contains("m-list") ? 0.04 : 0.96; S.paneMode = "split"; pn.className = "pane m-split" + (pn.classList.contains("pane-week") ? " pane-week" : ""); pn.style.setProperty("--split", (S.split*100).toFixed(1) + "%"); }
-  divDrag = {el, body:el.closest(".pane-body"), pane:pn, pid:e.pointerId, ys:[[e.clientY, performance.now()]]}; divDrag.pane.classList.add("dragging");
-  el.classList.add("active"); try { el.setPointerCapture(e.pointerId); } catch {}
+  const pane = el.closest(".pane"); cancelAnimationFrame(paneAnim); S.animUntil = 0;
+  const f = curF(pane); paintPane(pane, f, "split");
+  divDrag = {el, pane, body:el.closest(".pane-body"), pid:e.pointerId, f, y0:e.clientY, f0:f, ys:[[e.clientY, performance.now()]]};
+  pane.classList.add("dragging"); el.classList.add("active");
+  try { el.setPointerCapture(e.pointerId); } catch {}
 });
 document.addEventListener("pointermove", (e) => {
-  if (!divDrag || e.pointerId !== divDrag.pid) return;
+  const d = divDrag; if (!d || e.pointerId !== d.pid) return;
   e.preventDefault();
-  const r = divDrag.body.getBoundingClientRect();
-  S.split = Math.max(0.04, Math.min(0.96, (e.clientY - r.top) / r.height));
-  divDrag.pane.style.setProperty("--split", (S.split*100).toFixed(1) + "%");
-  const now = performance.now(); divDrag.ys.push([e.clientY, now]); while (divDrag.ys.length > 2 && now - divDrag.ys[0][1] > 90) divDrag.ys.shift();
+  const H = Math.max(1, d.body.getBoundingClientRect().height);
+  d.f = Math.max(0, Math.min(1, d.f0 + (e.clientY - d.y0) / H)); // follows the finger 1:1 from where it grabbed
+  d.pane.style.setProperty("--tlF", (d.f * 100).toFixed(2) + "%");
+  const now = performance.now(); d.ys.push([e.clientY, now]); while (d.ys.length > 2 && now - d.ys[0][1] > 120) d.ys.shift();
 }, {passive:false});
-function endDiv(){
-  const d = divDrag; if (!d) return; d.el.classList.remove("active"); divDrag = null;
-  // release velocity from the last ~100ms of movement; holding still before letting go means no fling
-  const now = performance.now(), recent = d.ys.filter(p => now - p[1] < 110);
-  let v = 0; // fraction of the pane per ms, + is downward
-  if (recent.length >= 2){ const a = recent[0], b = recent[recent.length - 1]; if (b[1] > a[1]) v = (b[0] - a[0]) / (b[1] - a[1]) / Math.max(1, d.body.getBoundingClientRect().height); }
-  const H = d.body.getBoundingClientRect().height, pxv = v * H;
-  // a real fling (fast and still moving) or a drag nearly to an edge opens the list or the timeline fully; otherwise it stays where you let go
-  let to = null;
+function endDiv(cancel){
+  const d = divDrag; if (!d) return; divDrag = null;
+  d.el.classList.remove("active"); d.pane.classList.remove("dragging");
+  const H = Math.max(1, d.body.getBoundingClientRect().height), now = performance.now();
+  const recent = d.ys.filter(p => now - p[1] < 100); // let go after holding still = no fling
   const moved = recent.length >= 2 ? recent[recent.length - 1][0] - recent[0][0] : 0;
-  if ((pxv < -0.7 && moved < -30) || S.split < 0.1) to = 0; else if ((pxv > 0.7 && moved > 30) || S.split > 0.92) to = 1;
-  if (to === null){ d.pane.classList.remove("dragging"); if (S.db) saveCfg({split:Math.round(S.split*100)/100}).catch(() => {}); schedule(); return; }
-  flingSplit(d.pane, to, v);
+  const dt = recent.length >= 2 ? Math.max(1, recent[recent.length - 1][1] - recent[0][1]) : 1;
+  const pxv = cancel ? 0 : moved / dt, v = pxv / H, f = d.f;
+  if (pxv < -0.7 && moved < -30) return animatePane(d.pane, 0, "list", v);
+  if (pxv > 0.7 && moved > 30) return animatePane(d.pane, 1, "timeline", v);
+  if (f < 0.1) return animatePane(d.pane, 0, "list", 0);
+  if (f > 0.92) return animatePane(d.pane, 1, "timeline", 0);
+  if (f < 0.15 || f > 0.85) return animatePane(d.pane, clampSplit(f), "split", 0);
+  settlePane(d.pane, f, "split"); // stays exactly where you let go
 }
-// carry the finger's momentum into a damped spring, frame by frame, so the motion picks up exactly where the finger left
-function flingSplit(pane, to, v0){
-  const w = 0.016; let x = S.split - to, v = v0, last = performance.now();
-  S.animUntil = Date.now() + 2000;
-  const step = (now) => {
-    const dt = Math.min(32, now - last); last = now;
-    const a = -w * w * x - 2 * w * v; v += a * dt; x += v * dt;
-    const f = Math.max(0, Math.min(1, to + x));
-    pane.style.setProperty("--split", (f * 100).toFixed(2) + "%");
-    if (Math.abs(x) > 0.002 || Math.abs(v) > 0.00015){ requestAnimationFrame(step); return; }
-    pane.style.setProperty("--split", (to * 100) + "%");
-    S.split = 0.55; S.animUntil = 0;
-    S.paneMode = to === 0 ? "list" : "timeline";
-    pane.className = "pane m-" + S.paneMode + (pane.classList.contains("pane-week") ? " pane-week" : "") + " dragging";
-    pane.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.mode === S.paneMode)));
-    requestAnimationFrame(() => { pane.classList.remove("dragging"); pane.style.setProperty("--split", "55%"); if (S.db) saveCfg({layout:S.paneMode, split:0.55}).catch(() => {}); schedule(); });
-  };
-  requestAnimationFrame(step);
-}
-document.addEventListener("pointerup", (e) => { if (divDrag && e.pointerId === divDrag.pid) endDiv(); });
-document.addEventListener("pointercancel", (e) => { if (divDrag && e.pointerId === divDrag.pid) endDiv(); });
+document.addEventListener("pointerup", (e) => { if (divDrag && e.pointerId === divDrag.pid) endDiv(false); });
+document.addEventListener("pointercancel", (e) => { if (divDrag && e.pointerId === divDrag.pid) endDiv(true); });
 document.addEventListener("submit", (e) => {
   const f = e.target.closest("form[data-quick]"); if (!f) return;
   e.preventDefault(); const inp = f.querySelector("input"); const v = inp.value.trim(); if (!v) return;
@@ -4014,7 +4018,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.25-67";
+const APP_VERSION = "2026.10.25-68";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
