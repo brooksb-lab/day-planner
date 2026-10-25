@@ -987,7 +987,7 @@ body.ios .side .section:has(#sidebacklog){display:none}
 /* split screen: the timeline share springs between timeline, split and list */
 .pane{--tlF:var(--split,55%)}
 .pane.m-timeline{--tlF:100%}
-.pane.m-list{--tlF:0%}
+.pane.m-list{--tlF:0.5%}
 .pane .pane-tl{display:block!important;flex:0 1 var(--tlF)!important;transition:--tlF .6s var(--spring),opacity .3s ease}
 .pane.dragging .pane-tl{transition:none}
 .pane .pane-list{display:block!important;flex:1 1 0!important;min-height:0!important;transition:opacity .3s ease}
@@ -2361,12 +2361,37 @@ document.addEventListener("pointermove", (e) => {
   const now = performance.now(); divDrag.ys.push([e.clientY, now]); while (divDrag.ys.length > 2 && now - divDrag.ys[0][1] > 90) divDrag.ys.shift();
 }, {passive:false});
 function endDiv(){
-  const d = divDrag; if (!d) return; d.el.classList.remove("active"); d.pane.classList.remove("dragging"); divDrag = null;
-  const a = d.ys[0], b = d.ys[d.ys.length - 1], v = b[1] > a[1] ? (b[0] - a[0]) / (b[1] - a[1]) : 0;
-  // a flick, or a drag nearly to the edge, opens the list or the timeline fully
-  const mode = v < -0.45 || S.split < 0.14 ? "list" : v > 0.45 || S.split > 0.9 ? "timeline" : null;
-  if (mode){ if (S.split < 0.15 || S.split > 0.85) S.split = 0.55; setPaneMode(d.pane, mode); schedule(); return; }
-  if (S.db) saveCfg({split:Math.round(S.split*100)/100}).catch(() => {}); schedule();
+  const d = divDrag; if (!d) return; d.el.classList.remove("active"); divDrag = null;
+  // release velocity from the last ~100ms of movement; holding still before letting go means no fling
+  const now = performance.now(), recent = d.ys.filter(p => now - p[1] < 110);
+  let v = 0; // fraction of the pane per ms, + is downward
+  if (recent.length >= 2){ const a = recent[0], b = recent[recent.length - 1]; if (b[1] > a[1]) v = (b[0] - a[0]) / (b[1] - a[1]) / Math.max(1, d.body.getBoundingClientRect().height); }
+  const H = d.body.getBoundingClientRect().height, pxv = v * H;
+  // a real fling (fast and still moving) or a drag nearly to an edge opens the list or the timeline fully; otherwise it stays where you let go
+  let to = null;
+  const moved = recent.length >= 2 ? recent[recent.length - 1][0] - recent[0][0] : 0;
+  if ((pxv < -0.7 && moved < -30) || S.split < 0.1) to = 0; else if ((pxv > 0.7 && moved > 30) || S.split > 0.92) to = 1;
+  if (to === null){ d.pane.classList.remove("dragging"); if (S.db) saveCfg({split:Math.round(S.split*100)/100}).catch(() => {}); schedule(); return; }
+  flingSplit(d.pane, to, v);
+}
+// carry the finger's momentum into a damped spring, frame by frame, so the motion picks up exactly where the finger left
+function flingSplit(pane, to, v0){
+  const w = 0.016; let x = S.split - to, v = v0, last = performance.now();
+  S.animUntil = Date.now() + 2000;
+  const step = (now) => {
+    const dt = Math.min(32, now - last); last = now;
+    const a = -w * w * x - 2 * w * v; v += a * dt; x += v * dt;
+    const f = Math.max(0, Math.min(1, to + x));
+    pane.style.setProperty("--split", (f * 100).toFixed(2) + "%");
+    if (Math.abs(x) > 0.002 || Math.abs(v) > 0.00015){ requestAnimationFrame(step); return; }
+    pane.style.setProperty("--split", (to * 100) + "%");
+    S.split = 0.55; S.animUntil = 0;
+    S.paneMode = to === 0 ? "list" : "timeline";
+    pane.className = "pane m-" + S.paneMode + (pane.classList.contains("pane-week") ? " pane-week" : "") + " dragging";
+    pane.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.mode === S.paneMode)));
+    requestAnimationFrame(() => { pane.classList.remove("dragging"); pane.style.setProperty("--split", "55%"); if (S.db) saveCfg({layout:S.paneMode, split:0.55}).catch(() => {}); schedule(); });
+  };
+  requestAnimationFrame(step);
 }
 document.addEventListener("pointerup", (e) => { if (divDrag && e.pointerId === divDrag.pid) endDiv(); });
 document.addEventListener("pointercancel", (e) => { if (divDrag && e.pointerId === divDrag.pid) endDiv(); });
@@ -3989,7 +4014,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.25-66";
+const APP_VERSION = "2026.10.25-67";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
