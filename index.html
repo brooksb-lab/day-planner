@@ -1138,6 +1138,7 @@ function calKind(c){
   if (c.accessRole === "freeBusyReader") return "work";
   const n = (c.summary||"").toLowerCase();
   if (id.includes("#contacts") || n === "birthdays") return "bday";
+  if (n === "clo" || n === "work") return "work";
   if (n === "tasks") return "admin";
   for (const k of ["fun","meal","between","studio","body","admin","social"]) if (n === k) return k;
   return "other";
@@ -1175,7 +1176,7 @@ function decorate(c){
   // use the color set for the calendar in Google when it comes through
   const g = /^#[0-9a-f]{6}$/i.test(c.backgroundColor || "") ? c.backgroundColor : "";
   return {id:c.id, name:nm, kind, description:c.description||"", gColor:g,
-    color:g || `var(--c-${kind})`, writable: c.accessRole ? (c.accessRole === "owner" || c.accessRole === "writer") : (kind !== "hol" && kind !== "work")};
+    color:g || `var(--c-${kind})`, writable: c.accessRole ? (c.accessRole === "owner" || c.accessRole === "writer") : kind !== "hol"};
 }
 const writableCals = () => S.calendars.filter(c => c.writable);
 const calByName = (name) => {
@@ -1188,11 +1189,12 @@ function guessCal(text){
   const has = (...w) => w.some(x => t.includes(x));
   let kind = "personal";
   if (has("lunch","dinner","breakfast","brunch","eat","cook","meal","grocer","restaurant","resy","coffee")) kind = "meal";
-  else if (has("studio","sew","sewing","pattern","drape","sample","fitting","sketch","clo ","3d","design","povonno","pov/on")) kind = "studio";
+  else if (has("studio","sew","sewing","pattern","drape","sample","fitting","sketch","design","povonno","pov/on")) kind = "studio";
   else if (has("gym","workout","train","garen","run","yoga","pilates","swim","doctor","dentist","therapy","haircut","hair","trims")) kind = "body";
   else if (has("pay","bill","tax","email","call ","bank","laundry","clean","errand","return","dmv","admin","renew","book ")) kind = "admin";
   else if (has("drinks","dinner with","date","friends","party","hang","birthday","visit","catch up")) kind = "social";
   else if (has("show","concert","movie","club","bar ","museum","gallery","game")) kind = "fun";
+  else if (has("clo","office","client","training","onboarding","workshop","kickoff","standup","1:1")) kind = "work";
   const c = S.calendars.find(x => x.kind === kind && x.writable) || defaultCal();
   return c ? c.name : "Personal";
 }
@@ -1290,7 +1292,8 @@ async function startCalendar(){
 }
 function applyCalendars(p){
   const list = (p && Array.isArray(p.calendars)) ? p.calendars : [];
-  S.calendars = list.map(decorate).sort((a,b) => order(a) - order(b));
+  // the CLO work subscription is dropped; office time comes from the CLO calendar on this account instead
+  S.calendars = list.filter(c => !(c.accessRole === "freeBusyReader" || /@clo3d\.com$/i.test(c.id || ""))).map(decorate).sort((a,b) => order(a) - order(b));
   const cc = cfg().calColors; for (const c of S.calendars) if (cc[c.name]) c.color = cc[c.name];
   S.calMap = new Map(S.calendars.map(c => [c.id, c]));
   syncWatches();
@@ -3911,7 +3914,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.20-61";
+const APP_VERSION = "2026.10.25-62";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);

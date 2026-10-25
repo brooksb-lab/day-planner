@@ -27,7 +27,7 @@ No build step, no framework, no server. Plain JS inside one IIFE at the bottom o
 
 ## Versioning (every push)
 
-- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.20-61`).
+- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-62`).
 - `CACHE` in `sw.js`, `day-vN` with the same N.
 - He sees the version in More (iPhone) or the sidebar (desktop).
 
@@ -96,4 +96,4 @@ For deeper checks, copy `index.html` to a scratch folder, insert `window.__T={S,
 - iPhone polish is ongoing; he sends screenshots. Match iOS proportions.
 - A native Xcode shell (WKWebView, `~/Projects/DayWeb` on his Mac) exists but is parked. It has his credentials baked in and must stay private.
 - An older native SwiftUI/EventKit project lives at `~/Projects/Day` on his Mac. Not in use.
-- His work calendar shows only as Busy blocks by design. Don't connect it directly without checking CLO policy.
+- The CLO work subscription (brooks@clo3d.com) is filtered out. Office time comes from his own "CLO" calendar on his personal account (kind `work`, writable).
