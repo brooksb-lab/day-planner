@@ -258,6 +258,11 @@ body.ios .lists:first-child{margin-top:0}
 .sw{aspect-ratio:1;border-radius:50%;border:0;padding:0;background:var(--sw);cursor:pointer;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.12)}
 .sw.on{box-shadow:0 0 0 2px var(--win),0 0 0 4px var(--sw)}
 .btn.danger{color:var(--bad)}
+.lst-new{display:flex;align-items:center;gap:10px;margin-top:6px;padding:6px 12px;border-radius:10px;transition:background .15s}
+.lst-new:focus-within{background:var(--fill-2,var(--win-2))}
+.lst-plus{width:20px;text-align:center;font:400 20px/1 var(--ui);color:var(--lc,var(--accent))}
+.lst-new input{flex:1;min-width:0;border:0;background:transparent;padding:6px 0;font:15px var(--ui);color:var(--fg);outline:none}
+.lst-new input::placeholder{color:var(--fg-3)}
 .appver{margin:28px 0 4px;text-align:center;font:11px var(--ui);color:var(--fg-3);font-variant-numeric:tabular-nums}
 /* items take their list's color; starred ones light up */
 .todo{position:relative;padding-right:44px!important}
@@ -1212,7 +1217,7 @@ function parseEvent(e, cal){
   const start = allDay ? new Date(e.start.date + "T00:00:00") : new Date(e.start?.dateTime);
   const end = allDay ? new Date((e.end?.date || e.start.date) + "T00:00:00") : new Date(e.end?.dateTime || e.start?.dateTime);
   return {id:e.id, calId:cal.id, cal, title:e.summary || (cal.kind==="work" ? "Busy" : "(no title)"),
-    start, end, allDay, attendees:(e.attendees||[]).length, location:e.location || "", desc:e.description || "", link:e.htmlLink, status:e.status, colorId:e.colorId || ""};
+    start, end, allDay, attendees:(e.attendees||[]).length, location:e.location || "", desc:e.description || "", link:e.htmlLink, status:e.status, colorId:e.colorId || "", recurringEventId:e.recurringEventId || ""};
 }
 /* item colors: Google's event colors, so a color set here also shows in Google Calendar and survives a drag between calendar and lists */
 const EV_COLORS = {"7":["Peacock","#039be5"],"9":["Blueberry","#3f51b5"],"1":["Lavender","#7986cb"],"3":["Grape","#8e24aa"],"4":["Flamingo","#e67c73"],"11":["Tomato","#d50000"],"6":["Tangerine","#f4511e"],"5":["Banana","#f6bf26"],"2":["Sage","#33b679"],"10":["Basil","#0b8043"],"8":["Graphite","#616161"]};
@@ -1845,7 +1850,8 @@ function listsHtml(){
     const items = listItems(l.id), n = items.filter(t => t.status !== "done").length;
     return `<div class="section lst" data-list="${esc(l.id)}" style="--lc:${l.color || "var(--fg-3)"}">
       <div class="lst-h"><span class="lgrip" data-lgrip="${esc(l.id)}" title="Drag to reorder" aria-label="Drag to reorder">⠿</span><button type="button" class="lst-dot" data-act="lstedit" data-list="${esc(l.id)}" aria-label="Edit ${esc(l.name)}"></button><button type="button" class="lst-t" data-act="lstedit" data-list="${esc(l.id)}" title="Rename or recolor">${esc(l.name)}</button><span class="lst-n">${n || ""}</span></div>
-      ${todoList(items, "Empty. Drag to-dos here.", "list:" + l.id)}</div>`;
+      ${todoList(items, "Empty. Drag to-dos here.", "list:" + l.id)}
+      <form class="lst-new" data-quick data-list="${esc(l.id)}"><span class="lst-plus" aria-hidden="true">+</span><input placeholder="Add to ${esc(l.name)}" autocomplete="off" enterkeyhint="done" aria-label="Add a to-do to ${esc(l.name)}"></form></div>`;
   }).join("") + `<button type="button" class="lst-add" data-act="lstadd">${PLUS_ICON}New list</button></div>`;
 }
 const todayTodos = (day) => S.todos.filter(t => t.start && sameDay(new Date(t.start), day));
@@ -1868,7 +1874,7 @@ function paneView(title, sub, day, evs, extra, tlHtml, cls){
       <div class="pane-tl">${tlHtml || timeline(evs, day)}</div>
       <div class="divider" data-divider role="separator" aria-orientation="horizontal" aria-label="Resize timeline and list" title="Drag to resize"><i></i></div>
       <div class="pane-list">${listsHtml()}
-        <form class="quick drawer-add" data-quick><input id="drawerin" placeholder="Add a to-do · try: trims thu 2pm 1h" autocomplete="off"><button class="btn" type="submit">Add</button></form></div>
+</div>
     </div></div>`;
 }
 function viewDay(evs, today){
@@ -1900,7 +1906,7 @@ function viewBacklog(){
   const sched = S.todos.filter(t => (t.status === "scheduled" || (t.status === "done" && t.eventId && doneToday(t))) && showT(t)).sort((a,b) => String(a.start).localeCompare(String(b.start)));
   const nDone = S.todos.filter(t => t.status === "done").length;
   return head("To-do", `${openTodos().length} open · ${S.todos.filter(t => t.status === "scheduled").length} scheduled · ${nDone} done${S.hideDone && nDone ? " (hidden)" : ""}`) +
-    listsHtml() + `<form class="quick drawer-add ios-add" data-quick><input id="drawerin" placeholder="Add a to-do · trims thu 2pm 1h" autocomplete="off"><button class="btn" type="submit">Add</button></form>
+    listsHtml() + `
      <div class="section"><div class="label">Scheduled</div>${todoList(sched, "Nothing scheduled from your lists.")}</div>`;
 }
 function renderSide(){
@@ -2460,7 +2466,8 @@ document.addEventListener("pointercancel", (e) => { if (divDrag && e.pointerId =
 document.addEventListener("submit", (e) => {
   const f = e.target.closest("form[data-quick]"); if (!f) return;
   e.preventDefault(); const inp = f.querySelector("input"); const v = inp.value.trim(); if (!v) return;
-  act("quick", async () => { await quickAdd(v); inp.value = ""; inp.blur(); hintFor(inp); });
+  const keep = !!f.dataset.list; // list rows stay open for the next one
+  act("quick", async () => { await quickAdd(v, f.dataset.list); inp.value = ""; if (keep) inp.focus(); else inp.blur(); hintFor(inp); });
 });
 
 /* ---------- leave-by: travel time to events that have a location ---------- */
@@ -2806,10 +2813,10 @@ function quickHint(v){
   if (q.day) return `→ To-do. Add a time to put it on ${q.day.toLocaleDateString([], {weekday:"short"})}.`;
   return "";
 }
-async function quickAdd(v){
+async function quickAdd(v, listId){
   const q = parseQuick(v);
   const est = q.mins || 30, cal = guessCal(q.title);
-  const extra = {};
+  const extra = listId ? {list:listId} : {};
   if (q.repeat){ extra.repeat = q.repeat; extra.showFrom = dayKey(q.start || q.day || new Date()); if (q.start) extra.repeatTime = `${pad(q.start.getHours())}:${pad(q.start.getMinutes())}`; }
   const id = await addTodo({title:q.title, est, cal, extra});
   if (q.repeat) await todoRef(id).update({seriesId:id});
@@ -3408,6 +3415,32 @@ async function deleteEvent(p){
   });
   toast(`Deleted "${base}".`, true);
 }
+/* repeat rules: a few plain choices mapped to Google RRULEs; anything else shows as-is and is left alone */
+const DOW = ["SU","MO","TU","WE","TH","FR","SA"], DOWN = {SU:"Sun",MO:"Mon",TU:"Tue",WE:"Wed",TH:"Thu",FR:"Fri",SA:"Sat"};
+const REPEATS = [["none","Never"],["daily","Every day"],["weekdays","Weekdays"],["weekly","Every week"],["biweekly","Every 2 weeks"],["monthly","Every month"],["yearly","Every year"]];
+function repeatRule(kind, start){
+  const d = DOW[start.getDay()];
+  return {daily:"RRULE:FREQ=DAILY", weekdays:"RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", weekly:`RRULE:FREQ=WEEKLY;BYDAY=${d}`, biweekly:`RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=${d}`, monthly:"RRULE:FREQ=MONTHLY", yearly:"RRULE:FREQ=YEARLY"}[kind] || null;
+}
+const ruleParts = (rr) => Object.fromEntries(String(rr || "").replace(/^RRULE:/, "").split(";").filter(Boolean).map(x => x.split("=")));
+function ruleKind(rr){
+  if (!rr) return "none";
+  const m = ruleParts(rr), iv = Number(m.INTERVAL || 1);
+  if (m.UNTIL || m.COUNT) return "custom";
+  if (m.FREQ === "DAILY" && iv === 1) return "daily";
+  if (m.FREQ === "WEEKLY"){ if (m.BYDAY === "MO,TU,WE,TH,FR" && iv === 1) return "weekdays"; if (!m.BYDAY || !m.BYDAY.includes(",")) return iv === 1 ? "weekly" : iv === 2 ? "biweekly" : "custom"; return "custom"; }
+  if (m.FREQ === "MONTHLY" && iv === 1 && !m.BYDAY) return "monthly";
+  if (m.FREQ === "YEARLY" && iv === 1) return "yearly";
+  return "custom";
+}
+function ruleText(rr){
+  const m = ruleParts(rr), iv = Number(m.INTERVAL || 1), every = (u) => iv > 1 ? `Every ${iv} ${u}s` : `Every ${u}`;
+  let t = m.FREQ === "DAILY" ? every("day") : m.FREQ === "WEEKLY" ? every("week") : m.FREQ === "MONTHLY" ? every("month") : m.FREQ === "YEARLY" ? every("year") : "Repeats";
+  if (m.BYDAY) t += " on " + m.BYDAY.split(",").map(x => DOWN[x.slice(-2)] || x).join(", ");
+  if (m.UNTIL) t += ` until ${m.UNTIL.slice(4,6)}/${m.UNTIL.slice(6,8)}/${m.UNTIL.slice(0,4)}`;
+  if (m.COUNT) t += `, ${m.COUNT} times`;
+  return t;
+}
 function openSheet({ev, todo}){
   closeSheet(); closeRename();
   const p = ev, t = todo || (ev ? todoForEvent(ev) : null);
@@ -3425,6 +3458,7 @@ function openSheet({ev, todo}){
     <div class="is-body">
       <input class="is-title" name="title" value="${esc(title)}" placeholder="Title">
       ${isEv && !p.allDay ? `<div class="is-grid"><label>Date<input type="date" name="d" value="${dayKey(p.start)}" ${guests ? "disabled" : ""}></label><label>Starts<input type="time" name="s" value="${hhmm(p.start)}" ${guests ? "disabled" : ""}></label><label>Ends<input type="time" name="e" value="${hhmm(p.end)}" ${guests ? "disabled" : ""}></label></div>` : ""}
+      ${isEv ? `<div class="is-grid two"><label>Repeat<select name="r" ${p.recurringEventId ? "disabled" : ""}>${REPEATS.map(([k, n]) => `<option value="${k}">${n}</option>`).join("")}</select></label>${p.recurringEventId ? `<label>Change<select name="sc"><option value="one">This event</option><option value="all">All events</option></select></label>` : ""}</div><div class="rn-note is-rep">${p.recurringEventId ? "Checking how this repeats…" : ""}</div>` : ""}
       ${!isEv ? `<div class="is-grid two"><label>List<select name="l">${L.map(l => `<option value="${esc(l.id)}" ${l.id === curList ? "selected" : ""}>${esc(l.name)}</option>`).join("")}</select></label><label>Takes<select name="m">${[15,30,45,60,90,120,180,240].map(m => `<option value="${m}" ${Number(t.est || 30) === m ? "selected" : ""}>${m < 60 ? m + " min" : (m/60) + " hr"}</option>`).join("")}</select></label></div>` : ""}
       <label class="is-f">Calendar<select name="c" ${guests ? "disabled" : ""}>${cals.map(c => `<option ${c.name === curCal ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
       <div class="is-f"><span>Color</span><div class="is-sw"><button type="button" class="sw${!color ? " on" : ""}" data-col="" style="--sw:var(--fg-3)" aria-label="Calendar or list color"></button>${Object.entries(EV_COLORS).map(([k, [n, hex]]) => `<button type="button" class="sw${color === k ? " on" : ""}" data-col="${k}" style="--sw:${hex}" aria-label="${n}" title="${n}"></button>`).join("")}</div></div>
@@ -3436,6 +3470,18 @@ function openSheet({ev, todo}){
   document.body.append(w);
   requestAnimationFrame(() => w.classList.add("on"));
   const f = w.querySelector("form"); let col = color;
+  // load the series this event belongs to, so its repeat rule shows and can be changed
+  let master = null, kind0 = "none";
+  if (isEv && p.recurringEventId){
+    const rsel = f.elements.r, note = f.querySelector(".is-rep");
+    S.mcp.callTool(GC, "get_event", {calendarId:p.calId, eventId:p.recurringEventId}).then(res => {
+      master = res.payload || null; const rr = (master && master.recurrence || []).find(x => /^RRULE:/.test(x));
+      kind0 = ruleKind(rr);
+      if (kind0 === "custom"){ rsel.insertAdjacentHTML("beforeend", `<option value="custom">${esc(ruleText(rr))}</option>`); }
+      rsel.value = kind0; rsel.disabled = false;
+      note.textContent = rr ? `${ruleText(rr)}. Changing the repeat updates the whole series.` : "";
+    }).catch(() => { note.textContent = "Repeat for this series can be changed in Google Calendar."; });
+  }
   w.addEventListener("click", (e) => {
     const sw = e.target.closest("[data-col]");
     if (sw){ col = sw.dataset.col; w.querySelectorAll(".is-sw .sw").forEach(b => b.classList.toggle("on", b === sw)); return; }
@@ -3463,8 +3509,42 @@ function openSheet({ev, todo}){
       act(t.id, async () => { await todoRef(t.id).update(after); pushUndo(`Edited "${nt}"`, () => todoRef(t.id).update(before), () => todoRef(t.id).update(after)); });
       return;
     }
+    const rk = v("r") || kind0, scope = v("sc") || "one", repChanged = isEv && rk !== kind0 && rk !== "custom";
+    if (isEv && p.recurringEventId && master && (scope === "all" || repChanged)){
+      // whole series: edit the master event; times keep the series' first date, change only the clock time
+      act("ev" + p.id, async () => {
+        const mp = {}, mu = {};
+        if (nt !== title){ mp.summary = nt; mu.summary = master.summary || ""; }
+        const ms = master.start && master.start.dateTime ? new Date(master.start.dateTime) : null, me = master.end && master.end.dateTime ? new Date(master.end.dateTime) : null;
+        let st = null;
+        if (ms && me && !guests){
+          const ns = new Date(`${v("d")}T${v("s")}:00`), ne = new Date(`${v("d")}T${v("e")}:00`);
+          if (!isNaN(ns) && !isNaN(ne)){
+            st = new Date(ms); st.setHours(ns.getHours(), ns.getMinutes(), 0, 0);
+            let dur = ne - ns; if (dur <= 0) dur += 86400000;
+            const en = new Date(st.getTime() + dur);
+            if (+st !== +ms || +en !== +me){ mp.startTime = localISO(st); mp.endTime = localISO(en); mu.startTime = localISO(ms); mu.endTime = localISO(me); }
+          }
+        }
+        const loc = (v("loc") || "").trim(); if (loc !== (master.location || "")){ mp.location = loc; mu.location = master.location || ""; }
+        const desc = [nn, marksOf(master.description)].filter(Boolean).join("\n\n"); if (desc !== (master.description || "")){ mp.description = desc; mu.description = master.description || ""; }
+        if (col !== (master.colorId || "")){ mp.colorId = col || "0"; mu.colorId = master.colorId || "0"; }
+        if (repChanged){
+          const keep = (master.recurrence || []).filter(x => !/^RRULE:/.test(x));
+          const rr = repeatRule(rk, st || ms || p.start);
+          mp.recurrence = rk === "none" ? [] : [...keep, rr]; mu.recurrence = master.recurrence || [];
+        }
+        if (!Object.keys(mp).length) return;
+        await S.mcp.callTool(GC, "update_event", {calendarId:p.calId, eventId:p.recurringEventId, notificationLevel:"NONE", ...mp});
+        await afterWrite();
+        pushUndo(`Edited all "${nt}"`, async () => { await S.mcp.callTool(GC, "update_event", {calendarId:p.calId, eventId:p.recurringEventId, notificationLevel:"NONE", ...mu}); await afterWrite(); });
+        toast(`Updated every "${nt}".`, true);
+      });
+      return;
+    }
     act("ev" + p.id, async () => {
       const patch = {}, undo = {};
+      if (repChanged && !p.recurringEventId && rk !== "none"){ patch.recurrence = [repeatRule(rk, p.start)]; undo.recurrence = []; }
       if (nt !== title){ patch.summary = (done ? "✓ " : "") + nt; undo.summary = p.title; }
       if (!p.allDay && !guests){
         const st = new Date(`${v("d")}T${v("s")}:00`); let en = new Date(`${v("d")}T${v("e")}:00`);
@@ -3908,10 +3988,12 @@ async function gcall(tool, i = {}){
     if (i.description !== undefined) b.description = i.description;
     if (i.location !== undefined) b.location = i.location;
     if (i.colorId !== undefined) b.colorId = i.colorId && i.colorId !== "0" ? String(i.colorId) : null;
+    if (i.recurrence !== undefined) b.recurrence = i.recurrence;
     if (i.startTime) b.start = {dateTime:toRFC(i.startTime), timeZone:TZ};
     if (i.endTime) b.end = {dateTime:toRFC(i.endTime), timeZone:TZ};
     return gfetch(`${CAL}/calendars/${enc(i.calendarId || "primary")}/events/${enc(i.eventId)}?sendUpdates=none`, {method:"PATCH", body:JSON.stringify(b)});
   }
+  if (tool === "get_event") return gfetch(`${CAL}/calendars/${enc(i.calendarId || "primary")}/events/${enc(i.eventId)}`);
   if (tool === "move_event"){
     return gfetch(`${CAL}/calendars/${enc(i.calendarId)}/events/${enc(i.eventId)}/move?destination=${enc(i.destination)}&sendUpdates=none`, {method:"POST"});
   }
@@ -4085,7 +4167,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.25-74";
+const APP_VERSION = "2026.10.25-75";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
