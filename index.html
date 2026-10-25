@@ -1309,7 +1309,7 @@ function startDb(){
   cfgRef().onSnapshot((snap) => { cfgRaw = snap.exists ? {...snap.data()} : {}; applyCfg(); const was = autoTab; autoTab = timeTab(); if (autoTab !== was && S.tab === was && Date.now() - S.tabManual > 20*60000) S.tab = autoTab; schedule(); }, () => {});
   S.db.collection("todos").onSnapshot((snap) => {
     S.todos = snap.docs.map(d => ({id:d.id, ...d.data()}));
-    S.todosReady = true; reconcile(); schedule(); setTimeout(() => rollRecurring().catch(() => {}), 400);
+    S.todosReady = true; reconcile(); schedule(); setTimeout(() => rollRecurring().catch(() => {}), 400); setTimeout(() => carryOver().catch(() => {}), 1500);
   }, (e) => { S.dbError = e && e.code || "error"; schedule(); });
   startAliases();
 }
@@ -1787,7 +1787,9 @@ const byPri = (a,b) => (a.pri||2)-(b.pri||2) || (a.createdAt||0)-(b.createdAt||0
 /* backlog list: unscheduled items; checked ones stay in place unless hidden */
 const eff = (t) => (typeof t.order === "number" ? t.order : (t.createdAt || 0));
 const byOrder = (a,b) => eff(a) - eff(b);
-const unsched = (t) => (t.status === "open" || (t.status === "done" && !t.eventId)) && visibleNow(t);
+// open items stay until done; checked-off items stay through the day they were done, then drop off
+const doneToday = (t) => !t.doneAt || t.doneAt >= startOfDay(new Date()).getTime();
+const unsched = (t) => (t.status === "open" || (t.status === "done" && !t.eventId && doneToday(t))) && visibleNow(t);
 /* ---------- to-do lists: named, colored, reorderable; items can be starred ---------- */
 const LIST_COLORS = ["","#ff3b30","#ff9500","#ffcc00","#34c759","#00c7be","#32ade6","#007aff","#5e5ce6","#af52de","#ff2d55","#a2845e"];
 const lists = () => { const l = cfg().lists; return Array.isArray(l) && l.length ? l : [{id:"inbox", name:"To-do", color:""}]; };
@@ -1854,7 +1856,7 @@ function viewWeek(evs, today){
   return paneView("Week", `${fmtDay(start)} to ${fmtDay(addDays(start,6))}`, start, evs, `<div class="wkbar">${nav}${studioStrip()}</div>`, weekTimeline(evs, start), "pane-week");
 }
 function viewBacklog(){
-  const sched = S.todos.filter(t => (t.status === "scheduled" || (t.status === "done" && t.eventId)) && showT(t)).sort((a,b) => String(a.start).localeCompare(String(b.start)));
+  const sched = S.todos.filter(t => (t.status === "scheduled" || (t.status === "done" && t.eventId && doneToday(t))) && showT(t)).sort((a,b) => String(a.start).localeCompare(String(b.start)));
   const nDone = S.todos.filter(t => t.status === "done").length;
   return head("To-do", `${openTodos().length} open · ${S.todos.filter(t => t.status === "scheduled").length} scheduled · ${nDone} done${S.hideDone && nDone ? " (hidden)" : ""}`) +
     listsHtml() + `<form class="quick drawer-add ios-add" data-quick><input id="drawerin" placeholder="Add a to-do · trims thu 2pm 1h" autocomplete="off"><button class="btn" type="submit">Add</button></form>
@@ -2576,6 +2578,31 @@ function nextOcc(r, from, inclusive){
 }
 const visibleNow = (t) => !t.showFrom || t.showFrom <= dayKey(new Date());
 const rolling = new Set();
+/* scheduled to-dos that weren't checked off carry over to today, same time of day, until they're done */
+const carrying = new Set();
+async function carryOver(){
+  if (!S.mcp || !S.todosReady) return;
+  const today = startOfDay(new Date());
+  const late = S.todos.filter(t => t.status === "scheduled" && t.start && new Date(t.start) < today && !t.repeat && !carrying.has(t.id));
+  if (!late.length) return;
+  let n = 0;
+  for (const t of late){
+    carrying.add(t.id);
+    try {
+      const was = new Date(t.start), st = new Date(today); st.setHours(was.getHours(), was.getMinutes(), 0, 0);
+      const en = new Date(st.getTime() + (t.est || 30) * 60000);
+      if (t.eventId && t.calId){
+        try { await S.mcp.callTool(GC, "update_event", {calendarId:t.calId, eventId:t.eventId, startTime:localISO(st), endTime:localISO(en), notificationLevel:"NONE"}); }
+        catch { await todoRef(t.id).update({status:"open", eventId:null, calId:null, start:null}); n++; continue; } // its event is gone: back to the list
+      }
+      await todoRef(t.id).update({start:st.toISOString(), carriedFrom:t.carriedFrom || dayKey(was)});
+      n++;
+    } catch {} finally { carrying.delete(t.id); }
+  }
+  if (n){ await afterWrite(); toast(`Carried ${n} unfinished to-do${n === 1 ? "" : "s"} over to today.`); }
+}
+setInterval(() => { if (!document.hidden) carryOver().catch(() => {}); }, 300000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(() => carryOver().catch(() => {}), 1200); });
 async function rollRecurring(){
   if (!S.db || !S.todosReady) return;
   const series = new Map();
@@ -3914,7 +3941,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.25-62";
+const APP_VERSION = "2026.10.25-63";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
