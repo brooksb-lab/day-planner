@@ -1105,6 +1105,7 @@ body:not(.ios) .pane.m-timeline .divider,body:not(.ios) .pane.m-list .divider{he
       <div class="section">
         <div class="label">Calendars</div>
         <div id="callegend" style="display:flex;flex-direction:column;gap:6px;font-size:12.5px"></div>
+        <div id="devcals" hidden></div>
       </div>
       <div class="section">
         <div class="label">Connections</div>
@@ -1305,10 +1306,11 @@ function syncWatches(){
   if (!S.mcp) return;
   const r = windowRange();
   const rk = r.startTime;
-  const want = new Set(S.calendars.map(c => c.id + "|" + rk));
+  const want = new Set(S.calendars.filter(c => !c.device).map(c => c.id + "|" + rk));
   for (const [k, un] of watches) if (!want.has(k)) { un(); watches.delete(k); }
   rangeKey = rk;
   for (const cal of S.calendars){
+    if (cal.device) continue;
     const k = cal.id + "|" + rk;
     if (watches.has(k)) continue;
     const input = {calendarId:cal.id, startTime:r.startTime, endTime:r.endTime, pageSize:250, orderBy:"startTime"};
@@ -1352,11 +1354,64 @@ async function startCalendar(){
 }
 function applyCalendars(p){
   const list = (p && Array.isArray(p.calendars)) ? p.calendars : [];
-  // the CLO work subscription is dropped; office time comes from the CLO calendar on this account instead
-  S.calendars = list.filter(c => !(c.accessRole === "freeBusyReader" || /@clo3d\.com$/i.test(c.id || ""))).map(decorate).sort((a,b) => order(a) - order(b));
+  // the CLO work subscription shows as read-only "Work" busy blocks; in the iPhone app the phone's own work calendar replaces it
+  S.calendars = list.map(decorate).map(c => (c.accessRole === "freeBusyReader" || /@clo3d\.com$/i.test(c.id || "")) ? {...c, name:"Work", kind:"work", writable:false, private:true, busySub:true} : c).sort((a,b) => order(a) - order(b));
   const cc = cfg().calColors; for (const c of S.calendars) if (cc[c.name]) c.color = cc[c.name];
-  S.calMap = new Map(S.calendars.map(c => [c.id, c]));
+  mergeDevCals();
   syncWatches();
+}
+/* iPhone app only: calendars on the phone itself (the CLO work account), read through the native shell.
+   They stay on the device: never written to Google, never sent to Claude. */
+const NATIVE_CAL = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.dayCal);
+S.dev = {cals:[], list:[]};
+const devOn = () => { try { return JSON.parse(localStorage.getItem("devCalsOn") || "{}"); } catch { return {}; } };
+const devPicked = (c) => devOn()[c.id] ?? /clo3d|\bclo\b/i.test(c.source + " " + c.title);
+function mergeDevCals(){
+  S.calendars = S.calendars.filter(c => !c.device);
+  if (S.dev.list.length) S.calendars = S.calendars.filter(c => !c.busySub);
+  S.calendars.push(...S.dev.list);
+  S.calMap = new Map(S.calendars.map(c => [c.id, c]));
+}
+async function devRefresh(){
+  if (!NATIVE_CAL) return;
+  try {
+    const call = (m) => window.webkit.messageHandlers.dayCal.postMessage(m);
+    const r = await call({op:"calendars"});
+    if (!r || r.denied){ S.dev.denied = true; renderDevCals(); return; }
+    S.dev.denied = false; S.dev.cals = r.calendars || [];
+    const pick = S.dev.cals.filter(devPicked), w = windowRange();
+    const ev = pick.length ? await call({op:"events", ids:pick.map(c => c.id), start:w.startTime, end:w.endTime}) : {events:[]};
+    for (const k of [...S.events.keys()]) if (String(k).startsWith("dev:")) S.events.delete(k);
+    S.dev.list = pick.map(c => ({id:"dev:" + c.id, name:c.title, kind:"work", color:c.color || "var(--c-work)", writable:false, private:true, device:true, description:""}));
+    for (const c of S.dev.list) S.events.set(c.id, {list:[], fresh:true, at:Date.now()});
+    for (const e of (ev.events || [])){
+      const rec = S.events.get("dev:" + e.calId); if (!rec) continue;
+      rec.list.push({id:"dev-" + e.id, summary:e.title || "Busy", start:e.allDay ? {date:e.start.slice(0,10)} : {dateTime:e.start}, end:e.allDay ? {date:e.end.slice(0,10)} : {dateTime:e.end}, location:e.location || "", attendees:Array(e.attendees || 0).fill({})});
+    }
+    mergeDevCals(); renderDevCals(); schedule();
+  } catch {}
+}
+function renderDevCals(){
+  const el = $("devcals"); if (!el) return;
+  el.hidden = !NATIVE_CAL; if (!NATIVE_CAL) return;
+  const h = S.dev.denied ? `<div class="label">On this iPhone</div><div class="sub" style="margin:4px 0 0">Calendar access is off. Turn it on in Settings › Day › Calendars.</div>`
+    : `<div class="label">On this iPhone</div><div class="sub" style="margin:2px 0 8px">Shown here only. Never synced or sent to Claude.</div>` + S.dev.cals.map(c => `<label class="hidetog" style="justify-content:flex-start;margin:4px 0"><input type="checkbox" data-devcal="${esc(c.id)}" ${devPicked(c) ? "checked" : ""}><i style="width:9px;height:9px;border-radius:3px;background:${esc(c.color || "#8e8e93")};display:block;flex:none"></i><span>${esc(c.title)}</span><span class="sub" style="margin:0 0 0 auto">${esc(c.source || "")}</span></label>`).join("");
+  if (el.innerHTML !== h) el.innerHTML = h;
+  el.style.marginTop = "14px";
+}
+document.addEventListener("change", (e) => {
+  const b = e.target.closest && e.target.closest("[data-devcal]"); if (!b) return;
+  const o = devOn(); o[b.dataset.devcal] = b.checked; try { localStorage.setItem("devCalsOn", JSON.stringify(o)); } catch {}
+  devRefresh();
+});
+if (NATIVE_CAL){
+  addEventListener("daycal-changed", () => devRefresh());
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) devRefresh(); });
+  setInterval(() => { if (!document.hidden) devRefresh(); }, 60000);
+  setTimeout(devRefresh, 300);
+}
+if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.dayHaptic){
+  try { navigator.vibrate = () => { try { window.webkit.messageHandlers.dayHaptic.postMessage(1); } catch {} return true; }; } catch {}
 }
 const order = (c) => ({personal:0, fun:1, meal:2, between:3, other:4, work:5, hol:6}[c.kind] ?? 9);
 
@@ -1976,7 +2031,7 @@ function stripScroll(tl){
   if (off !== S.dayOff){ S.dayOff = off; stripHeadPaint(); }
   clearTimeout(stripScroll.t);
   stripScroll.t = setTimeout(() => {
-    if (Math.abs(S.dayOff - S.stripStart - STRIP_R) > STRIP_R - 3 || windowRange().startTime !== rangeKey){ if (windowRange().startTime !== rangeKey) syncWatches(); S.stripAt = 0; schedule(); }
+    if (Math.abs(S.dayOff - S.stripStart - STRIP_R) > STRIP_R - 3 || windowRange().startTime !== rangeKey){ if (windowRange().startTime !== rangeKey){ syncWatches(); devRefresh(); } S.stripAt = 0; schedule(); }
   }, 260);
 }
 function stripStep(d){
@@ -1984,7 +2039,7 @@ function stripStep(d){
   const target = d === 0 ? 0 : S.dayOff + d;
   const w = stripColW(tl), i = target - S.stripStart;
   if (tl && w && i >= 0 && i <= 2 * STRIP_R && !matchMedia("(prefers-reduced-motion: reduce)").matches){ tl.scrollTo({left:i * w, behavior:"smooth"}); return; }
-  S.dayOff = target; S.stripAt = 0; if (windowRange().startTime !== rangeKey) syncWatches(); schedule();
+  S.dayOff = target; S.stripAt = 0; if (windowRange().startTime !== rangeKey){ syncWatches(); devRefresh(); } schedule();
 }
 function viewWeek(evs, today){
   const start = addDays(today, S.weekOff*7);
@@ -2010,6 +2065,7 @@ function renderSide(){
   $("clearbtn").textContent = S.busy.has("clear") ? "Removing…" : (Date.now() - S.confirmClear < 5000 ? "Confirm: remove all samples" : "Remove samples");
   $("clearbtn").disabled = S.busy.has("clear"); renderStudioSide(); renderTravelSide(); planTravel();
   renderConn();
+  renderDevCals();
   $("callegend").innerHTML = S.calendars.length ? S.calendars.map(c => `<div style="display:flex;align-items:center;gap:8px"><i style="width:9px;height:9px;border-radius:3px;background:${c.color};display:block;flex:none"></i><span>${esc(c.name)}</span><span class="sub" style="margin:0;margin-left:auto">${c.writable?"":"read-only"}${S.events.get(c.id)?.error?" · not syncing":""}</span></div>`).join("") : `<div class="sub">Calendars appear once Google Calendar is connected.</div>`;
 }
 
@@ -4049,7 +4105,7 @@ document.addEventListener("pointercancel", () => endLstDrag(false));
 /* ---------- Claude bar ---------- */
 let ctl = null;
 function context(){
-  const evs = allEvents(); const today = startOfDay(new Date());
+  const evs = allEvents().filter(e => !e.cal.private && !(e.origCal && e.origCal.private)); const today = startOfDay(new Date());
   const upcoming = evs.filter(e => e.end > today && e.start < addDays(today, 8)).slice(0, 120).map(e => ({
     event_id:e.id, calendar:e.cal.name, title:e.title, start:e.allDay ? dayKey(e.start) : localISO(e.start), end:e.allDay ? null : localISO(e.end), all_day:e.allDay, guests:e.attendees, todo_id:todoForEvent(e)?.id || null }));
   const todos = S.todos.filter(t => t.status !== "done" || (t.doneAt && Date.now()-t.doneAt < 2*864e5)).slice(0, 150).map(t => ({
@@ -4458,7 +4514,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.25-79";
+const APP_VERSION = "2026.10.25-80";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);

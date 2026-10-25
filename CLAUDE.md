@@ -27,7 +27,7 @@ No build step, no framework, no server. Plain JS inside one IIFE at the bottom o
 
 ## Versioning (every push)
 
-- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-79`).
+- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-80`).
 - `CACHE` in `sw.js`, `day-vN` with the same N.
 - He sees the version at the very bottom of the sidebar (desktop) and of More (iPhone).
 
@@ -101,9 +101,14 @@ For deeper checks, copy `index.html` to a scratch folder, insert `window.__T={S,
 ## Open threads
 
 - iPhone polish is ongoing; he sends screenshots. Match iOS proportions.
-- A native Xcode shell (WKWebView, `~/Projects/DayWeb` on his Mac) exists but is parked. It has his credentials baked in and must stay private.
+- Native Xcode shell (WKWebView loading the live GitHub Pages URL, `~/Projects/DayWeb` on his Mac, XcodeGen `project.yml`, team 4MRL3LNZZP). Web changes reach it without a rebuild; only Swift changes need Xcode. It has his credentials baked in and must stay private.
 - An older native SwiftUI/EventKit project lives at `~/Projects/Day` on his Mac. Not in use.
-- The CLO work subscription (brooks@clo3d.com) is filtered out. Office time comes from his own "CLO" calendar on his personal account (kind `work`, writable).
+- Work calendar: CLO policy rules out signing the work Google account into the app. Two routes instead:
+  - Web (any computer): the CLO free/busy subscription on his personal account shows as read-only "Work" busy blocks (`busySub`, `private`).
+  - iPhone app (native shell, `~/Projects/DayWeb` on his Mac): `DeviceCalendar.swift` reads the phone's own calendars with EventKit (read-only) through the `dayCal` message handler. The page lists them in More under "On this iPhone" (`devRefresh`, `renderDevCals`, toggles in localStorage `devCalsOn`; default on for sources matching clo3d/CLO). When any are on, the busy subscription is hidden. Device events never go to Google or Claude.
+  - `private` calendars are excluded from the Claude bar context.
+  - The shell also forwards `navigator.vibrate` to real haptics (`dayHaptic`).
+- His own "CLO" calendar on the personal account still holds office time (kind `work`, writable).
 
 ## Updates reaching the phone
 
