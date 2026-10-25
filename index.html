@@ -178,6 +178,7 @@ body.ios .ev .ev-chk{display:none}
 .ev.done b{text-decoration:line-through;opacity:.6}
 .ev.done{opacity:.7}
 .tl{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.pane-tl{touch-action:pan-x pan-y}
 .tl-ghost{position:absolute;left:4px;right:4px;z-index:20;border-radius:8px;border:1.5px dashed var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);font:600 12px var(--ui);color:var(--accent);padding:4px 8px;pointer-events:none;box-shadow:0 8px 20px -8px rgba(0,0,0,.3)}
 /* iPhone: list/timeline handle stays visible so the list can be flicked open or shut */
 body.ios .pane.m-list .divider,body.ios .pane.m-timeline .divider{height:22px!important;opacity:1!important;pointer-events:auto!important}
@@ -1412,7 +1413,7 @@ async function scheduleTodo(t, {start, minutes, calName}){
   const st = new Date(start); if (isNaN(st)) throw new Error("Couldn't read that start time.");
   const en = new Date(st.getTime() + (Number(minutes)||t.est||30)*60000);
   const res = await S.mcp.callTool(GC, "create_event", {calendarId:cal.id, summary:t.title, startTime:localISO(st), endTime:localISO(en),
-    description:`${t.notes ? t.notes + "\n\n" : ""}planner:todo/${t.id}`, colorId:t.color || undefined, notificationLevel:"NONE"});
+    description:`${t.notes ? t.notes + "\n\n" : ""}planner:todo/${t.id}`, colorId:t.color || undefined, location:t.location || undefined, notificationLevel:"NONE"});
   const p = res.payload || {};
   let eventId = p.id || p.event?.id || p.eventId;
   if (!eventId){
@@ -1777,7 +1778,7 @@ function todoRow(t){
   const draggable = t.status !== "scheduled" && !t.eventId;
   const L = listOf(t), star = isStar(t);
   return `<div class="todo${done?" is-done":""}${star?" starred":""}" data-id="${t.id}"${draggable?" data-drag":""} style="--lc:${evColor(t.color) || L.color || "var(--fg-3)"};--lt:${evColor(t.color) || L.color || "#ffcc00"}"><div class="lead">${draggable ? `<span class="grip" data-grip="${t.id}" aria-label="Drag to move" title="Drag to move">⠿</span>` : `<span class="nogrip"></span>`}<button class="check${done?" on":""}" data-act="toggle" data-id="${t.id}" aria-label="${done?"Mark not done":"Mark done"}">${done?"✓":""}</button></div>
-    <div class="tt"><div>${esc(t.title)}</div><div class="meta"><span class="pri p${t.pri}">P${t.pri||2}</span>${chip(t.cal)}${when?`<span class="chip mono">${esc(fmtDay(when).split(",")[0].slice(0,3))} ${fmtTime(when)}</span>`:""}${t.repeat?`<button class="chip rep" data-act="repeatoff" data-id="${t.id}" title="Repeats ${esc(repeatLabel(t.repeat))}. Tap to stop repeating.">↻ ${esc(repeatLabel(t.repeat))}</button>`:""}${t.notes?`<span class="sub" style="margin:0">${esc(t.notes.slice(0,80))}</span>`:""}</div></div>
+    <div class="tt"><div>${esc(t.title)}</div><div class="meta">${chip(t.cal)}${when?`<span class="chip mono">${esc(fmtDay(when).split(",")[0].slice(0,3))} ${fmtTime(when)}</span>`:""}${t.repeat?`<button class="chip rep" data-act="repeatoff" data-id="${t.id}" title="Repeats ${esc(repeatLabel(t.repeat))}. Tap to stop repeating.">↻ ${esc(repeatLabel(t.repeat))}</button>`:""}${t.location?`<span class="sub" style="margin:0">${esc(t.location.slice(0,40))}</span>`:""}${t.notes?`<span class="sub" style="margin:0">${esc(t.notes.slice(0,80))}</span>`:""}</div></div>
     ${actions ? `<div class="acts">${actions}</div>` : ""}<button type="button" class="star${star?" on":""}" data-act="star" data-id="${t.id}" aria-label="${star?"Unstar":"Star"}" aria-pressed="${star}"><svg viewBox="0 0 20 20" width="17" height="17"><path d="M10 2.6l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 7.9l5-.7z" fill="${star?"currentColor":"none"}" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>${form}</div>`;
 }
 function todoList(list, empty, zone){
@@ -2053,6 +2054,7 @@ function lerpPill(host, a, b, t){
   }, {passive:true});
   document.addEventListener("touchmove", (e) => {
     if (!sw) return;
+    if (e.touches.length > 1 || S.pinching){ sw = null; const m = $("main"); m.style.transition = ""; m.style.transform = ""; m.style.opacity = ""; return; }
     const p = e.touches[0], dx = p.clientX - sw.x, dy = p.clientY - sw.y;
     if (!sw.mode){
       if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
@@ -3005,7 +3007,7 @@ function endEvDrag(apply){
       const ev = d.ev, mins = Math.max(15, Math.round((ev.end - ev.start) / 60000));
       act("ev" + ev.id, async () => {
         const before = undoStack.length;
-        const id = await addTodo({title:ev.title.replace(/^✓\s*/, ""), est:mins, cal:ev.cal.name, extra:{notes:ev.location || "", color:ev.colorId || null}});
+        const id = await addTodo({title:ev.title.replace(/^✓\s*/, ""), est:mins, cal:ev.cal.name, extra:{notes:stripMarks(ev.desc), location:ev.location || "", color:ev.colorId || null}});
         await moveTodo(id, z.zone, z.ids, z.idx);
         await S.mcp.callTool(GC, "delete_event", {calendarId:ev.calId, eventId:ev.id, notificationLevel:"NONE"});
         await afterWrite();
@@ -3245,6 +3247,47 @@ async function toggleEventDone(ev){
   try { await setDone(!done); } catch (err) { S.doneOpt.delete("e:" + ev.id); schedule(); throw err; }
   pushUndo(done ? `Unchecked "${base}"` : `Checked off "${base}"`, () => setDone(done));
 }
+/* ---------- pinch the timeline (or ctrl/⌘ + scroll on desktop) to stretch or compress the hours ---------- */
+(() => {
+  const MIN = 22, MAX = 150;
+  let pz = null, raf = 0, saveT = 0;
+  const tlOf = (h) => h && h.querySelector(".tl");
+  function zoomTo(px, cy){
+    const h = $("main").querySelector(".pane-tl"), tl = tlOf(h); if (!h || !tl) return;
+    px = Math.max(MIN, Math.min(MAX, px)); if (Math.abs(px - TL.PX) < 0.5) return;
+    const r = h.getBoundingClientRect(), off = tl.getBoundingClientRect().top - r.top + h.scrollTop;
+    const hr = (cy - r.top + h.scrollTop - off) / TL.PX; // hour under the fingers stays put
+    TL.PX = px; render();
+    // the fingers' original elements were replaced by the re-render; keep them in the page (hidden) so the gesture keeps reporting
+    if (pz) for (const n of pz.targets) if (!document.contains(n)){ n.style.display = "none"; n.dataset.pinchStale = "1"; document.body.appendChild(n); }
+    const h2 = $("main").querySelector(".pane-tl"), tl2 = tlOf(h2); if (!h2 || !tl2) return;
+    const off2 = tl2.getBoundingClientRect().top - h2.getBoundingClientRect().top + h2.scrollTop;
+    h2.scrollTop = hr * px + off2 - (cy - r.top);
+    clearTimeout(saveT); saveT = setTimeout(() => { if (S.db) saveCfg({hourHeight:Math.round(TL.PX)}).catch(() => {}); }, 700);
+  }
+  const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY) || 1;
+  document.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 2) return;
+    const h = e.target.closest && e.target.closest(".pane-tl"); if (!h) return;
+    if (typeof hold !== "undefined" && hold){ clearTimeout(hold.timer); if (hold.g) hold.g.remove(); hold = null; }
+    if (evDrag && !evDrag.active){ clearTimeout(evDrag.timer); evDrag = null; }
+    S.pinching = true; pz = {d0:dist(e.touches), px0:TL.PX, targets:[...new Set([...e.touches].map(t => t.target))]};
+  }, {passive:true});
+  document.addEventListener("touchmove", (e) => {
+    if (!pz || e.touches.length !== 2) return;
+    e.preventDefault();
+    const px = pz.px0 * dist(e.touches) / pz.d0, cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; zoomTo(px, cy); });
+  }, {passive:false});
+  const end = (e) => { if (pz && e.touches.length < 2){ pz = null; setTimeout(() => { S.pinching = false; document.querySelectorAll("body > [data-pinch-stale]").forEach(n => n.remove()); }, 120); } };
+  document.addEventListener("touchend", end); document.addEventListener("touchcancel", end);
+  document.addEventListener("gesturestart", (e) => { if (e.target.closest && e.target.closest(".pane-tl")) e.preventDefault(); });
+  document.addEventListener("wheel", (e) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const h = e.target.closest && e.target.closest(".pane-tl"); if (!h) return;
+    e.preventDefault(); zoomTo(TL.PX * Math.exp(-e.deltaY * 0.01), e.clientY);
+  }, {passive:false});
+})();
 /* ---------- bottom sheet: see and edit an event or a to-do ---------- */
 const MARK_RE = /planner:(?:todo\/[\w-]+|sample)/g;
 const stripMarks = (d) => String(d || "").replace(MARK_RE, "").trim();
@@ -3289,7 +3332,7 @@ function openSheet({ev, todo}){
       ${!isEv ? `<div class="is-grid two"><label>List<select name="l">${L.map(l => `<option value="${esc(l.id)}" ${l.id === curList ? "selected" : ""}>${esc(l.name)}</option>`).join("")}</select></label><label>Takes<select name="m">${[15,30,45,60,90,120,180,240].map(m => `<option value="${m}" ${Number(t.est || 30) === m ? "selected" : ""}>${m < 60 ? m + " min" : (m/60) + " hr"}</option>`).join("")}</select></label></div>` : ""}
       <label class="is-f">Calendar<select name="c" ${guests ? "disabled" : ""}>${cals.map(c => `<option ${c.name === curCal ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
       <div class="is-f"><span>Color</span><div class="is-sw"><button type="button" class="sw${!color ? " on" : ""}" data-col="" style="--sw:var(--fg-3)" aria-label="Calendar or list color"></button>${Object.entries(EV_COLORS).map(([k, [n, hex]]) => `<button type="button" class="sw${color === k ? " on" : ""}" data-col="${k}" style="--sw:${hex}" aria-label="${n}" title="${n}"></button>`).join("")}</div></div>
-      ${isEv ? `<label class="is-f">Location<input name="loc" value="${esc(p.location || "")}" placeholder="Add a place"></label>` : ""}
+      <label class="is-f">Location<input name="loc" value="${esc(isEv ? (p.location || "") : (t.location || ""))}" placeholder="Add a place"></label>
       <label class="is-f">Notes<textarea name="n" rows="3" placeholder="Notes">${esc(notes)}</textarea></label>
       ${guests ? `<div class="rn-note">Has guests, so time and calendar changes are best made in Google Calendar.</div>` : ""}
       <div class="is-acts"><button type="button" class="btn" data-is="done">${done ? "Mark not done" : "Mark done"}</button>${t ? `<button type="button" class="btn ghost" data-is="star">${isStar(t) ? "Unstar" : "Star"}</button>` : ""}<span style="flex:1"></span>${isEv && p.link ? `<a class="btn ghost" href="${esc(p.link)}" target="_blank" rel="noopener">Google</a>` : ""}<button type="button" class="btn ghost danger" data-is="del">Delete</button></div>
@@ -3319,8 +3362,8 @@ function openSheet({ev, todo}){
     const nt = (v("title") || "").trim() || title, nn = (v("n") || "").trim(), nc = v("c");
     closeSheet();
     if (!isEv){
-      const before = {title:t.title, notes:t.notes || "", list:t.list || null, est:t.est || 30, cal:t.cal || null, color:t.color || null};
-      const after = {title:nt, notes:nn, list:v("l"), est:Number(v("m")) || 30, cal:nc, color:col || null};
+      const before = {title:t.title, notes:t.notes || "", location:t.location || "", list:t.list || null, est:t.est || 30, cal:t.cal || null, color:t.color || null};
+      const after = {title:nt, notes:nn, location:(v("loc") || "").trim(), list:v("l"), est:Number(v("m")) || 30, cal:nc, color:col || null};
       act(t.id, async () => { await todoRef(t.id).update(after); pushUndo(`Edited "${nt}"`, () => todoRef(t.id).update(before), () => todoRef(t.id).update(after)); });
       return;
     }
@@ -3339,7 +3382,7 @@ function openSheet({ev, todo}){
       if (col !== (p.colorId || "")){ patch.colorId = col || "0"; undo.colorId = p.colorId || "0"; }
       if (Object.keys(patch).length){
         await S.mcp.callTool(GC, "update_event", {calendarId:p.calId, eventId:p.id, notificationLevel:"NONE", ...patch});
-        if (t) await todoRef(t.id).update({title:nt, notes:nn, color:col || null, ...(patch.startTime ? {start:new Date(patch.startTime).toISOString(), est:Math.round((new Date(patch.endTime) - new Date(patch.startTime)) / 60000)} : {})});
+        if (t) await todoRef(t.id).update({title:nt, notes:nn, location:loc, color:col || null, ...(patch.startTime ? {start:new Date(patch.startTime).toISOString(), est:Math.round((new Date(patch.endTime) - new Date(patch.startTime)) / 60000)} : {})});
         await afterWrite();
         pushUndo(`Edited "${nt}"`, async () => { await S.mcp.callTool(GC, "update_event", {calendarId:p.calId, eventId:p.id, notificationLevel:"NONE", ...undo}); await afterWrite(); });
       }
@@ -3353,8 +3396,8 @@ function openSheet({ev, todo}){
 document.addEventListener("click", (e) => {
   // tap a to-do's text to open it
   if (drag || Date.now() - lastDragAt < 400) return;
-  const tt = e.target.closest(".todo .tt"); if (!tt || e.target.closest("button,a,input,select")) return;
-  const row = tt.closest(".todo"), t = row && findTodoLive(row.dataset.id); if (!t) return;
+  const row = e.target.closest(".todo"); if (!row || e.target.closest("button,a,input,select,textarea,[data-grip],.sched,.acts")) return;
+  const t = findTodoLive(row.dataset.id); if (!t) return;
   const ev = t.eventId && allEvents().find(x => x.id === t.eventId);
   openSheet(ev ? {ev} : {todo:t});
 });
@@ -3946,7 +3989,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.25-64";
+const APP_VERSION = "2026.10.25-66";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);

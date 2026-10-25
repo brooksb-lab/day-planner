@@ -27,7 +27,7 @@ No build step, no framework, no server. Plain JS inside one IIFE at the bottom o
 
 ## Versioning (every push)
 
-- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-64`).
+- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-66`).
 - `CACHE` in `sw.js`, `day-vN` with the same N.
 - He sees the version in More (iPhone) or the sidebar (desktop).
 
@@ -77,7 +77,9 @@ Key state: `S` (tab, calendars, events, todos, paneMode, split, aliases, doneOpt
 - Swipe to-dos: right = done, left = tomorrow, far left = delete.
 - Scheduled to-dos not checked off carry over to today at the same time (`carryOver`, moves the Google event). Checked-off items drop out of lists the day after.
 - Press and hold empty timeline space, drag to place, let go to name a new event.
-- Overlapping events fan out (Google Calendar style), later ones on top.
+- Overlapping events fan out (Google Calendar style), later ones on top. Overlap is decided by real times; short blocks never grow into the next event.
+- Pinch the timeline (ctrl/⌘ + scroll on desktop) to change hour height; saved as `hourHeight`. Re-renders during the pinch re-attach the touch targets hidden so the gesture keeps reporting.
+- To-dos have title, notes, location, list, estimate, calendar, color; all of it goes onto the event when scheduled. Priority badges (P1–P3) are hidden; stars replace them.
 - Flick the list/timeline handle up or down to open the list or timeline fully.
 - iPhone Week shows two days, snapping one day at a time; dragging an event to the edge steps a day.
 - Swipe a notice up or sideways to dismiss it.
