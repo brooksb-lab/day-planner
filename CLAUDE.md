@@ -27,7 +27,7 @@ No build step, no framework, no server. Plain JS inside one IIFE at the bottom o
 
 ## Versioning (every push)
 
-- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-73`).
+- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-74`).
 - `CACHE` in `sw.js`, `day-vN` with the same N.
 - He sees the version at the very bottom of the sidebar (desktop) and of More (iPhone).
 
@@ -107,3 +107,4 @@ For deeper checks, copy `index.html` to a scratch folder, insert `window.__T={S,
 - The refresh button fetches the newest `index.html` directly, compares `APP_VERSION`, drops the service worker and caches if they are behind, then reloads with `?r=`.
 - The day always fills the timeline box: `fitTimeline()` sets a minimum hour height (`S.pxFloor`); `S.pxUser` is the zoom he chose.
 - Travel: events with a location get a leave-by time (next 8 days). Origin = the previous event with a place within 90 min, else "Start from", else device location. Drawn as a hatched `.travel` block from leave-by to start. Addresses geocode via Nominatim, trying the full location, then the street lines only (cache key `geoCache2`).
+- Time zones: primary is always the device zone (shown in More/sidebar as "automatic"). Second zone `cfg().tz2`: "auto" (default, also when unset) shows NYC only when the device is on a different clock; "off" hides it; or a fixed IANA zone.

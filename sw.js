@@ -1,6 +1,6 @@
 // App shell cache. Network first so updates land; cache is the offline fallback.
 // The page itself is always fetched past the CDN cache (unique query) so a new GitHub version shows on the next load.
-const CACHE = "day-v73";
+const CACHE = "day-v74";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-180.png", "./icons/sun.svg", "./icons/moon.svg"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {})); self.skipWaiting(); });
 self.addEventListener("activate", (e) => {

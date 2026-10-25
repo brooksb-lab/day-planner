@@ -146,6 +146,9 @@ h2{font-size:20px;line-height:1.2;margin:0;text-wrap:balance;letter-spacing:-.01
 .hr span i{font-style:normal;font-size:12px;color:var(--fg-3);opacity:.75;margin-left:3px}
 .tint{position:absolute;left:0;right:0;top:0;z-index:0;pointer-events:none;border-radius:6px}
 .hr span b.tl-tmp{display:block;font-weight:400;font-size:11px;line-height:13px;color:var(--fg-3);opacity:.6;margin-top:1px}
+.tzrow{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--fg-2);min-height:30px}
+.tzrow b{font-weight:500;color:var(--fg)}
+.tzrow select{max-width:68%}
 .hr span b.tz2{display:block;font-weight:400;font-size:9px;line-height:10px;color:var(--accent);opacity:.7;margin-top:1px}
 .tzsel{width:100%;font:inherit;font-size:13px;color:var(--fg);background:var(--win-2);border:1px solid var(--line);border-radius:9px;padding:7px 10px}
 @media (max-width:560px){.tzsel{font-size:16px}}
@@ -1063,8 +1066,10 @@ body:not(.ios) .pane.m-timeline .divider,body:not(.ios) .pane.m-list .divider{he
         <label class="tog lookhide"><input type="checkbox" id="markTog"> Sun and moon icon</label>
       </div>
       <div class="section">
-        <div class="label">Second time zone</div>
-        <select id="tz2sel" class="tzsel" aria-label="Second time zone"></select>
+        <div class="label">Time zones</div>
+        <div class="tzrow"><span>Primary</span><b id="tzhere"></b></div>
+        <div class="tzrow"><span>Second</span><select id="tz2sel" class="tzsel" aria-label="Second time zone"></select></div>
+        <div class="sub" id="tznote" style="margin-top:4px"></div>
       </div>
       <div class="section"><div class="label">Free time</div><div id="studiobox"></div></div>
       <div class="section"><div class="label">Travel</div><div id="travelbox"></div></div>
@@ -1146,7 +1151,7 @@ function calKind(c){
 }
 const KIND_NAME = {personal:"Personal", work:"Work", hol:"Holidays"};
 /* ---------- settings (stored with the page, editable by the Claude bar) ---------- */
-const CFG_DEFAULTS = {tlStart:0, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day", tz2:"", showMark:false, dayStart:8, dayEnd:22, homeAddr:"", travelMode:"transit", travelBuffer:5};
+const CFG_DEFAULTS = {tlStart:0, tlEnd:24, hourHeight:46, tabHours:{morning:5, day:11, evening:17, tomorrow:22}, layout:"split", split:0.55, calColors:{}, defaultCal:"Personal", theme:"day", tz2:"auto", showMark:false, dayStart:8, dayEnd:22, homeAddr:"", travelMode:"transit", travelBuffer:5};
 let cfgRaw = {};
 const cfg = () => ({...CFG_DEFAULTS, ...cfgRaw, tabHours:{...CFG_DEFAULTS.tabHours, ...(cfgRaw.tabHours || {})}, calColors:{...(cfgRaw.calColors || {})}});
 function applyCfg(){
@@ -1159,7 +1164,7 @@ function applyCfg(){
   applyTheme(c.theme);
   document.body.classList.toggle("no-mark", !c.showMark);
   const mt = document.getElementById("markTog"); if (mt) mt.checked = !!c.showMark;
-  const tzs = document.getElementById("tz2sel"); if (tzs && document.activeElement !== tzs) tzs.value = c.tz2 || "";
+  const tzs = document.getElementById("tz2sel"); if (tzs && document.activeElement !== tzs){ tzs.value = c.tz2 || "auto"; if (typeof showTz === "function") showTz(); }
   for (const cal of S.calendars) cal.color = c.calColors[cal.name] || cal.gColor || `var(--c-${cal.kind})`;
 }
 const cfgRef = () => S.db.collection("settings").doc("main");
@@ -2247,13 +2252,21 @@ document.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key ==
 const TZ_QUICK = ["America/Los_Angeles","America/Denver","America/Chicago","America/New_York","America/Mexico_City","America/Sao_Paulo","Europe/London","Europe/Paris","Europe/Berlin","Europe/Istanbul","Asia/Dubai","Asia/Kolkata","Asia/Shanghai","Asia/Seoul","Asia/Tokyo","Australia/Sydney","Pacific/Honolulu","UTC"];
 const tzCity = (z) => z === "UTC" ? "UTC" : z.split("/").pop().replace(/_/g, " ");
 const tzFmt = {};
+// primary is wherever this device is; "auto" second zone shows New York only while you're somewhere on a different clock
+const HOME_TZ = "America/New_York";
+const hereTz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return HOME_TZ; } };
+function sameClock(a, b){
+  try { const f = (z) => new Intl.DateTimeFormat("en-US", {timeZone:z, hour:"numeric", minute:"numeric", day:"numeric", hour12:false}).format(new Date()); return f(a) === f(b); } catch { return a === b; }
+}
+function tz2Zone(){ const v = cfg().tz2 || "auto"; if (v === "auto") return sameClock(hereTz(), HOME_TZ) ? "" : HOME_TZ; return v === "off" ? "" : v; }
+const tzName = (z) => z === HOME_TZ ? "NYC" : tzCity(z);
 function tz2Label(day, hr){
-  const z = cfg().tz2; if (!z) return "";
+  const z = tz2Zone(); if (!z) return "";
   try {
     const f = tzFmt[z] || (tzFmt[z] = new Intl.DateTimeFormat("en-US", {timeZone:z, hour:"numeric", minute:"2-digit", hour12:true}));
     const d = new Date(day); d.setHours(hr % 24, 0, 0, 0); if (hr >= 24) d.setDate(d.getDate() + 1);
     const parts = f.formatToParts(d), h = parts.find(x => x.type === "hour").value, m = parts.find(x => x.type === "minute").value, ap = parts.find(x => x.type === "dayPeriod").value[0].toLowerCase();
-    return `<b class="tz2" title="${esc(tzCity(z))}">${h}${m !== "00" ? ":" + m : ""}${ap}</b>`;
+    return `<b class="tz2" title="${esc(tzName(z))}">${h}${m !== "00" ? ":" + m : ""}${ap}</b>`;
   } catch { return ""; }
 }
 function fillTzSelect(){
@@ -2261,11 +2274,19 @@ function fillTzSelect(){
   const here = Intl.DateTimeFormat().resolvedOptions().timeZone;
   let all = []; try { all = Intl.supportedValuesOf("timeZone"); } catch {}
   const opt = (z) => `<option value="${z}">${esc(tzCity(z))}${z === here ? " (here)" : ""} · ${esc(z.split("/")[0])}</option>`;
-  sel.innerHTML = `<option value="">Off</option><optgroup label="Common">${TZ_QUICK.map(opt).join("")}</optgroup>` + (all.length ? `<optgroup label="All">${all.filter(z => !TZ_QUICK.includes(z)).map(opt).join("")}</optgroup>` : "");
-  sel.value = cfg().tz2 || "";
-  sel.addEventListener("change", () => { saveCfg({tz2: sel.value}).catch(() => { cfgRaw = {...cfgRaw, tz2: sel.value}; applyCfg(); schedule(); }); });
+  sel.innerHTML = `<option value="auto">Automatic · NYC when I'm away</option><option value="off">Off</option><optgroup label="Common">${TZ_QUICK.map(opt).join("")}</optgroup>` + (all.length ? `<optgroup label="All">${all.filter(z => !TZ_QUICK.includes(z)).map(opt).join("")}</optgroup>` : "");
+  sel.value = cfg().tz2 || "auto";
+  showTz();
+  sel.addEventListener("change", () => { setTimeout(showTz, 50); saveCfg({tz2: sel.value}).catch(() => { cfgRaw = {...cfgRaw, tz2: sel.value}; applyCfg(); schedule(); }); });
+}
+function showTz(){
+  const h = $("tzhere"), n = $("tznote"); if (!h) return;
+  const z = hereTz(); h.textContent = `${tzName(z)} · automatic`;
+  const z2 = tz2Zone();
+  n.textContent = (cfg().tz2 || "auto") === "auto" ? (z2 ? `You're away, so the timeline also shows NYC time.` : `You're on NYC time, so no second zone is shown.`) : "";
 }
 fillTzSelect();
+setInterval(() => { const before = showTz.last, now = hereTz() + "|" + tz2Zone(); if (before !== now){ showTz.last = now; showTz(); schedule(); } }, 60000);
 $("markTog").addEventListener("change", (e) => { const v = e.target.checked; saveCfg({showMark: v}).catch(() => { cfgRaw = {...cfgRaw, showMark: v}; applyCfg(); schedule(); }); });
 document.body.classList.toggle("no-mark", !cfg().showMark);
 /* temperature tint per hour, faint hourly temps, sunrise and sunset */
@@ -4064,7 +4085,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.25-73";
+const APP_VERSION = "2026.10.25-74";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
