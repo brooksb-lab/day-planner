@@ -237,9 +237,19 @@ body.is-dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
 .todo .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px;align-items:center}
 .todo.is-done .tt>div:first-child{text-decoration:line-through;color:var(--fg-3)}
 /* lists */
+.plc{position:absolute;top:100%;left:0;right:0;z-index:70;margin-top:4px;min-width:240px;max-width:min(420px,calc(100vw - 32px));background:var(--win);border-radius:12px;box-shadow:0 0 0 .5px var(--line),0 12px 32px -8px rgba(0,0,0,.35);overflow:hidden;display:flex;flex-direction:column}
+.plc[hidden]{display:none}
+.plc-i{display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:0;background:transparent;text-align:left;padding:9px 12px;font:14px var(--ui);color:var(--fg);cursor:pointer;border-top:.5px solid var(--line-2)}
+.plc-i:first-child{border-top:0}
+.plc-i span{font-size:12px;color:var(--fg-2)}
+.plc-i:hover,.plc-i.on{background:var(--fill-2,var(--win-2))}
+.is-f,.studio-edit label{position:relative}
+#skybg{position:fixed;inset:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;filter:saturate(1.05)}
+body.ios #skybg{display:none}
 .lists{display:flex;flex-direction:column;margin-top:24px}
 .lists:first-child{margin-top:0}
 .ios-only{display:none!important} body.ios .ios-only{display:flex!important}
+body.ios .desk-only{display:none!important}
 body.ios .lists{margin-top:22px}
 body.ios .lists:first-child{margin-top:0}
 .lst-h{display:flex;align-items:center;gap:6px;min-height:28px}
@@ -1071,6 +1081,7 @@ body:not(.ios) .pane.m-timeline .divider,body:not(.ios) .pane.m-list .divider{he
         <label class="tog lookhide"><input type="checkbox" id="markTog"> Sun and moon icon</label>
       </div>
       <div class="section">
+        <label class="tog desk-only"><input type="checkbox" id="skyTog"> Live weather background</label>
         <div class="label">Time zones</div>
         <div class="tzrow"><span>Primary</span><b id="tzhere"></b></div>
         <div class="tzrow"><span>Second</span><select id="tz2sel" class="tzsel" aria-label="Second time zone"></select></div>
@@ -2206,6 +2217,133 @@ addEventListener("resize", () => { shellFit(); applySide(); });
 if (window.visualViewport) visualViewport.addEventListener("resize", shellFit);
 requestAnimationFrame(() => { shellFit(); applySide(); schedule(); });
 
+/* ---------- live sky behind the desktop window: time of day + current weather, like the iOS Weather app ---------- */
+(() => {
+  const cv = document.createElement("canvas"); cv.id = "skybg"; cv.setAttribute("aria-hidden", "true");
+  document.body.prepend(cv);
+  const ctx = cv.getContext("2d");
+  let W = 0, H = 0, raf = 0, last = 0, clouds = [], drops = [], flakes = [], stars = [], flash = 0, nextFlash = 0, kindKey = "";
+  const on = () => { let v = "1"; try { v = localStorage.getItem("liveSky") ?? "1"; } catch {} return v !== "0" && !document.body.classList.contains("ios"); };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const hex = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const mix = (a, b, t) => { const x = hex(a), y = hex(b); return `rgb(${x.map((v, i) => Math.round(lerp(v, y[i], t))).join(",")})`; };
+  const mixc = (a, b, t) => { const x = hex(a), y = hex(b); return "#" + x.map((v, i) => Math.round(lerp(v, y[i], t)).toString(16).padStart(2, "0")).join(""); };
+  // sky colours (top, bottom) for each part of the day, clear and overcast
+  const SKY = {
+    night:{c:["#070b1d","#1b2647"], o:["#16191f","#262b33"]},
+    dawn: {c:["#34427a","#f0a07c"], o:["#545a68","#a99a92"]},
+    day:  {c:["#2f84e0","#a6d3f7"], o:["#7a8594","#b6c0cb"]},
+    dusk: {c:["#2a285a","#ef8458"], o:["#4b4b5c","#9a8079"]},
+  };
+  function sunTimes(){
+    const d = WX.data && WX.data.daily; const now = new Date();
+    const rise = d && d.sunrise ? new Date(d.sunrise[0]) : new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 45);
+    const set = d && d.sunset ? new Date(d.sunset[0]) : new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 15);
+    return {rise, set};
+  }
+  // where we are in the day: 0 night, 1 dawn, 2 day, 3 dusk, with blends between
+  function phase(){
+    const {rise, set} = sunTimes(), t = Date.now(), H45 = 45 * 60000;
+    const seg = (a, b) => Math.max(0, Math.min(1, (t - a) / (b - a)));
+    if (t < +rise - H45) return {from:"night", to:"night", k:0};
+    if (t < +rise) return {from:"night", to:"dawn", k:seg(+rise - H45, +rise)};
+    if (t < +rise + H45) return {from:"dawn", to:"day", k:seg(+rise, +rise + H45)};
+    if (t < +set - H45) return {from:"day", to:"day", k:0};
+    if (t < +set) return {from:"day", to:"dusk", k:seg(+set - H45, +set)};
+    if (t < +set + H45) return {from:"dusk", to:"night", k:seg(+set, +set + H45)};
+    return {from:"night", to:"night", k:0};
+  }
+  function weather(){
+    let force = ""; try { force = new URLSearchParams(location.search).get("sky") || ""; } catch {}
+    const c = WX.data && WX.data.current, code = force === "rain" ? 63 : force === "snow" ? 73 : force === "storm" ? 95 : force === "cloudy" ? 3 : force === "fog" ? 45 : force === "clear" ? 0 : (c ? c.weather_code : 1);
+    const k = code === 0 ? "clear" : code <= 2 ? "partly" : code === 3 ? "overcast" : code <= 48 ? "fog" : code <= 57 ? "drizzle" : code <= 67 ? "rain" : code <= 77 ? "snow" : code <= 82 ? "rain" : code <= 86 ? "snow" : "storm";
+    const cover = {clear:0.05, partly:0.35, overcast:0.85, fog:0.7, drizzle:0.8, rain:0.9, snow:0.8, storm:1}[k];
+    return {k, cover};
+  }
+  function seed(w){
+    const key = w.k + "|" + W + "x" + H; if (key === kindKey) return; kindKey = key;
+    const nC = Math.round(2 + w.cover * 14);
+    clouds = Array.from({length:nC}, (_, i) => ({x:Math.random() * W * 1.4 - W * 0.2, y:Math.random() * H * (w.k === "fog" ? 0.9 : 0.55) + (w.k === "fog" ? H * 0.1 : 0), r:lerp(90, 260, Math.random()) * (W / 1400), v:lerp(4, 14, Math.random()), a:lerp(0.35, 0.8, Math.random()), puffs:Array.from({length:5}, () => [Math.random() * 1.6 - 0.8, Math.random() * 0.5 - 0.25, lerp(0.5, 1, Math.random())])}));
+    const nD = w.k === "rain" ? 260 : w.k === "storm" ? 360 : w.k === "drizzle" ? 120 : 0;
+    drops = Array.from({length:nD}, () => ({x:Math.random() * W, y:Math.random() * H, l:lerp(10, 22, Math.random()), v:lerp(520, 900, Math.random()), a:lerp(0.15, 0.4, Math.random())}));
+    flakes = Array.from({length:w.k === "snow" ? 200 : 0}, () => ({x:Math.random() * W, y:Math.random() * H, r:lerp(1, 3.2, Math.random()), v:lerp(18, 50, Math.random()), p:Math.random() * 6.28}));
+    stars = Array.from({length:160}, () => ({x:Math.random() * W, y:Math.random() * H * 0.7, r:Math.random() * 1.2 + 0.2, p:Math.random() * 6.28}));
+  }
+  function size(){
+    const s = 0.6; // render a little below screen resolution; the scene is soft anyway
+    W = Math.round(innerWidth * s); H = Math.round(innerHeight * s); cv.width = W; cv.height = H; kindKey = "";
+  }
+  function draw(now){
+    const dt = Math.min(0.1, (now - (last || now)) / 1000); last = now;
+    const ph = phase(), w = weather(); seed(w);
+    const ov = Math.min(1, w.cover * 1.05);
+    const top = mixc(mixc(SKY[ph.from].c[0], SKY[ph.to].c[0], ph.k), mixc(SKY[ph.from].o[0], SKY[ph.to].o[0], ph.k), ov);
+    const bot = mixc(mixc(SKY[ph.from].c[1], SKY[ph.to].c[1], ph.k), mixc(SKY[ph.from].o[1], SKY[ph.to].o[1], ph.k), ov);
+    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, top); g.addColorStop(1, bot);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const night = ph.from === "night" && ph.to === "night" ? 1 : ph.to === "night" ? ph.k : ph.from === "night" ? 1 - ph.k : 0;
+    const t = now / 1000;
+    // stars and moon at night, sun by day
+    if (night > 0.05 && w.cover < 0.9){
+      for (const s of stars){ ctx.globalAlpha = night * (1 - w.cover) * (0.5 + 0.5 * Math.sin(t * 1.3 + s.p)); ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.29); ctx.fill(); }
+      ctx.globalAlpha = night * (1 - w.cover * 0.7);
+      const mx = W * 0.8, my = H * 0.18, mr = Math.min(W, H) * 0.045;
+      const mg = ctx.createRadialGradient(mx, my, mr * 0.5, mx, my, mr * 5); mg.addColorStop(0, "rgba(220,230,255,.35)"); mg.addColorStop(1, "rgba(220,230,255,0)");
+      ctx.fillStyle = mg; ctx.fillRect(mx - mr * 5, my - mr * 5, mr * 10, mr * 10);
+      ctx.fillStyle = "#eef2ff"; ctx.beginPath(); ctx.arc(mx, my, mr, 0, 6.29); ctx.fill();
+    }
+    const dayness = 1 - night;
+    if (dayness > 0.05 && w.cover < 0.8){
+      const {rise, set} = sunTimes(), f = Math.max(0, Math.min(1, (Date.now() - rise) / (set - rise)));
+      const sx = lerp(W * 0.15, W * 0.85, f), sy = H * (0.75 - Math.sin(f * Math.PI) * 0.6), sr = Math.min(W, H) * 0.05;
+      ctx.globalAlpha = dayness * (1 - w.cover);
+      const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr * 7); sg.addColorStop(0, "rgba(255,248,220,.95)"); sg.addColorStop(0.15, "rgba(255,236,180,.55)"); sg.addColorStop(1, "rgba(255,220,150,0)");
+      ctx.fillStyle = sg; ctx.fillRect(sx - sr * 7, sy - sr * 7, sr * 14, sr * 14);
+    }
+    // clouds drift across; brightness follows the light
+    const cl = mix(night > 0.5 ? "#3a4152" : "#f4f6fa", w.k === "storm" || w.k === "rain" ? "#5b6170" : night > 0.5 ? "#3a4152" : "#f4f6fa", 0.6);
+    for (const c of clouds){
+      c.x += c.v * dt * (W / 1400); if (c.x - c.r * 2 > W) c.x = -c.r * 2;
+      ctx.globalAlpha = c.a * (0.35 + w.cover * 0.65);
+      for (const [px, py, pr] of c.puffs){
+        const x = c.x + px * c.r, y = c.y + py * c.r, r = c.r * pr;
+        const cg = ctx.createRadialGradient(x, y, 0, x, y, r); cg.addColorStop(0, cl); cg.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = cg; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+    }
+    // rain, snow, lightning
+    if (drops.length){
+      ctx.globalAlpha = 1; ctx.lineWidth = 1; ctx.strokeStyle = night > 0.5 ? "rgba(170,190,220,.5)" : "rgba(220,230,245,.6)";
+      ctx.beginPath();
+      for (const d of drops){ d.y += d.v * dt; d.x += d.v * dt * 0.12; if (d.y > H){ d.y = -d.l; d.x = Math.random() * W; } ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + d.l * 0.12, d.y + d.l); }
+      ctx.stroke();
+    }
+    if (flakes.length){
+      ctx.fillStyle = "#fff";
+      for (const f of flakes){ f.y += f.v * dt; f.x += Math.sin(t + f.p) * 12 * dt; if (f.y > H){ f.y = -4; f.x = Math.random() * W; } ctx.globalAlpha = 0.8; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.29); ctx.fill(); }
+    }
+    if (w.k === "storm"){
+      if (!nextFlash) nextFlash = t + 4 + Math.random() * 8;
+      if (t > nextFlash){ flash = 1; nextFlash = t + 5 + Math.random() * 10; }
+      if (flash > 0){ ctx.globalAlpha = flash * 0.5; ctx.fillStyle = "#e8eeff"; ctx.fillRect(0, 0, W, H); flash = Math.max(0, flash - dt * 3); }
+    }
+    ctx.globalAlpha = 1;
+  }
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+  function loop(now){
+    raf = 0;
+    if (!on() || document.hidden){ cv.style.display = on() ? "" : "none"; return; }
+    cv.style.display = "";
+    if (now - last >= 1000 / 30 || !last) draw(now);
+    if (!reduce.matches) raf = requestAnimationFrame(loop);
+  }
+  const kick = () => { if (!raf) raf = requestAnimationFrame(loop); };
+  size(); addEventListener("resize", () => { size(); kick(); });
+  document.addEventListener("visibilitychange", kick);
+  setInterval(kick, 60000); // picks up weather and light changes even with motion reduced
+  window.__skyKick = kick; kick();
+})();
+(() => { const t = document.getElementById("skyTog"); if (!t) return; try { t.checked = (localStorage.getItem("liveSky") ?? "1") !== "0"; } catch { t.checked = true; } t.addEventListener("change", () => { try { localStorage.setItem("liveSky", t.checked ? "1" : "0"); } catch {} window.__skyKick && window.__skyKick(); }); })();
 /* ---------- hover tooltips for icon-only controls ---------- */
 (() => {
   if (!matchMedia("(hover:hover)").matches) return;
@@ -2567,6 +2705,7 @@ function renderTravelSide(){
     <label>Get around by<select id="trmode">${Object.entries(MODE_LBL).map(([k, v]) => `<option value="${k}" ${k === (c.travelMode || "transit") ? "selected" : ""}>${v}</option>`).join("")}</select></label>
     <label>Extra buffer (min)<input id="trbuf" type="number" min="0" max="60" step="5" value="${esc(c.travelBuffer)}"></label>
     <div class="sub" style="margin-top:8px">Events with a place get a leave-by time. Estimates use distance, not live transit.</div></div>`;
+  attachPlaces($("trhome"));
 }
 document.addEventListener("change", (e) => {
   const id = e.target && e.target.id; if (!["trhome","trmode","trbuf"].includes(id)) return;
@@ -3391,6 +3530,54 @@ async function toggleEventDone(ev){
     e.preventDefault(); zoomTo(TL.PX * Math.exp(-e.deltaY * 0.01), e.clientY);
   }, {passive:false});
 })();
+/* ---------- place suggestions as you type a location (OpenStreetMap search via Photon, no key needed) ---------- */
+function placeLabel(pp){
+  const street = [pp.housenumber, pp.street].filter(Boolean).join(" ");
+  const area = [pp.city || pp.district || pp.locality, [pp.state, pp.postcode].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  const addr = [street, area].filter(Boolean).join(", ");
+  const name = pp.name && pp.name !== street ? pp.name : "";
+  return {name, addr, text:name ? name + (addr ? "\n" + addr : "") : addr};
+}
+function attachPlaces(inp){
+  if (!inp || inp.dataset.places) return; inp.dataset.places = "1";
+  inp.setAttribute("autocomplete", "off");
+  const box = document.createElement("div"); box.className = "plc"; box.hidden = true;
+  inp.insertAdjacentElement("afterend", box);
+  let t = 0, seq = 0, items = [], idx = -1;
+  const close = () => { box.hidden = true; idx = -1; };
+  const pick = (i) => {
+    const it = items[i]; if (!it) return;
+    inp.value = it.text.replace(/\n/g, ", ");
+    inp.dataset.placeText = it.text;
+    // remember where it is so leave-by times work right away
+    try { TRAVEL.geo[it.text.trim().toLowerCase()] = {lat:it.lat, lon:it.lon}; TRAVEL.geo[inp.value.trim().toLowerCase()] = {lat:it.lat, lon:it.lon}; localStorage.setItem("geoCache2", JSON.stringify(TRAVEL.geo)); } catch {}
+    close(); inp.dispatchEvent(new Event("change", {bubbles:true}));
+  };
+  inp.addEventListener("input", () => {
+    clearTimeout(t); delete inp.dataset.placeText;
+    const q = inp.value.trim(); if (q.length < 3){ close(); return; }
+    t = setTimeout(async () => {
+      const my = ++seq;
+      try {
+        const here = TRAVEL.here || {lat:40.7128, lon:-74.006};
+        const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6&lang=en&lat=${here.lat}&lon=${here.lon}`);
+        const j = r.ok ? await r.json() : {features:[]};
+        if (my !== seq) return;
+        items = (j.features || []).map(f => ({...placeLabel(f.properties || {}), lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0]})).filter(x => x.text);
+        box.innerHTML = items.map((x, i) => `<button type="button" class="plc-i" data-i="${i}"><b>${esc(x.name || x.addr)}</b>${x.name && x.addr ? `<span>${esc(x.addr)}</span>` : ""}</button>`).join("");
+        box.hidden = !items.length; idx = -1;
+      } catch { close(); }
+    }, 220);
+  });
+  box.addEventListener("pointerdown", (e) => { e.preventDefault(); const b = e.target.closest("[data-i]"); if (b) pick(+b.dataset.i); });
+  inp.addEventListener("keydown", (e) => {
+    if (box.hidden) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); idx = (idx + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length; box.querySelectorAll(".plc-i").forEach((b, i) => b.classList.toggle("on", i === idx)); }
+    else if (e.key === "Enter" && idx >= 0){ e.preventDefault(); pick(idx); }
+    else if (e.key === "Escape"){ e.stopPropagation(); close(); }
+  });
+  inp.addEventListener("blur", () => setTimeout(close, 150));
+}
 /* ---------- bottom sheet: see and edit an event or a to-do ---------- */
 const MARK_RE = /planner:(?:todo\/[\w-]+|sample)/g;
 const stripMarks = (d) => String(d || "").replace(MARK_RE, "").trim();
@@ -3470,6 +3657,7 @@ function openSheet({ev, todo}){
   document.body.append(w);
   requestAnimationFrame(() => w.classList.add("on"));
   const f = w.querySelector("form"); let col = color;
+  attachPlaces(f.elements.loc);
   // load the series this event belongs to, so its repeat rule shows and can be changed
   let master = null, kind0 = "none";
   if (isEv && p.recurringEventId){
@@ -3505,7 +3693,7 @@ function openSheet({ev, todo}){
     closeSheet();
     if (!isEv){
       const before = {title:t.title, notes:t.notes || "", location:t.location || "", list:t.list || null, est:t.est || 30, cal:t.cal || null, color:t.color || null};
-      const after = {title:nt, notes:nn, location:(v("loc") || "").trim(), list:v("l"), est:Number(v("m")) || 30, cal:nc, color:col || null};
+      const after = {title:nt, notes:nn, location:(f.elements.loc.dataset.placeText || v("loc") || "").trim(), list:v("l"), est:Number(v("m")) || 30, cal:nc, color:col || null};
       act(t.id, async () => { await todoRef(t.id).update(after); pushUndo(`Edited "${nt}"`, () => todoRef(t.id).update(before), () => todoRef(t.id).update(after)); });
       return;
     }
@@ -3526,7 +3714,7 @@ function openSheet({ev, todo}){
             if (+st !== +ms || +en !== +me){ mp.startTime = localISO(st); mp.endTime = localISO(en); mu.startTime = localISO(ms); mu.endTime = localISO(me); }
           }
         }
-        const loc = (v("loc") || "").trim(); if (loc !== (master.location || "")){ mp.location = loc; mu.location = master.location || ""; }
+        const loc = (f.elements.loc.dataset.placeText || v("loc") || "").trim(); if (loc !== (master.location || "")){ mp.location = loc; mu.location = master.location || ""; }
         const desc = [nn, marksOf(master.description)].filter(Boolean).join("\n\n"); if (desc !== (master.description || "")){ mp.description = desc; mu.description = master.description || ""; }
         if (col !== (master.colorId || "")){ mp.colorId = col || "0"; mu.colorId = master.colorId || "0"; }
         if (repChanged){
@@ -3553,7 +3741,7 @@ function openSheet({ev, todo}){
           if (+st !== +p.start || +en !== +p.end){ patch.startTime = localISO(st); patch.endTime = localISO(en); undo.startTime = localISO(p.start); undo.endTime = localISO(p.end); S.optim.set(p.id, {start:st, end:en, at:Date.now()}); }
         }
       }
-      const loc = (v("loc") || "").trim(); if (loc !== (p.location || "")){ patch.location = loc; undo.location = p.location || ""; }
+      const loc = (f.elements.loc.dataset.placeText || v("loc") || "").trim(); if (loc !== (p.location || "")){ patch.location = loc; undo.location = p.location || ""; }
       const desc = [nn, marksOf(p.desc)].filter(Boolean).join("\n\n"); if (desc !== (p.desc || "")){ patch.description = desc; undo.description = p.desc || ""; }
       if (col !== (p.colorId || "")){ patch.colorId = col || "0"; undo.colorId = p.colorId || "0"; }
       if (Object.keys(patch).length){
@@ -4167,7 +4355,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.25-75";
+const APP_VERSION = "2026.10.25-77";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);

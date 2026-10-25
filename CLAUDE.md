@@ -27,7 +27,7 @@ No build step, no framework, no server. Plain JS inside one IIFE at the bottom o
 
 ## Versioning (every push)
 
-- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-75`).
+- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-77`).
 - `CACHE` in `sw.js`, `day-vN` with the same N.
 - He sees the version at the very bottom of the sidebar (desktop) and of More (iPhone).
 
@@ -110,3 +110,5 @@ For deeper checks, copy `index.html` to a scratch folder, insert `window.__T={S,
 - Time zones: primary is always the device zone (shown in More/sidebar as "automatic"). Second zone `cfg().tz2`: "auto" (default, also when unset) shows NYC only when the device is on a different clock; "off" hides it; or a fixed IANA zone.
 - Repeat: the event sheet shows the series rule (fetched with `get_event` on `recurringEventId`). Plain choices map to RRULEs (`repeatRule`/`ruleKind`); other rules show as text and are left alone. "Change: This event / All events"; changing the repeat always edits the series master (EXDATEs kept).
 - Every list has an "Add to <list>" row at the bottom; it goes through `quickAdd(text, listId)` so times like "thu 2pm" still schedule.
+- Desktop background: `#skybg` canvas (live sky): gradient by time of day from sunrise/sunset, clouds by cover, rain/snow/lightning from the current weather code, stars and moon at night. ~30fps at 0.6 scale, pauses when hidden. `?sky=rain|snow|storm|cloudy|fog|clear` forces a look for testing. Toggle "Live weather background" in the sidebar (localStorage `liveSky`). Hidden on iPhone.
+- Location fields (sheet, Travel "Start from") suggest places as you type via Photon (OpenStreetMap, no key). Picking one saves "Name\naddress" and caches its coordinates for travel times.
