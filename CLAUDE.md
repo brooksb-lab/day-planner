@@ -27,7 +27,7 @@ No build step, no framework, no server. Plain JS inside one IIFE at the bottom o
 
 ## Versioning (every push)
 
-- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-77`).
+- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-78`).
 - `CACHE` in `sw.js`, `day-vN` with the same N.
 - He sees the version at the very bottom of the sidebar (desktop) and of More (iPhone).
 
@@ -57,14 +57,16 @@ Key state: `S` (tab, calendars, events, todos, paneMode, split, aliases, doneOpt
 
 ## Layout
 
-- Desktop: a macOS-style window (BrooksOS look) with menubar, title bar tabs (Morning, Day, Evening, Tomorrow, Week, To-do) and a hideable sidebar. The old "Day" look is retired; keep `theme-day` CSS untouched or delete it.
+- Desktop: a macOS-style window (BrooksOS look) with menubar, title bar tabs (Day, 2 Day, Week) and a hideable sidebar. The old "Day" look is retired; keep `theme-day` CSS untouched or delete it.
 - iPhone (`IOS_MQ`, max-width 560px → `body.ios`):
-  - glass header `#iosHead` (`#iosNav` title + icons, `#iosSeg` Morning/Day/Evening when on Today) floating over content;
-  - bottom `#iosTabs` segmented control: Today, Tomorrow, Week, To-do;
-  - swipe left/right on content moves through pages (`slideTo`), pills glide with the swipe, pills are draggable;
+  - glass header `#iosHead` (`#iosNav` title + icons) floating over content;
+  - bottom `#iosTabs` segmented control: Day, 2 Day, Week (pill is draggable);
+  - page swiping between tabs is off; sideways swipes on the calendar move through days;
   - More ("…" icon) slides in as a full-height panel (the desktop sidebar);
   - timelines run edge to edge, everything else has a 16px inset.
-- Panes: Day, Tomorrow, Week have timeline + list with a draggable divider and three layout modes.
+- Panes: every tab is timeline + lists with a draggable divider and three layout modes. Morning/Evening/Tomorrow/To-do views were removed as tabs (functions still in the file, unused).
+- Day / 2 Day / Week are one strip of days (`viewStrip`): `S.dayOff` = first visible day relative to today, `visCols()` = 1 / 2 / 7 (3 on iPhone week). The strip renders `STRIP_R` (7) days either side and snaps per day (`.pane-strip`, column width from container query `100cqw`). Scrolling updates `S.dayOff` and the headers (`stripScroll`, `stripHeadPaint`); near the strip ends it re-renders centered. ‹ Today › buttons use `stripStep`. The event window (`windowRange`) follows `S.dayOff` in 14-day blocks.
+- Lists fold with the chevron (`collapsed` on the list in `cfg().lists`).
 - Known limit: the iOS Home Screen web app stops short of the bottom edge (a status-bar-height band). Content can't render there. Don't try to stretch past `innerHeight`; it pushes the tab bar off screen (tried twice).
 
 ## Interactions to keep working
@@ -81,7 +83,9 @@ Key state: `S` (tab, calendars, events, todos, paneMode, split, aliases, doneOpt
 - Pinch the timeline (ctrl/⌘ + scroll on desktop) to change hour height; saved as `hourHeight`. Re-renders during the pinch re-attach the touch targets hidden so the gesture keeps reporting.
 - To-dos have title, notes, location, list, estimate, calendar, color; all of it goes onto the event when scheduled. Priority badges (P1–P3) are hidden; stars replace them.
 - Split screen: one value, `--tlF` (timeline share, 0 = list only, 1 = timeline only), set inline on `.pane`. Mode buttons, the handle and flings all go through `animatePane` (critically damped spring in JS). No CSS transitions on the layout. Drag follows the finger and stays where released; a fling (>0.7px/ms, still moving) or a drag near an edge opens fully. `applyCfg` won't overwrite the mode mid-drag or mid-animation.
-- iPhone Week shows two days, snapping one day at a time; dragging an event to the edge steps a day.
+- Dragging an event or to-do to the left/right edge of the calendar steps a day (every 650ms while held), on desktop and iPhone; drop lands on that date.
+- Event taps on touch open from `pointerup` (iOS drops delegated clicks on plain divs); the following click is swallowed for 700ms.
+- Short events show the time after the title with a `|`.
 - Swipe a notice up or sideways to dismiss it.
 - Undo/redo for every write.
 
@@ -110,5 +114,6 @@ For deeper checks, copy `index.html` to a scratch folder, insert `window.__T={S,
 - Time zones: primary is always the device zone (shown in More/sidebar as "automatic"). Second zone `cfg().tz2`: "auto" (default, also when unset) shows NYC only when the device is on a different clock; "off" hides it; or a fixed IANA zone.
 - Repeat: the event sheet shows the series rule (fetched with `get_event` on `recurringEventId`). Plain choices map to RRULEs (`repeatRule`/`ruleKind`); other rules show as text and are left alone. "Change: This event / All events"; changing the repeat always edits the series master (EXDATEs kept).
 - Every list has an "Add to <list>" row at the bottom; it goes through `quickAdd(text, listId)` so times like "thu 2pm" still schedule.
+- Timeline background: `wxLayer` darkens each column with real outside darkness (sunrise/sunset from Open-Meteo, 45 min twilight ramp; fallback 7:00/18:15), hourly temps on the right of each column, sunrise/sunset lines, rain hatching with %.
 - Desktop background: `#skybg` canvas (live sky): gradient by time of day from sunrise/sunset, clouds by cover, rain/snow/lightning from the current weather code, stars and moon at night. ~30fps at 0.6 scale, pauses when hidden. `?sky=rain|snow|storm|cloudy|fog|clear` forces a look for testing. Toggle "Live weather background" in the sidebar (localStorage `liveSky`). Hidden on iPhone.
 - Location fields (sheet, Travel "Start from") suggest places as you type via Photon (OpenStreetMap, no key). Picking one saves "Name\naddress" and caches its coordinates for travel times.
