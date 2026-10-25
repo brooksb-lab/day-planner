@@ -27,9 +27,9 @@ No build step, no framework, no server. Plain JS inside one IIFE at the bottom o
 
 ## Versioning (every push)
 
-- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-72`).
+- `APP_VERSION` in `index.html`, format `YYYY.MM.DD-N` (current `2026.10.25-73`).
 - `CACHE` in `sw.js`, `day-vN` with the same N.
-- He sees the version in More (iPhone) and in the menubar next to the clock (desktop).
+- He sees the version at the very bottom of the sidebar (desktop) and of More (iPhone).
 
 ## Back end (all in the browser)
 
