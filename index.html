@@ -177,6 +177,10 @@ body.ios .ev .ev-chk{display:none}
 .ev.short .ev-chk{top:50%;margin-top:-9px}
 .ev.done b{text-decoration:line-through;opacity:.6}
 .ev.done{opacity:.7}
+.travel{position:absolute;z-index:0;pointer-events:none;border-radius:6px;border:1px dashed color-mix(in srgb,var(--fg-3) 70%,transparent);
+  background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--fg-3) 12%,transparent) 0 5px,transparent 5px 10px);display:flex;align-items:center;padding:0 8px;overflow:hidden}
+.travel span{font:500 10.5px var(--ui);color:var(--fg-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.travel.short span{font-size:9.5px}
 .tl{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .pane-tl{touch-action:pan-x pan-y}
 .tl-ghost{position:absolute;left:4px;right:4px;z-index:20;border-radius:8px;border:1.5px dashed var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);font:600 12px var(--ui);color:var(--accent);padding:4px 8px;pointer-events:none;box-shadow:0 8px 20px -8px rgba(0,0,0,.3)}
@@ -1760,10 +1764,19 @@ function timeline(evs, day, opt = {}){
     return `<div class="ev${t?" ev-todo":""}${chk?" can-chk":""}${done?" done":""}${mv?" movable":""}${it.e.aliased?" aliased":""}${!it.e.cal.writable?" ro":""}${short?" short":""}${tiny?" tiny":""}" data-ev="${esc(it.e.id)}" data-cal="${esc(it.e.calId)}" title="${esc(it.e.title)}" style="--evc:${col};--lines:${lines};top:${(it.s-H0*60)/60*PX+1}px;height:${hpx}px;left:calc(${lft}% + ${it.lane ? 2 : 4}px);width:calc(${wid}% - ${it.lane ? 6 : 8}px);z-index:${1 + it.lane};border-left-color:${col};background:color-mix(in srgb, ${col} 16%, var(--win))${it.lane ? ";box-shadow:0 0 0 1.5px var(--win),0 2px 8px -2px rgba(0,0,0,.18)" : ""}">
       ${chk ? `<button type="button" class="ev-chk${done?" on":""}" data-evchk aria-label="${done?"Mark not done":"Mark done"}">${done?"✓":""}</button>` : ""}<b>${esc(it.e.title.replace(/^✓\s*/,""))}</b><span>${fmtTime(it.e.start)}–${fmtTime(it.e.end)}</span>${leaveFor(it.e) ? `<em class="ev-leave">${leaveTxt(it.e)}</em>` : ""}${mv?'<i class="rs" data-rs></i>':""}</div>`;
   }).join("");
+  // travel time: a hatched block from leave-by to the start, like Apple Calendar
+  const TRV_ICON = {transit:"🚇", walk:"🚶", bike:"🚲", car:"🚕"};
+  const trv = items.map(it => {
+    const r = leaveFor(it.e); if (!r || !sameDay(r.leave, day)) return "";
+    const ts = Math.max(H0*60, r.leave.getHours()*60 + r.leave.getMinutes()), te = it.s; if (te - ts < 5) return "";
+    const w = 100/it.lanes, lft = it.lane * w, wid = it.lanes > 1 ? Math.min(100 - lft, w * 1.7) : 100;
+    const hpx = (te - ts)/60*PX;
+    return `<div class="travel${hpx < 18 ? " short" : ""}" style="top:${(ts-H0*60)/60*PX+1}px;height:${Math.max(2, hpx - 2)}px;left:calc(${lft}% + 4px);width:calc(${wid}% - 8px)" title="Leave by ${fmtTime(r.leave)}">${hpx >= 12 ? `<span>${TRV_ICON[cfg().travelMode || "transit"] || "🚇"} ${r.mins} min · leave ${fmtTime(r.leave)}</span>` : ""}</div>`;
+  }).join("");
   let now = "";
   const n = new Date();
   if (sameDay(n, day)){ const m = n.getHours()*60+n.getMinutes(); if (m >= H0*60) now = `<div class="nowline" style="top:${(m-H0*60)/60*PX}px"></div>`; }
-  const tlEl = `<div class="tl" data-day="${dayKey(day)}" style="height:${(H1-H0)*PX}px">${grid}${evh}${now}</div>`;
+  const tlEl = `<div class="tl" data-day="${dayKey(day)}" style="height:${(H1-H0)*PX}px">${grid}${trv}${evh}${now}</div>`;
   if (opt.week) return tlEl;
   h += `<div class="tl-wrap">${tlEl}</div>`;
   return h;
@@ -2430,7 +2443,7 @@ document.addEventListener("submit", (e) => {
 
 /* ---------- leave-by: travel time to events that have a location ---------- */
 const TRAVEL = {res:new Map(), geo:{}, pending:new Set(), here:null, hereAt:0, warned:new Set()};
-try { TRAVEL.geo = JSON.parse(localStorage.getItem("geoCache") || "{}"); } catch {}
+try { TRAVEL.geo = JSON.parse(localStorage.getItem("geoCache2") || "{}"); } catch {}
 const MODE_LBL = {transit:"subway + walk", walk:"walk", car:"car", bike:"bike"};
 function travelMins(km, mode){
   const road = km * 1.3;
@@ -2452,12 +2465,21 @@ function geocode(q){
   // Nominatim asks for at most one request a second
   geoQueue = geoQueue.then(() => new Promise(ok => setTimeout(ok, 1100))).then(async () => {
     if (key in TRAVEL.geo) return;
-    try {
-      const u = `https://nominatim.openstreetmap.org/search?format=json&limit=1&viewbox=-74.30,40.95,-73.65,40.45&q=${encodeURIComponent(q)}`;
-      const r = await fetch(u, {headers:{"Accept-Language":"en"}}); const j = r.ok ? await r.json() : [];
-      TRAVEL.geo[key] = j[0] ? {lat:+j[0].lat, lon:+j[0].lon} : null;
-      try { localStorage.setItem("geoCache", JSON.stringify(TRAVEL.geo)); } catch {}
-    } catch {}
+    // calendar locations are often "Place name\nstreet, city"; try the whole thing, then the street address on its own
+    const lines = q.split(/\n+/).map(x => x.trim()).filter(Boolean), tries = [lines.join(", ")];
+    if (lines.length > 1) tries.push(lines.slice(1).join(", "));
+    const bare = tries[tries.length - 1].replace(/,?\s*(United States|USA)$/i, ""); if (!tries.includes(bare)) tries.push(bare);
+    let hit = null;
+    for (let i = 0; i < tries.length && !hit; i++){
+      if (i) await new Promise(ok => setTimeout(ok, 1100));
+      try {
+        const u = `https://nominatim.openstreetmap.org/search?format=json&limit=1&viewbox=-74.30,40.95,-73.65,40.45&q=${encodeURIComponent(tries[i])}`;
+        const r = await fetch(u, {headers:{"Accept-Language":"en"}}); const j = r.ok ? await r.json() : [];
+        if (j[0]) hit = {lat:+j[0].lat, lon:+j[0].lon};
+      } catch {}
+    }
+    TRAVEL.geo[key] = hit;
+    try { localStorage.setItem("geoCache2", JSON.stringify(TRAVEL.geo)); } catch {}
   });
   return geoQueue.then(() => TRAVEL.geo[key] ?? null);
 }
@@ -2477,7 +2499,7 @@ async function originFor(ev, evs){
 let travelT = 0;
 function planTravel(){
   clearTimeout(travelT); travelT = setTimeout(async () => {
-    const now = new Date(), horizon = addDays(startOfDay(now), 2), evs = allEvents();
+    const now = new Date(), horizon = addDays(startOfDay(now), 8), evs = allEvents();
     const want = evs.filter(e => !e.allDay && e.location && e.start > now && e.start < horizon && !/^https?:|zoom|meet\.google|teams/i.test(e.location));
     let changed = false;
     for (const e of want){
@@ -4041,7 +4063,7 @@ render();
 $("origin").textContent = location.origin;
 if (!AUTH.clientId) $("setup").hidden = false;
 initGis().then(() => { if (AUTH.state === "signedin") onSignedIn(); schedule(); });
-const APP_VERSION = "2026.10.25-70";
+const APP_VERSION = "2026.10.25-71";
 function showVer(){
   try {
     const pr = document.createElement("div"); pr.style.cssText = "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden"; document.body.append(pr);
